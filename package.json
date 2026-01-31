@@ -1,6 +1,6 @@
 {
   "name": "biome-to-oxc",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt) - Exhaustive, cutting-edge, with all experimental features",
   "keywords": [
     "biome",
@@ -15,7 +15,7 @@
   "author": "Dominikos Pritis",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dominikospritis/biome-to-oxc"
+    "url": "https://github.com/entro314-labs/biome-to-oxc"
   },
   "bin": {
     "biome-to-oxc": "./dist/bin/biome-to-oxc.mjs"
@@ -39,23 +39,23 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "commander": "^14.0.2",
+    "commander": "^14.0.3",
     "jsonc-parser": "^3.3.1",
     "picocolors": "^1.1.1",
-    "zod": "^4.3.5"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^25.0.10",
-    "oxfmt": "^0.26.0",
-    "oxlint": "^1.41.0",
-    "oxlint-tsgolint": "^0.11.1",
-    "tsdown": "0.20.0-beta.4",
+    "@types/node": "^25.1.0",
+    "oxfmt": "^0.27.0",
+    "oxlint": "^1.42.0",
+    "oxlint-tsgolint": "^0.11.4",
+    "tsdown": "0.20.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.0-beta.2"
+    "vitest": "beta"
   },
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=10.0.0"
   },
-  "packageManager": "pnpm@10.28.1"
+  "packageManager": "pnpm@10.28.2"
 }
