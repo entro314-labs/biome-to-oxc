@@ -6,6 +6,7 @@ import type {
   MigrationReport,
   OxlintConfig,
   OxfmtConfig,
+  PackageUpdateSummary,
 } from './types.js';
 import { DefaultReporter } from './reporter.js';
 import { findBiomeConfig, loadBiomeConfig, resolveBiomeExtends } from './config-loader.js';
@@ -130,6 +131,8 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     suggestions.push(...featureSuggestions);
   }
 
+  let packageJsonSummary: PackageUpdateSummary | undefined;
+
   if (!options.dryRun) {
     if (!options.noBackup) {
       await backupExistingConfigs(oxlintConfigPath, oxfmtConfigPath, reporter);
@@ -141,9 +144,9 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     await writeFile(oxfmtConfigPath, JSON.stringify(oxfmtConfig, null, 2) + '\n', 'utf-8');
     reporter.info(`Created Oxfmt config: ${oxfmtConfigPath}`);
 
-    if (options.updateScripts) {
-      updatePackageJson(outputDir, reporter, false);
-    }
+    packageJsonSummary = updatePackageJson(outputDir, reporter, false, {
+      updateScripts: options.updateScripts,
+    });
 
     if (options.turborepo && detectedIntegrations.turborepo) {
       updateTurboConfig(outputDir, reporter, false);
@@ -153,11 +156,15 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     reporter.info(`Would create: ${oxlintConfigPath}`);
     reporter.info(`Would create: ${oxfmtConfigPath}`);
 
+    packageJsonSummary = updatePackageJson(outputDir, reporter, true, {
+      updateScripts: options.updateScripts,
+    });
+
     if (options.verbose) {
-      
-      
-      
-      
+
+
+
+
     }
   }
 
@@ -178,6 +185,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
       overridesConverted,
       formatterOverridesConverted: formatterOverridesCount,
     },
+    packageJson: packageJsonSummary,
     detectedIntegrations,
   };
 

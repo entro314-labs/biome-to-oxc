@@ -251,11 +251,41 @@ export type MigrationOptions = {
   report?: string;
 };
 
+export type PackageScriptUpdate = {
+  name: string;
+  before: string;
+  after: string;
+};
+
+export type PackageDependencyRemoval = {
+  name: string;
+  dependencyType: 'dependencies' | 'devDependencies';
+  version?: string;
+};
+
+export type PackageDevDependencyChange = {
+  name: string;
+  action: 'added' | 'already-present' | 'updated';
+  from?: string;
+  to: string;
+};
+
+export type PackageUpdateSummary = {
+  packageJsonPath: string;
+  found: boolean;
+  dryRun: boolean;
+  scriptsUpdated: PackageScriptUpdate[];
+  dependenciesRemoved: PackageDependencyRemoval[];
+  devDependencies: PackageDevDependencyChange[];
+  changed: boolean;
+};
+
 export type MigrationReport = {
   success: boolean;
   warnings: string[];
   errors: string[];
   suggestions: string[];
+  packageJson?: PackageUpdateSummary;
   summary: {
     biomeConfigPath: string;
     oxlintConfigPath: string;

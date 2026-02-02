@@ -29,7 +29,7 @@ const MigrationOptionsSchema = z.object({
 
 // Handle interrupt signals
 const handleSignal = (signal: string, code: number) => {
-  
+  console.error(pc.red(`\n✖ Received ${signal}, exiting...`));
   process.exit(code);
 };
 
@@ -65,8 +65,6 @@ async function main() {
     .option('--report <path>', 'Write detailed JSON migration report to specified path')
     .option('-v, --verbose', 'Show detailed migration information')
     .action(async (rawOptions) => {
-      
-
       try {
         // Normalize options (commander transforms --no-backup to backup: false, we need to map it back)
         const opts = {
@@ -91,81 +89,135 @@ async function main() {
         const report = await migrate(migrationOptions);
 
         if (report.success) {
-          
-          
-          
-          
-          
-          
-          
-          
-          
+
+
+
+
+
+
+
+
+
 
           if (report.detectedIntegrations) {
             const integrations = Object.entries(report.detectedIntegrations)
               .filter(([_, detected]) => detected)
-              .map(([name]) => name);
+              if (report.success) {
+                const dryRun = migrationOptions.dryRun ?? false;
+                const heading = dryRun ? '✔ Migration preview' : '✔ Migration complete';
+                console.log(pc.green(`\n${heading}`));
 
-            if (integrations.length > 0) {
-              
-            }
-          }
+                console.log(pc.cyan(`\nConfiguration output${dryRun ? ' (planned)' : ''}:`));
+                console.log(`  ${dryRun ? 'Would create' : 'Created'} Oxlint config: ${report.summary.oxlintConfigPath}`);
+                console.log(`  ${dryRun ? 'Would create' : 'Created'} Oxfmt config: ${report.summary.oxfmtConfigPath}`);
+                console.log(
+                  `  Lint rules converted: ${report.summary.rulesConverted} (skipped: ${report.summary.rulesSkipped})`,
+                );
+                console.log(
+                  `  Overrides converted: ${report.summary.overridesConverted} (formatter overrides: ${report.summary.formatterOverridesConverted})`,
+                );
 
-          if (report.warnings.length > 0) {
-            
-            if (migrationOptions.verbose) {
-              report.warnings.forEach((w) => {});
-            } else {
-              
-            }
-          }
+                if (report.packageJson) {
+                  const pkg = report.packageJson;
+                  console.log(pc.cyan(`\npackage.json updates${pkg.dryRun ? ' (planned)' : ''}:`));
 
-          if (report.suggestions.length > 0) {
-            
-            if (migrationOptions.verbose) {
-              report.suggestions.forEach((s) => {});
-            } else {
-              
-            }
-          }
+                  if (!pkg.found) {
+                    console.log(`  package.json not found; dependency and script updates skipped.`);
+                  } else if (!pkg.changed) {
+                    console.log(`  No package.json changes needed.`);
+                  } else {
+                    for (const removal of pkg.dependenciesRemoved) {
+                      const versionLabel = removal.version ? ` (${removal.version})` : '';
+                      console.log(
+                        `  ${pkg.dryRun ? 'Would remove' : 'Removed'} ${removal.name} from ${removal.dependencyType}${versionLabel}`,
+                      );
+                    }
 
-          
-          
-          
-          
-          
-          
+                    const devDepChanges = pkg.devDependencies.filter(
+                      (change) => change.action !== 'already-present',
+                    );
 
-          if (!migrationOptions.updateScripts) {
-            
-          }
+                    for (const change of devDepChanges) {
+                      if (change.action === 'added') {
+                        console.log(
+                          `  ${pkg.dryRun ? 'Would add' : 'Added'} devDependency ${change.name}@${change.to}`,
+                        );
+                      } else {
+                        const fromVersion = change.from ?? 'unknown';
+                        console.log(
+                          `  ${pkg.dryRun ? 'Would update' : 'Updated'} devDependency ${change.name} ${fromVersion} → ${change.to}`,
+                        );
+                      }
+                    }
 
-          if (migrationOptions.report) {
-            
-          }
+                    for (const scriptChange of pkg.scriptsUpdated) {
+                      console.log(
+                        `  ${pkg.dryRun ? 'Would update' : 'Updated'} script "${scriptChange.name}": ${scriptChange.before} → ${scriptChange.after}`,
+                      );
+                    }
+                  }
 
-          process.exit(0);
-        } else {
-          
+                  if (pkg.found && migrationOptions.updateScripts && pkg.scriptsUpdated.length === 0) {
+                    console.log('  No Biome scripts found to update.');
+                  }
+                }
 
-          if (report.errors.length > 0) {
-            
-            report.errors.forEach((e) => {});
-          }
+                if (report.detectedIntegrations) {
+                  const integrations = Object.entries(report.detectedIntegrations)
+                    .filter(([_, detected]) => detected)
+                    .map(([name]) => name);
 
-          process.exit(1);
-        }
-      } catch (error) {
-        console.error(pc.red('\n✖ Unexpected error during migration:'));
-        console.error(error instanceof Error ? error.stack : error);
-        process.exit(1);
-      }
-    });
+                  if (integrations.length > 0) {
+                    console.log(pc.cyan('\nDetected integrations:'));
+                    console.log(`  ${integrations.join(', ')}`);
+                  }
+                }
 
-  await program.parseAsync();
-}
+                if (report.warnings.length > 0) {
+                  console.log(pc.yellow(`\nWarnings (${report.warnings.length}):`));
+                  if (migrationOptions.verbose) {
+                    report.warnings.forEach((w) => {
+                      console.log(`  - ${w}`);
+                    });
+                  } else {
+                    console.log('  Run with --verbose to see all warning details.');
+                  }
+                }
 
-main().catch((error) => {
-  console.error(pc.red('✖ Fatal error:'), error);
-  process.exit(1);
+                if (report.suggestions.length > 0) {
+                  console.log(pc.cyan(`\nNext steps (${report.suggestions.length}):`));
+                  if (migrationOptions.verbose) {
+                    report.suggestions.forEach((s) => {
+                      console.log(`  - ${s}`);
+                    });
+                  } else {
+                    console.log('  Run with --verbose to see all suggestions.');
+                  }
+                }
+
+                if (!migrationOptions.updateScripts) {
+                  console.log(pc.dim('\nNote: Script updates were skipped (use --update-scripts to enable).'));
+                }
+
+                if (migrationOptions.report) {
+                  if (migrationOptions.dryRun) {
+                    console.log(pc.dim(`\nReport output skipped in dry-run mode: ${migrationOptions.report}`));
+                  } else {
+                    console.log(pc.green(`\nDetailed report written to: ${migrationOptions.report}`));
+                  }
+                }
+
+                process.exit(0);
+              } else {
+                console.error(pc.red('\n✖ Migration failed.'));
+
+                if (report.errors.length > 0) {
+                  console.error(pc.red(`Errors (${report.errors.length}):`));
+                  report.errors.forEach((e) => {
+                    console.error(`  - ${e}`);
+                  });
+                }
+
+                process.exit(1);
+              }
 });
