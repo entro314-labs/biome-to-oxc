@@ -15,8 +15,8 @@ type PackageJson = {
   [key: string]: unknown;
 };
 
-const OXLINT_VERSION = '^1.41.0';
-const OXFMT_VERSION = '^0.26.0';
+const OXLINT_VERSION = '^1.43.0';
+const OXFMT_VERSION = '^0.28.0';
 
 export function updatePackageJson(
   projectDir: string,
@@ -117,30 +117,43 @@ function updateScripts(
   let modified = false;
 
   for (const [name, script] of Object.entries(scripts)) {
-    let newScript = script;
+    let newScript = stripExecBiome(script);
+    let updated = false;
 
-    if (script.includes('biome check')) {
-      newScript = newScript.replace(/biome check/g, 'oxlint && oxfmt --check');
-      modified = true;
-      reporter.info(`Updated script "${name}": biome check → oxlint && oxfmt --check`);
+    const replacements = [
+      {
+        command: 'check',
+        check: 'oxlint && oxfmt --check',
+        fix: 'oxlint --fix && oxfmt',
+      },
+      {
+        command: 'ci',
+        check: 'oxlint && oxfmt --check',
+        fix: 'oxlint --fix && oxfmt',
+      },
+      {
+        command: 'lint',
+        check: 'oxlint',
+        fix: 'oxlint --fix',
+      },
+      {
+        command: 'format',
+        check: 'oxfmt --check',
+        fix: 'oxfmt',
+      },
+    ];
+
+    for (const mapping of replacements) {
+      const result = replaceBiomeCommand(newScript, mapping.command, mapping.check, mapping.fix);
+      if (result.didReplace) {
+        updated = true;
+      }
+      newScript = result.updated;
     }
 
-    if (script.includes('biome lint')) {
-      newScript = newScript.replace(/biome lint/g, 'oxlint');
+    if (updated) {
       modified = true;
-      reporter.info(`Updated script "${name}": biome lint → oxlint`);
-    }
-
-    if (script.includes('biome format')) {
-      newScript = newScript.replace(/biome format/g, 'oxfmt');
-      modified = true;
-      reporter.info(`Updated script "${name}": biome format → oxfmt`);
-    }
-
-    if (script.includes('biome ci')) {
-      newScript = newScript.replace(/biome ci/g, 'oxlint && oxfmt --check');
-      modified = true;
-      reporter.info(`Updated script "${name}": biome ci → oxlint && oxfmt --check`);
+      reporter.info(`Updated script "${name}" to use oxlint/oxfmt equivalents`);
     }
 
     if (newScript !== script) {
@@ -150,6 +163,53 @@ function updateScripts(
   }
 
   return modified;
+}
+
+function replaceBiomeCommand(
+  script: string,
+  command: string,
+  checkReplacement: string,
+  fixReplacement: string,
+): { updated: string; didReplace: boolean } {
+  let didReplace = false;
+  const regex = new RegExp(`\\bbiome\\s+${command}\\b([^&|]*)`, 'g');
+  const updated = script.replace(regex, (_match, args: string) => {
+    didReplace = true;
+    const hasFix = /\s--(write|fix)\b/.test(args);
+    const cleanedArgs = args.replace(/\s--(write|fix)\b/g, '').trim();
+    const suffix = cleanedArgs.length > 0 ? ` ${cleanedArgs}` : '';
+    const replacement = hasFix ? fixReplacement : checkReplacement;
+    return applySuffixToCommands(replacement, suffix);
+  });
+
+  return { updated, didReplace };
+}
+
+function applySuffixToCommands(replacement: string, suffix: string): string {
+  if (!suffix) {
+    return replacement;
+  }
+
+  if (!replacement.includes('&&')) {
+    return `${replacement}${suffix}`;
+  }
+
+  return replacement
+    .split('&&')
+    .map((part) => `${part.trim()}${suffix}`)
+    .join(' && ');
+}
+
+function stripExecBiome(script: string): string {
+  const execBiomePattern = /(^|[;&|()]|&&|\|\|)\s*exec\s+biome\b/g;
+  return script.replace(execBiomePattern, (_match, prefix: string) => {
+    if (!prefix) {
+      return 'biome';
+    }
+
+    const spacer = prefix.length > 0 ? ' ' : '';
+    return `${prefix}${spacer}biome`;
+  });
 }
 
 function removeBiomeDependency(
