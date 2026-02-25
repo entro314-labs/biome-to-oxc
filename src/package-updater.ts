@@ -1,11 +1,13 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type {
+  FixStrategy,
   PackageDependencyRemoval,
   PackageDevDependencyChange,
   PackageScriptUpdate,
   PackageUpdateSummary,
   Reporter,
+  TypeAwareProfile,
 } from './types.js';
 
 type PackageJson = {
@@ -23,7 +25,12 @@ export function updatePackageJson(
   projectDir: string,
   reporter: Reporter,
   dryRun: boolean,
-  options: { updateScripts?: boolean; typeAware?: boolean } = {},
+  options: {
+    updateScripts?: boolean;
+    typeAware?: boolean;
+    typeAwareProfile?: TypeAwareProfile;
+    fixStrategy?: FixStrategy;
+  } = {},
 ): PackageUpdateSummary {
   const packageJsonPath = resolve(projectDir, 'package.json');
   const summary: PackageUpdateSummary = {
@@ -49,9 +56,16 @@ export function updatePackageJson(
     let modified = false;
     const updateScriptsEnabled = options.updateScripts ?? false;
     const typeAwareEnabled = options.typeAware ?? false;
+    const typeAwareProfile = options.typeAwareProfile ?? 'standard';
+    const fixStrategy = options.fixStrategy ?? 'safe';
 
     if (updateScriptsEnabled && packageJson.scripts) {
-      modified = updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated) || modified;
+      modified =
+        updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated, {
+          typeAwareEnabled,
+          typeAwareProfile,
+          fixStrategy,
+        }) || modified;
     }
 
     if (packageJson.devDependencies) {
@@ -124,8 +138,20 @@ function updateScripts(
   scripts: Record<string, string>,
   reporter: Reporter,
   updates: PackageScriptUpdate[],
+  options: {
+    typeAwareEnabled: boolean;
+    typeAwareProfile: TypeAwareProfile;
+    fixStrategy: FixStrategy;
+  },
 ): boolean {
   let modified = false;
+  const lintBase = buildLintBaseCommand(options.typeAwareEnabled, options.typeAwareProfile);
+
+  const lintFixByStrategy: Record<FixStrategy, string> = {
+    safe: `${lintBase} --fix`,
+    suggestions: `${lintBase} --fix --fix-suggestions`,
+    dangerous: `${lintBase} --fix --fix-suggestions --fix-dangerously`,
+  };
 
   for (const [name, script] of Object.entries(scripts)) {
     let newScript = stripExecBiome(script);
@@ -134,27 +160,35 @@ function updateScripts(
     const replacements = [
       {
         command: 'check',
-        check: 'oxlint && oxfmt --check',
-        fix: 'oxlint --fix && oxfmt',
-        unsafeFix: 'oxlint --fix --fix-suggestions && oxfmt',
+        check: `${lintBase} && oxfmt --check`,
+        fixByStrategy: {
+          safe: `${lintFixByStrategy.safe} && oxfmt`,
+          suggestions: `${lintFixByStrategy.suggestions} && oxfmt`,
+          dangerous: `${lintFixByStrategy.dangerous} && oxfmt`,
+        },
       },
       {
         command: 'ci',
-        check: 'oxlint && oxfmt --check',
-        fix: 'oxlint --fix && oxfmt',
-        unsafeFix: 'oxlint --fix --fix-suggestions && oxfmt',
+        check: `${lintBase} && oxfmt --check`,
+        fixByStrategy: {
+          safe: `${lintFixByStrategy.safe} && oxfmt`,
+          suggestions: `${lintFixByStrategy.suggestions} && oxfmt`,
+          dangerous: `${lintFixByStrategy.dangerous} && oxfmt`,
+        },
       },
       {
         command: 'lint',
-        check: 'oxlint',
-        fix: 'oxlint --fix',
-        unsafeFix: 'oxlint --fix --fix-suggestions',
+        check: lintBase,
+        fixByStrategy: lintFixByStrategy,
       },
       {
         command: 'format',
         check: 'oxfmt --check',
-        fix: 'oxfmt',
-        unsafeFix: 'oxfmt',
+        fixByStrategy: {
+          safe: 'oxfmt',
+          suggestions: 'oxfmt',
+          dangerous: 'oxfmt',
+        },
       },
     ];
 
@@ -163,8 +197,8 @@ function updateScripts(
         newScript,
         mapping.command,
         mapping.check,
-        mapping.fix,
-        mapping.unsafeFix,
+        mapping.fixByStrategy,
+        options.fixStrategy,
       );
       if (result.didReplace) {
         updated = true;
@@ -190,8 +224,8 @@ function replaceBiomeCommand(
   script: string,
   command: string,
   checkReplacement: string,
-  fixReplacement: string,
-  unsafeFixReplacement: string,
+  fixByStrategy: Record<FixStrategy, string>,
+  defaultFixStrategy: FixStrategy,
 ): { updated: string; didReplace: boolean } {
   let didReplace = false;
   const regex = new RegExp(`\\bbiome\\s+${command}\\b([^&|]*)`, 'g');
@@ -201,11 +235,11 @@ function replaceBiomeCommand(
     const hasUnsafe = /\s--unsafe\b/.test(args);
     const cleanedArgs = args.replace(/\s--(write|fix|unsafe)\b/g, '').trim();
     const suffix = cleanedArgs.length > 0 ? ` ${cleanedArgs}` : '';
-    const replacement = hasUnsafe
-      ? unsafeFixReplacement
-      : hasFix
-        ? fixReplacement
-        : checkReplacement;
+    const effectiveFixStrategy = hasUnsafe
+      ? escalateFixStrategy(defaultFixStrategy, 'suggestions')
+      : defaultFixStrategy;
+
+    const replacement = hasFix || hasUnsafe ? fixByStrategy[effectiveFixStrategy] : checkReplacement;
     return applySuffixToCommands(replacement, suffix);
   });
 
@@ -225,6 +259,31 @@ function applySuffixToCommands(replacement: string, suffix: string): string {
     .split('&&')
     .map((part) => `${part.trim()}${suffix}`)
     .join(' && ');
+}
+
+function buildLintBaseCommand(
+  typeAwareEnabled: boolean,
+  typeAwareProfile: TypeAwareProfile,
+): string {
+  if (!typeAwareEnabled) {
+    return 'oxlint';
+  }
+
+  if (typeAwareProfile === 'strict') {
+    return 'oxlint --type-aware --type-check';
+  }
+
+  return 'oxlint --type-aware';
+}
+
+function escalateFixStrategy(current: FixStrategy, minimum: FixStrategy): FixStrategy {
+  const order: Record<FixStrategy, number> = {
+    safe: 1,
+    suggestions: 2,
+    dangerous: 3,
+  };
+
+  return order[current] >= order[minimum] ? current : minimum;
 }
 
 function stripExecBiome(script: string): string {

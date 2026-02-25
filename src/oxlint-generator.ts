@@ -1,10 +1,45 @@
-import type { BiomeConfig, OxlintConfig, Reporter } from './types.js';
+import type {
+  BiomeConfig,
+  OxlintBuiltinPlugin,
+  OxlintConfig,
+  OxlintSettings,
+  Reporter,
+  TypeAwareProfile,
+} from './types.js';
 import { extractRulesFromBiomeConfig } from './rule-mapper.js';
 
-export function generateOxlintConfig(biomeConfig: BiomeConfig, reporter: Reporter): OxlintConfig {
+type OxlintGenerationOptions = {
+  enableImportGraph?: boolean;
+  importCycleMaxDepth?: number;
+  typeAwareProfile?: TypeAwareProfile;
+};
+
+const DEFAULT_PLUGINS: OxlintBuiltinPlugin[] = ['oxc', 'typescript', 'unicorn'];
+const PLUGIN_SORT_ORDER: OxlintBuiltinPlugin[] = [
+  'eslint',
+  'oxc',
+  'typescript',
+  'unicorn',
+  'import',
+  'react',
+  'react-perf',
+  'jsx-a11y',
+  'nextjs',
+  'vitest',
+  'jest',
+  'jsdoc',
+  'promise',
+  'node',
+  'vue',
+];
+
+export function generateOxlintConfig(
+  biomeConfig: BiomeConfig,
+  reporter: Reporter,
+  options: OxlintGenerationOptions = {},
+): OxlintConfig {
   const oxlintConfig: OxlintConfig = {
     $schema: './node_modules/oxlint/configuration_schema.json',
-    plugins: [],
   };
 
   if (biomeConfig.linter?.enabled === false) {
@@ -23,15 +58,30 @@ export function generateOxlintConfig(biomeConfig: BiomeConfig, reporter: Reporte
     oxlintConfig.rules = rules;
   }
 
+  if (options.enableImportGraph) {
+    addImportGraphRecipe(oxlintConfig, options.importCycleMaxDepth ?? 3);
+  }
+
   determinePlugins(oxlintConfig);
   mapIgnorePatterns(biomeConfig, oxlintConfig);
   mapEnvironment(biomeConfig, oxlintConfig);
+  mapSettings(biomeConfig, oxlintConfig, options.typeAwareProfile ?? 'standard');
 
   return oxlintConfig;
 }
 
+function addImportGraphRecipe(oxlintConfig: OxlintConfig, maxDepth: number): void {
+  if (!oxlintConfig.rules) {
+    oxlintConfig.rules = {};
+  }
+
+  if (!oxlintConfig.rules['import/no-cycle']) {
+    oxlintConfig.rules['import/no-cycle'] = ['error', { maxDepth: Math.max(1, maxDepth) }];
+  }
+}
+
 function determinePlugins(oxlintConfig: OxlintConfig): void {
-  const plugins = new Set<string>();
+  const plugins = new Set<OxlintBuiltinPlugin>();
 
   if (oxlintConfig.rules) {
     for (const ruleName of Object.keys(oxlintConfig.rules)) {
@@ -65,9 +115,35 @@ function determinePlugins(oxlintConfig: OxlintConfig): void {
     }
   }
 
-  if (plugins.size > 0) {
-    oxlintConfig.plugins = Array.from(plugins).sort();
+  if (plugins.size === 0) {
+    delete oxlintConfig.plugins;
+    return;
   }
+
+  const usesNonDefaultPlugin = Array.from(plugins).some((plugin) => !DEFAULT_PLUGINS.includes(plugin));
+
+  if (!usesNonDefaultPlugin) {
+    // Keep Oxlint defaults by omitting `plugins` entirely.
+    delete oxlintConfig.plugins;
+    return;
+  }
+
+  for (const defaultPlugin of DEFAULT_PLUGINS) {
+    plugins.add(defaultPlugin);
+  }
+
+  oxlintConfig.plugins = sortPlugins(Array.from(plugins));
+}
+
+function sortPlugins(plugins: OxlintBuiltinPlugin[]): OxlintBuiltinPlugin[] {
+  return plugins.sort((a, b) => {
+    const ia = PLUGIN_SORT_ORDER.indexOf(a);
+    const ib = PLUGIN_SORT_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
 }
 
 function mapIgnorePatterns(biomeConfig: BiomeConfig, oxlintConfig: OxlintConfig): void {
@@ -97,5 +173,73 @@ function mapEnvironment(biomeConfig: BiomeConfig, oxlintConfig: OxlintConfig): v
     if (Object.keys(globals).length > 0) {
       oxlintConfig.globals = globals;
     }
+  }
+}
+
+function mapSettings(
+  biomeConfig: BiomeConfig,
+  oxlintConfig: OxlintConfig,
+  typeAwareProfile: TypeAwareProfile,
+): void {
+  const settings: OxlintSettings = {};
+  const activePlugins = new Set(oxlintConfig.plugins ?? []);
+
+  const hasReact =
+    activePlugins.has('react') ||
+    biomeConfig.javascript?.parser?.jsxEverywhere === true ||
+    biomeConfig.files?.include?.some((pattern) => /\.(jsx|tsx)$/.test(pattern)) ||
+    false;
+
+  if (hasReact) {
+    settings.react = {
+      version: null,
+      linkComponents: [],
+      formComponents: [],
+      componentWrapperFunctions: [],
+    };
+  }
+
+  if (activePlugins.has('jsx-a11y')) {
+    settings['jsx-a11y'] = {
+      polymorphicPropName: null,
+      components: {},
+      attributes: {},
+    };
+  }
+
+  const nextHints =
+    activePlugins.has('nextjs') ||
+    biomeConfig.files?.include?.some(
+      (pattern) => pattern.includes('next') || pattern.includes('app/') || pattern.includes('pages/'),
+    ) ||
+    false;
+
+  if (nextHints) {
+    settings.next = {
+      rootDir: [],
+    };
+  }
+
+  if (activePlugins.has('vitest')) {
+    settings.vitest = {
+      typecheck: typeAwareProfile === 'strict',
+    };
+  }
+
+  if (activePlugins.has('jsdoc')) {
+    settings.jsdoc = {
+      ignorePrivate: false,
+      ignoreInternal: false,
+      ignoreReplacesDocs: true,
+      overrideReplacesDocs: true,
+      augmentsExtendsReplacesDocs: false,
+      implementsReplacesDocs: false,
+      exemptDestructuredRootsFromChecks: false,
+      tagNamePreference: {},
+    };
+  }
+
+  if (Object.keys(settings).length > 0) {
+    oxlintConfig.settings = settings;
   }
 }

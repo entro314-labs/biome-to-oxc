@@ -1,4 +1,4 @@
-import { writeFile, rename, stat } from 'node:fs/promises';
+import { writeFile, rename, stat, readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import type {
   BiomeConfig,
@@ -26,11 +26,28 @@ import {
 import { detectPrettier, generatePrettierMigrationSuggestions } from './prettier-detector.js';
 import { writeReportToFile } from './report-writer.js';
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js';
+import { buildJsPluginScaffold, collectUnsupportedBiomeRules } from './js-plugin-scaffolder.js';
 
 async function fileExists(path: string): Promise<boolean> {
   try {
     await stat(path);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+async function detectWorkspaceMonorepo(projectDir: string): Promise<boolean> {
+  const packageJsonPath = resolve(projectDir, 'package.json');
+
+  if (!(await fileExists(packageJsonPath))) {
+    return false;
+  }
+
+  try {
+    const content = await readFile(packageJsonPath, 'utf-8');
+    const parsed = JSON.parse(content) as { workspaces?: unknown };
+    return parsed.workspaces !== undefined;
   } catch {
     return false;
   }
@@ -71,7 +88,11 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   // Detect advanced project features for cutting-edge optimizations
   const projectFeatures = detectProjectFeatures(biomeConfig, reporter);
 
-  const oxlintConfig = generateOxlintConfig(biomeConfig, reporter);
+  const oxlintConfig = generateOxlintConfig(biomeConfig, reporter, {
+    enableImportGraph: options.importGraph ?? false,
+    importCycleMaxDepth: options.importCycleMaxDepth ?? 3,
+    typeAwareProfile: options.typeAwareProfile ?? 'standard',
+  });
   const oxfmtConfig = generateOxfmtConfig(biomeConfig, reporter);
 
   let formatterOverridesCount = 0;
@@ -101,14 +122,58 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   const oxfmtConfigPath = resolve(outputDir, '.oxfmtrc.jsonc');
 
   const suggestions: string[] = [];
+  const unsupportedRules = collectUnsupportedBiomeRules(reporter.getWarnings());
+  const workspaceMonorepo = await detectWorkspaceMonorepo(outputDir);
+
+  if (options.jsPlugins && unsupportedRules.length > 0) {
+    const jsPluginEntries = buildJsPluginScaffold(options.jsPlugin);
+
+    if (jsPluginEntries.length > 0) {
+      oxlintConfig.jsPlugins = jsPluginEntries;
+      suggestions.push('Configured jsPlugins scaffolds for unsupported rules:');
+      suggestions.push(
+        `  ${jsPluginEntries.map((entry) => (typeof entry === 'string' ? entry : `${entry.name} <= ${entry.specifier}`)).join(', ')}`,
+      );
+    } else {
+      suggestions.push('Unsupported rules detected. Add JS plugin specifiers to scaffold plugin aliases:');
+      suggestions.push('  --js-plugin eslint-plugin-<name> [--js-plugin @scope/eslint-plugin-<name>]');
+    }
+
+    suggestions.push(`Unsupported Biome rules for JS plugin fallback: ${unsupportedRules.join(', ')}`);
+  }
 
   if (options.typeAware && detectedIntegrations.typescript) {
-    suggestions.push('Type-aware linting detected. Install oxlint-tsgolint:');
+    const typeAwareProfile = options.typeAwareProfile ?? 'standard';
+    const typeAwareCommand =
+      typeAwareProfile === 'strict'
+        ? 'npx oxlint --type-aware --type-check'
+        : 'npx oxlint --type-aware';
+
+    suggestions.push('Type-aware linting profile detected. Install oxlint-tsgolint:');
     suggestions.push('  pnpm add -D oxlint-tsgolint@latest');
-    suggestions.push('  npx oxlint --type-aware');
+    suggestions.push(`  ${typeAwareCommand}`);
     suggestions.push('Type-aware mode uses the tsgolint backend.');
-    suggestions.push('Use --type-check to include TypeScript compiler diagnostics:');
-    suggestions.push('  npx oxlint --type-aware --type-check');
+    suggestions.push('Note: Type-aware linting is alpha and not semver-stable.');
+    suggestions.push(
+      'TypeScript compatibility caveat: migrate deprecated tsconfig options if needed (typescript-go / TS7+ behavior).',
+    );
+  }
+
+  if (options.importGraph) {
+    suggestions.push('Import graph recipe enabled:');
+    suggestions.push(`  - Added import/no-cycle with maxDepth=${options.importCycleMaxDepth ?? 3}`);
+    suggestions.push('  - Ensure TypeScript path aliases resolve via tsconfig where applicable');
+  }
+
+  if (projectFeatures.hasMonorepo || workspaceMonorepo) {
+    suggestions.push('Monorepo strategy recommendation:');
+    suggestions.push('  - Use nested .oxlintrc.json files per package for local tuning');
+    suggestions.push('  - Child configs are not auto-merged with parent unless they use extends');
+    suggestions.push('  - Prefer package configs extending a shared root baseline (rules/plugins/overrides)');
+  }
+
+  if (await fileExists(resolve(outputDir, '.eslintignore'))) {
+    suggestions.push('.eslintignore detected: Oxlint supports it, but prefer migrating to ignorePatterns for long-term consistency.');
   }
 
   if (detectedIntegrations.turborepo) {
@@ -149,6 +214,8 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     packageJsonSummary = updatePackageJson(outputDir, reporter, false, {
       updateScripts: options.updateScripts,
       typeAware: options.typeAware,
+      typeAwareProfile: options.typeAwareProfile,
+      fixStrategy: options.fixStrategy,
     });
 
     if (options.turborepo && detectedIntegrations.turborepo) {
@@ -162,10 +229,9 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     packageJsonSummary = updatePackageJson(outputDir, reporter, true, {
       updateScripts: options.updateScripts,
       typeAware: options.typeAware,
+      typeAwareProfile: options.typeAwareProfile,
+      fixStrategy: options.fixStrategy,
     });
-
-    if (options.verbose) {
-    }
   }
 
   const rulesConverted = Object.keys(oxlintConfig.rules || {}).length;

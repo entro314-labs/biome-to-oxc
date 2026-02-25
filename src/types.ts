@@ -146,22 +146,87 @@ export type BiomeOverride = {
   css?: BiomeCssConfig;
 };
 
+export type FixStrategy = 'safe' | 'suggestions' | 'dangerous';
+export type TypeAwareProfile = 'standard' | 'strict';
+
+export type OxlintBuiltinPlugin =
+  | 'eslint'
+  | 'react'
+  | 'unicorn'
+  | 'typescript'
+  | 'oxc'
+  | 'import'
+  | 'jsdoc'
+  | 'jest'
+  | 'vitest'
+  | 'jsx-a11y'
+  | 'nextjs'
+  | 'react-perf'
+  | 'promise'
+  | 'node'
+  | 'vue';
+
+export type OxlintJsPlugin =
+  | string
+  | {
+      name: string;
+      specifier: string;
+    };
+
+export type OxlintSettings = {
+  jsdoc?: {
+    augmentsExtendsReplacesDocs?: boolean;
+    exemptDestructuredRootsFromChecks?: boolean;
+    ignoreInternal?: boolean;
+    ignorePrivate?: boolean;
+    ignoreReplacesDocs?: boolean;
+    implementsReplacesDocs?: boolean;
+    overrideReplacesDocs?: boolean;
+    tagNamePreference?: Record<string, string>;
+  };
+  'jsx-a11y'?: {
+    attributes?: Record<string, string[]>;
+    components?: Record<string, string>;
+    polymorphicPropName?: string | null;
+  };
+  next?: {
+    rootDir?: string | string[];
+  };
+  react?: {
+    componentWrapperFunctions?: string[];
+    formComponents?:
+      | string[]
+      | Array<string | { name: string; formAttribute?: string | string[] }>;
+    linkComponents?:
+      | string[]
+      | Array<string | { name: string; linkAttribute?: string | string[] }>;
+    version?: string | null;
+  };
+  vitest?: {
+    typecheck?: boolean;
+  };
+  [key: string]: unknown;
+};
+
 export type OxlintConfig = {
   $schema?: string;
   env?: Record<string, boolean>;
   globals?: Record<string, boolean | 'readonly' | 'writable' | 'off'>;
-  plugins?: string[];
+  plugins?: OxlintBuiltinPlugin[];
+  jsPlugins?: OxlintJsPlugin[];
   categories?: Record<string, 'off' | 'warn' | 'error'>;
   rules?: Record<string, OxlintRuleSeverity>;
   overrides?: OxlintOverride[];
   ignorePatterns?: string[];
+  settings?: OxlintSettings;
 };
 
 export type OxlintOverride = {
   files: string[];
   env?: Record<string, boolean>;
   globals?: Record<string, boolean | 'readonly' | 'writable' | 'off'>;
-  plugins?: string[];
+  plugins?: OxlintBuiltinPlugin[];
+  jsPlugins?: OxlintJsPlugin[];
   categories?: Record<string, 'off' | 'warn' | 'error'>;
   rules?: Record<string, OxlintRuleSeverity>;
 };
@@ -269,6 +334,12 @@ export type MigrationOptions = {
   updateScripts?: boolean;
   verbose?: boolean;
   typeAware?: boolean;
+  typeAwareProfile?: TypeAwareProfile;
+  fixStrategy?: FixStrategy;
+  jsPlugins?: boolean;
+  jsPlugin?: string[];
+  importGraph?: boolean;
+  importCycleMaxDepth?: number;
   turborepo?: boolean;
   eslintBridge?: boolean;
   prettier?: boolean;

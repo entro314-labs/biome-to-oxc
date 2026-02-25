@@ -11,6 +11,20 @@ The Oxc project provides blazing-fast alternatives to existing JavaScript toolin
 
 Both tools are production-ready and actively developed, even in alpha/beta stages.
 
+## Current State (v0.6.0)
+
+`biome-to-oxc` is currently in an advanced migration state focused on practical, production migration paths:
+
+- ✅ Rich CLI controls for migration behavior (`type-aware-profile`, `fix-strategy`, `import-graph`, `js-plugins`)
+- ✅ Rule + category migration with unsupported-rule reporting
+- ✅ Oxfmt generation aligned with current sort key names (`sortImports`, `sortPackageJson`, `sortTailwindcss`)
+- ✅ Strategy-aware script rewrites for safe/suggestions/dangerous fix workflows
+- ✅ Monorepo-aware guidance and ignore migration recommendations
+- ✅ Typed linting guidance with alpha stability + TypeScript compatibility caveats
+- ✅ Reference datasets committed under `docs/*.tsv` for rules/options coverage analysis
+
+If a Biome rule has no native Oxlint equivalent yet, migration reports now surface it clearly and can scaffold `jsPlugins` for compatibility workflows.
+
 ## Features
 
 ### Core Migration
@@ -43,7 +57,10 @@ Both tools are production-ready and actively developed, even in alpha/beta stage
 
 - Detects TypeScript usage
 - Provides `oxlint-tsgolint` installation guidance
-- Suggests type-aware linting commands
+- Supports profile-based guidance:
+  - `standard`: `oxlint --type-aware`
+  - `strict`: `oxlint --type-aware --type-check`
+- Surfaces alpha stability + TS compatibility caveats
 
 ✅ **Turborepo Integration** (`--turborepo`)
 
@@ -91,10 +108,31 @@ Both tools are production-ready and actively developed, even in alpha/beta stage
 
 ✅ **Experimental Features** (Alpha/Beta)
 
-- **Import Sorting**: `experimentalSortImports` with configurable order
-- **Package.json Sorting**: `experimentalSortPackageJson` for consistent deps
-- **Tailwind Integration**: `experimentalTailwindcss` for class optimization
+- **Import Sorting**: `sortImports` with configurable order
+- **Package.json Sorting**: `sortPackageJson` for consistent deps
+- **Tailwind Integration**: `sortTailwindcss` for class optimization
 - **Forward Compatibility**: Passes through unknown options for future features
+
+✅ **Oxlint Config Enhancements**
+
+- Preserves Oxlint defaults by omitting `plugins` when explicit plugin config is not required
+- Emits plugin `settings` scaffolds for detected ecosystems (`react`, `jsx-a11y`, `next`, `vitest`, `jsdoc`)
+- Optional import graph baseline (`--import-graph`) with configurable `import/no-cycle` depth
+- Optional JS plugin scaffolding (`--js-plugins` + repeatable `--js-plugin`)
+
+✅ **Coverage & Analysis Artifacts**
+
+- `docs/oxlint-rules.tsv`: Oxlint rule inventory used for mapping validation
+- `docs/oxfmt-rules.tsv`: Oxfmt configuration surface inventory
+- `docs/tsgolint-rules.tsv`: typed linting implementation matrix
+- `docs/oxlint-vs-tsgolint.tsv`: typed rule availability cross-reference
+
+✅ **Script Rewrite Strategy Controls**
+
+- Explicit fix strategy levels for rewritten scripts:
+  - `safe` → `--fix`
+  - `suggestions` → `--fix --fix-suggestions`
+  - `dangerous` → `--fix --fix-suggestions --fix-dangerously`
 
 ## Installation
 
@@ -131,6 +169,12 @@ Options:
   --no-backup              Skip backup of existing config files
   --update-scripts         Update package.json scripts to use oxlint/oxfmt
   --type-aware             Include type-aware linting guidance and dependencies
+  --type-aware-profile     Type-aware profile: standard | strict
+  --fix-strategy           Fix mode for rewritten scripts: safe | suggestions | dangerous
+  --js-plugins             Emit jsPlugins scaffold for unsupported mappings
+  --js-plugin              JS plugin specifier to scaffold (repeatable)
+  --import-graph           Add import plugin + import/no-cycle baseline recipe
+  --import-cycle-max-depth Max depth for import/no-cycle (default: 3)
   --turborepo              Detect and update turbo.json for Turborepo integration
   --eslint-bridge          Provide ESLint bridge suggestions for running alongside ESLint
   --prettier               Detect Prettier config and provide migration suggestions
@@ -150,7 +194,7 @@ npx biome-to-oxc --dry-run --verbose
 npx biome-to-oxc --update-scripts
 
 # Full migration with all integrations
-npx biome-to-oxc --update-scripts --type-aware --turborepo --eslint-bridge --prettier
+npx biome-to-oxc --update-scripts --type-aware --type-aware-profile strict --fix-strategy suggestions --import-graph --js-plugins --js-plugin eslint-plugin-playwright --turborepo --eslint-bridge --prettier
 
 # Generate detailed JSON report
 npx biome-to-oxc --report migration-report.json
@@ -166,6 +210,12 @@ npx biome-to-oxc --turborepo --update-scripts
 
 # TypeScript project with type-aware linting
 npx biome-to-oxc --type-aware --verbose
+
+# Strict type-aware profile + dangerous script fix strategy
+npx biome-to-oxc --type-aware --type-aware-profile strict --update-scripts --fix-strategy dangerous
+
+# Import graph baseline with custom cycle depth
+npx biome-to-oxc --import-graph --import-cycle-max-depth 5
 ```
 
 ## Migration Process
@@ -257,6 +307,9 @@ npx biome-to-oxc --type-aware --verbose
 
    # Run with type-aware rules
    npx oxlint --type-aware
+
+  # Strict profile (include TS compiler diagnostics)
+  npx oxlint --type-aware --type-check
    ```
 
 ## Known Limitations
@@ -267,6 +320,7 @@ npx biome-to-oxc --type-aware --verbose
 - Type-aware linting requires `oxlint-tsgolint` package (alpha)
 - CSS and JSON formatter overrides are mapped but may need manual review
 - Prettier plugin support is not available in Oxfmt
+- Some Biome rules still require JS plugin fallback until native rule parity is available
 
 ## Migration Report
 

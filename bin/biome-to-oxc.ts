@@ -21,6 +21,12 @@ const MigrationOptionsSchema = z.object({
   updateScripts: z.boolean().default(false),
   verbose: z.boolean().default(false),
   typeAware: z.boolean().default(false),
+  typeAwareProfile: z.enum(['standard', 'strict']).default('standard'),
+  fixStrategy: z.enum(['safe', 'suggestions', 'dangerous']).default('safe'),
+  jsPlugins: z.boolean().default(false),
+  jsPlugin: z.array(z.string()).optional(),
+  importGraph: z.boolean().default(false),
+  importCycleMaxDepth: z.number().int().positive().default(3),
   turborepo: z.boolean().default(false),
   eslintBridge: z.boolean().default(false),
   prettier: z.boolean().default(false),
@@ -59,6 +65,33 @@ async function main() {
     .option('--no-backup', 'Skip backup of existing config files')
     .option('--update-scripts', 'Update package.json scripts to use oxlint/oxfmt')
     .option('--type-aware', 'Include type-aware linting guidance and dependencies')
+    .option(
+      '--type-aware-profile <profile>',
+      'Type-aware profile: standard (--type-aware) or strict (--type-aware --type-check)',
+      'standard',
+    )
+    .option(
+      '--fix-strategy <strategy>',
+      'Fix mode for rewritten scripts: safe | suggestions | dangerous',
+      'safe',
+    )
+    .option('--js-plugins', 'Emit jsPlugins scaffold when unsupported rules are detected')
+    .option(
+      '--js-plugin <specifier>',
+      'JS plugin specifier to scaffold (repeatable). Example: eslint-plugin-playwright',
+      (value: string, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      },
+      [],
+    )
+    .option('--import-graph', 'Add import graph baseline (import/no-cycle) to generated Oxlint config')
+    .option(
+      '--import-cycle-max-depth <depth>',
+      'Max depth for import/no-cycle when --import-graph is enabled',
+      (value: string) => Number.parseInt(value, 10),
+      3,
+    )
     .option('--turborepo', 'Detect and update turbo.json for Turborepo integration')
     .option('--eslint-bridge', 'Provide ESLint bridge suggestions for running alongside ESLint')
     .option('--prettier', 'Detect Prettier config and provide migration suggestions')
@@ -90,27 +123,27 @@ async function main() {
 
         if (report.success) {
           const dryRun = migrationOptions.dryRun ?? false;
-          
-          
 
-          
-          
-          
-          
-          
+
+
+
+
+
+
+
 
           if (report.packageJson) {
             const pkg = report.packageJson;
-            
+
 
             if (!pkg.found) {
-              
+
             } else if (!pkg.changed) {
-              
+
             } else {
               for (const removal of pkg.dependenciesRemoved) {
-                
-                
+
+
               }
 
               const devDepChanges = pkg.devDependencies.filter(
@@ -119,20 +152,20 @@ async function main() {
 
               for (const change of devDepChanges) {
                 if (change.action === 'added') {
-                  
+
                 } else {
-                  
-                  
+
+
                 }
               }
 
               for (const _scriptChange of pkg.scriptsUpdated) {
-                
+
               }
             }
 
             if (pkg.found && migrationOptions.updateScripts && pkg.scriptsUpdated.length === 0) {
-              
+
             }
           }
 
@@ -142,42 +175,42 @@ async function main() {
               .map(([name]) => name);
 
             if (integrations.length > 0) {
-              
-              
+
+
             }
           }
 
           if (report.warnings.length > 0) {
-            
+
             if (migrationOptions.verbose) {
               report.warnings.forEach((w) => {
-                
+
               });
             } else {
-              
+
             }
           }
 
           if (report.suggestions.length > 0) {
-            
+
             if (migrationOptions.verbose) {
               report.suggestions.forEach((s) => {
-                
+
               });
             } else {
-              
+
             }
           }
 
           if (!migrationOptions.updateScripts) {
-            
+
           }
 
           if (migrationOptions.report) {
             if (migrationOptions.dryRun) {
-              
+
             } else {
-              
+
             }
           }
 
