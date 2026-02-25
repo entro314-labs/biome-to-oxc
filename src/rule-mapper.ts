@@ -18,8 +18,8 @@ const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
 };
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
-  noAccumulatingSpread: 'unicorn/no-array-push-push',
-  noApproximativeNumericConstant: 'no-loss-of-precision',
+  noAccumulatingSpread: 'oxc/no-accumulating-spread',
+  noApproximativeNumericConstant: 'oxc/approx-constant',
   noArrayIndexKey: 'react/no-array-index-key',
   noAssignInExpressions: 'no-cond-assign',
   noAsyncPromiseExecutor: 'no-async-promise-executor',
@@ -33,9 +33,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noConfusingVoidType: 'typescript/no-confusing-void-expression',
   noConsoleLog: 'no-console',
   noConstAssign: 'no-const-assign',
-  noConstEnum: 'typescript/no-const-enum',
+  noConstEnum: 'oxc/no-const-enum',
   noConstantCondition: 'no-constant-condition',
-  noConstantMathMinMaxClamp: 'no-constant-binary-expression',
+  noConstantMathMinMaxClamp: 'oxc/bad-min-max-func',
   noConstructorReturn: 'no-constructor-return',
   noControlCharactersInRegex: 'no-control-regex',
   noDangerouslySetInnerHtml: 'react/no-danger',
@@ -46,7 +46,6 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noDuplicateClassMembers: 'no-dupe-class-members',
   noDuplicateJsxProps: 'react/jsx-no-duplicate-props',
   noDuplicateObjectKeys: 'no-dupe-keys',
-  noDuplicateParameters: 'no-dupe-args',
   noEmptyCharacterClassInRegex: 'no-empty-character-class',
   noEmptyPattern: 'no-empty-pattern',
   noExplicitAny: 'typescript/no-explicit-any',
@@ -61,7 +60,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noLabelVar: 'no-label-var',
   noMisleadingCharacterClass: 'no-misleading-character-class',
   noMisleadingInstantiator: 'typescript/no-misused-new',
-  noNewSymbol: 'no-new-symbol',
+  noNewSymbol: 'no-new-native-nonconstructor',
   noNonoctalDecimalEscape: 'no-nonoctal-decimal-escape',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
@@ -88,23 +87,37 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noUselessFragments: 'react/jsx-no-useless-fragment',
   noUselessLabel: 'no-extra-label',
   noUselessRename: 'no-useless-rename',
-  noUselessSwitchCase: 'no-useless-switch-case',
+  noUselessSwitchCase: 'unicorn/no-useless-switch-case',
   noUselessTypeConstraint: 'typescript/no-unnecessary-type-constraint',
   noVar: 'no-var',
   noVoidElementsWithChildren: 'react/void-dom-elements-no-children',
   noVoidTypeReturn: 'typescript/no-invalid-void-type',
   noWith: 'no-with',
-  useAriaPropTypes: 'jsx-a11y/aria-proptypes',
-  useAriaPropsForRole: 'jsx-a11y/role-has-required-aria-props',
+  useAriaPropTypes: 'jsx_a11y/aria-proptypes',
+  useAriaPropsForRole: 'jsx_a11y/role-has-required-aria-props',
   useConst: 'prefer-const',
   useDefaultParameterLast: 'default-param-last',
-  useExhaustiveDependencies: 'react-hooks/exhaustive-deps',
-  useHookAtTopLevel: 'react-hooks/rules-of-hooks',
+  useExhaustiveDependencies: 'react/exhaustive-deps',
+  useHookAtTopLevel: 'react/rules-of-hooks',
   useIsNan: 'use-isnan',
-  useValidForDirection: 'no-for-direction',
+  useValidForDirection: 'for-direction',
   useValidTypeof: 'valid-typeof',
   useYield: 'require-yield',
 };
+
+function normalizeOxlintRuleName(ruleName: string): string {
+  // Keep compatibility with older mapping values and normalize to current keys.
+  if (ruleName.startsWith('react-hooks/')) {
+    return ruleName.replace('react-hooks/', 'react/');
+  }
+  if (ruleName.startsWith('jsx-a11y/')) {
+    return ruleName.replace('jsx-a11y/', 'jsx_a11y/');
+  }
+  if (ruleName.startsWith('react-perf/')) {
+    return ruleName.replace('react-perf/', 'react_perf/');
+  }
+  return ruleName;
+}
 
 export function mapBiomeRuleSeverity(severity: BiomeRuleSeverity): OxlintRuleSeverity {
   if (typeof severity === 'string') {
@@ -119,8 +132,9 @@ export function mapBiomeRuleSeverity(severity: BiomeRuleSeverity): OxlintRuleSev
 }
 
 export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): string | null {
-  if (BIOME_TO_OXLINT_RULE_MAP[biomeName]) {
-    return BIOME_TO_OXLINT_RULE_MAP[biomeName];
+  const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName];
+  if (mapped) {
+    return normalizeOxlintRuleName(mapped);
   }
 
   reporter.warn(`No Oxlint equivalent found for Biome rule: ${biomeName}`);

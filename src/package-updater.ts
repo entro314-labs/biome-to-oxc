@@ -15,14 +15,15 @@ type PackageJson = {
   [key: string]: unknown;
 };
 
-const OXLINT_VERSION = '^1.43.0';
-const OXFMT_VERSION = '^0.28.0';
+const OXLINT_VERSION = '^1.50.0';
+const OXFMT_VERSION = '^0.33.0';
+const OXLINT_TSGOLINT_VERSION = '^0.15.0';
 
 export function updatePackageJson(
   projectDir: string,
   reporter: Reporter,
   dryRun: boolean,
-  options: { updateScripts?: boolean } = {},
+  options: { updateScripts?: boolean; typeAware?: boolean } = {},
 ): PackageUpdateSummary {
   const packageJsonPath = resolve(projectDir, 'package.json');
   const summary: PackageUpdateSummary = {
@@ -47,10 +48,10 @@ export function updatePackageJson(
 
     let modified = false;
     const updateScriptsEnabled = options.updateScripts ?? false;
+    const typeAwareEnabled = options.typeAware ?? false;
 
     if (updateScriptsEnabled && packageJson.scripts) {
-      modified =
-        updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated) || modified;
+      modified = updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated) || modified;
     }
 
     if (packageJson.devDependencies) {
@@ -92,6 +93,16 @@ export function updatePackageJson(
         summary.devDependencies,
       ) || modified;
 
+    if (typeAwareEnabled) {
+      modified =
+        ensureDevDependency(
+          packageJson.devDependencies,
+          'oxlint-tsgolint',
+          OXLINT_TSGOLINT_VERSION,
+          summary.devDependencies,
+        ) || modified;
+    }
+
     summary.changed = modified;
 
     if (modified && !dryRun) {
@@ -125,26 +136,36 @@ function updateScripts(
         command: 'check',
         check: 'oxlint && oxfmt --check',
         fix: 'oxlint --fix && oxfmt',
+        unsafeFix: 'oxlint --fix --fix-suggestions && oxfmt',
       },
       {
         command: 'ci',
         check: 'oxlint && oxfmt --check',
         fix: 'oxlint --fix && oxfmt',
+        unsafeFix: 'oxlint --fix --fix-suggestions && oxfmt',
       },
       {
         command: 'lint',
         check: 'oxlint',
         fix: 'oxlint --fix',
+        unsafeFix: 'oxlint --fix --fix-suggestions',
       },
       {
         command: 'format',
         check: 'oxfmt --check',
         fix: 'oxfmt',
+        unsafeFix: 'oxfmt',
       },
     ];
 
     for (const mapping of replacements) {
-      const result = replaceBiomeCommand(newScript, mapping.command, mapping.check, mapping.fix);
+      const result = replaceBiomeCommand(
+        newScript,
+        mapping.command,
+        mapping.check,
+        mapping.fix,
+        mapping.unsafeFix,
+      );
       if (result.didReplace) {
         updated = true;
       }
@@ -170,15 +191,21 @@ function replaceBiomeCommand(
   command: string,
   checkReplacement: string,
   fixReplacement: string,
+  unsafeFixReplacement: string,
 ): { updated: string; didReplace: boolean } {
   let didReplace = false;
   const regex = new RegExp(`\\bbiome\\s+${command}\\b([^&|]*)`, 'g');
   const updated = script.replace(regex, (_match, args: string) => {
     didReplace = true;
     const hasFix = /\s--(write|fix)\b/.test(args);
-    const cleanedArgs = args.replace(/\s--(write|fix)\b/g, '').trim();
+    const hasUnsafe = /\s--unsafe\b/.test(args);
+    const cleanedArgs = args.replace(/\s--(write|fix|unsafe)\b/g, '').trim();
     const suffix = cleanedArgs.length > 0 ? ` ${cleanedArgs}` : '';
-    const replacement = hasFix ? fixReplacement : checkReplacement;
+    const replacement = hasUnsafe
+      ? unsafeFixReplacement
+      : hasFix
+        ? fixReplacement
+        : checkReplacement;
     return applySuffixToCommands(replacement, suffix);
   });
 

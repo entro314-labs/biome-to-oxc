@@ -1,6 +1,6 @@
 {
   "name": "biome-to-oxc",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt) - Exhaustive, cutting-edge, with all experimental features",
   "keywords": [
     "biome",
@@ -31,9 +31,9 @@
   },
   "scripts": {
     "test": "vitest",
-    "lint": "oxlint",
-    "format": "oxfmt",
-    "check": "oxlint && oxfmt --check",
+    "lint": "oxlint .",
+    "format": "oxfmt .",
+    "check": "oxlint . && oxfmt --check .",
     "build": "tsdown",
     "dev": "tsdown --watch",
     "prepublishOnly": "pnpm build"
@@ -45,17 +45,17 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^25.2.3",
-    "oxfmt": "^0.33.0",
-    "oxlint": "^1.48.0",
-    "oxlint-tsgolint": "^0.14.0",
+    "@types/node": "^25.3.0",
+    "oxfmt": "^0.35.0",
+    "oxlint": "^1.50.0",
+    "oxlint-tsgolint": "^0.15.0",
     "tsdown": "0.20.3",
-    "typescript": "^5.9.3",
+    "typescript": "beta",
     "vitest": "beta"
   },
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=10.0.0"
   },
-  "packageManager": "pnpm@10.29.3"
+  "packageManager": "pnpm@10.30.1"
 }

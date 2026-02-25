@@ -1,9 +1,5 @@
 import type {
   BiomeConfig,
-  BiomeFilesConfig,
-  BiomeLinterConfig,
-  BiomeFormatterConfig,
-  BiomeOverride,
   Reporter,
 } from './types.js';
 

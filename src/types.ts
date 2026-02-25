@@ -192,11 +192,11 @@ export type OxfmtConfig = {
   bracketSpacing?: boolean;
   bracketSameLine?: boolean;
   arrowParens?: 'always' | 'avoid';
-  endOfLine?: 'lf' | 'crlf' | 'cr' | 'auto';
+  endOfLine?: 'lf' | 'crlf' | 'cr';
   singleAttributePerLine?: boolean;
 
   // Object formatting
-  objectWrap?: 'preserve' | 'collapse' | 'always';
+  objectWrap?: 'preserve' | 'collapse';
 
   // Line endings
   insertFinalNewline?: boolean;
@@ -211,7 +211,31 @@ export type OxfmtConfig = {
   // Vue options
   vueIndentScriptAndStyle?: boolean;
 
-  // Experimental features
+  // Sorting features
+  sortImports?: {
+    order?: 'asc' | 'desc';
+    newlinesBetween?: boolean;
+    ignoreCase?: boolean;
+    internalPattern?: string[];
+    partitionByComment?: boolean;
+    partitionByNewline?: boolean;
+    sortSideEffects?: boolean;
+  };
+  sortPackageJson?:
+    | boolean
+    | {
+        sortScripts?: boolean;
+      };
+  sortTailwindcss?: {
+    attributes?: string[];
+    functions?: string[];
+    preserveDuplicates?: boolean;
+    preserveWhitespace?: boolean;
+    config?: string;
+    stylesheet?: string;
+  };
+
+  // Backward-compatible aliases (legacy field names)
   experimentalSortImports?: {
     order?: 'asc' | 'desc';
     newlinesBetween?: boolean;

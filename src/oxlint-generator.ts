@@ -39,16 +39,26 @@ function determinePlugins(oxlintConfig: OxlintConfig): void {
         plugins.add('typescript');
       } else if (ruleName.startsWith('react/') || ruleName.startsWith('react-hooks/')) {
         plugins.add('react');
+      } else if (ruleName.startsWith('react_perf/') || ruleName.startsWith('react-perf/')) {
+        plugins.add('react-perf');
       } else if (ruleName.startsWith('unicorn/')) {
         plugins.add('unicorn');
       } else if (ruleName.startsWith('import/')) {
         plugins.add('import');
-      } else if (ruleName.startsWith('jsx-a11y/')) {
+      } else if (ruleName.startsWith('jsx_a11y/') || ruleName.startsWith('jsx-a11y/')) {
         plugins.add('jsx-a11y');
       } else if (ruleName.startsWith('jest/')) {
         plugins.add('jest');
       } else if (ruleName.startsWith('vitest/')) {
         plugins.add('vitest');
+      } else if (ruleName.startsWith('nextjs/')) {
+        plugins.add('nextjs');
+      } else if (ruleName.startsWith('promise/')) {
+        plugins.add('promise');
+      } else if (ruleName.startsWith('jsdoc/')) {
+        plugins.add('jsdoc');
+      } else if (ruleName.startsWith('vue/')) {
+        plugins.add('vue');
       } else if (ruleName.startsWith('n/') || ruleName.startsWith('node/')) {
         plugins.add('node');
       }

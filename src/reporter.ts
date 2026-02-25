@@ -15,9 +15,7 @@ export class DefaultReporter implements Reporter {
     console.error(pc.red(`✖ ${message}`));
   }
 
-  info(message: string): void {
-    
-  }
+  info(message: string): void {}
 
   getWarnings(): string[] {
     return this.warnings;

@@ -2,9 +2,7 @@ import type {
   BiomeConfig,
   BiomeFormatterConfig,
   BiomeJavaScriptConfig,
-  BiomeOverride,
   OxfmtConfig,
-  OxfmtOverride,
   Reporter,
 } from './types.js';
 
@@ -159,7 +157,7 @@ function mapAdvancedOptions(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig):
     oxfmtConfig.vueIndentScriptAndStyle = false; // Prettier default
   }
 
-  // Experimental: Sort imports
+  // Sort imports
   // Enable if project seems to use import sorting
   const hasSortingHints =
     biomeConfig.linter?.rules &&
@@ -169,25 +167,25 @@ function mapAdvancedOptions(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig):
     );
 
   if (hasSortingHints) {
-    oxfmtConfig.experimentalSortImports = {
+    oxfmtConfig.sortImports = {
       order: 'asc',
       newlinesBetween: true,
     };
   }
 
-  // Experimental: Sort package.json
-  oxfmtConfig.experimentalSortPackageJson = {
+  // Sort package.json
+  oxfmtConfig.sortPackageJson = {
     sortScripts: true,
   };
 
-  // Experimental: Tailwind CSS support
+  // Sort Tailwind CSS classes
   // Detect Tailwind usage from common patterns
   const hasTailwindHints = biomeConfig.files?.include?.some(
     (pattern) => pattern.includes('tailwind') || pattern.includes('tw-'),
   );
 
   if (hasTailwindHints) {
-    oxfmtConfig.experimentalTailwindcss = {
+    oxfmtConfig.sortTailwindcss = {
       attributes: ['class', 'className', ':class'],
       functions: ['clsx', 'cn', 'classNames', 'tw'],
       preserveDuplicates: false,

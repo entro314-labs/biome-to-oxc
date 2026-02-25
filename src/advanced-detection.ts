@@ -28,10 +28,7 @@ export function detectProjectFeatures(
     hasHTML: false,
   };
 
-  const hasHtml =
-    biomeConfig.files?.include?.some((f) => f.endsWith('.html')) ||
-    biomeConfig.overrides?.some((o) => o.include?.some((f) => f.endsWith('.html'))) ||
-    ('html' in biomeConfig && !!(biomeConfig as any).html);
+  
 
   const allIncludes = [
     ...(biomeConfig.files?.include || []),
@@ -130,7 +127,7 @@ export function generateFeatureSpecificSuggestions(features: ProjectFeatures): s
   if (features.hasTailwind) {
     suggestions.push('');
     suggestions.push('Tailwind CSS detected:');
-    suggestions.push('  - experimentalTailwindcss enabled with common class attributes');
+    suggestions.push('  - sortTailwindcss enabled with common class attributes');
     suggestions.push('  - Supports: class, className, :class attributes');
     suggestions.push('  - Supports: clsx, cn, classNames, tw functions');
   }
@@ -138,7 +135,7 @@ export function generateFeatureSpecificSuggestions(features: ProjectFeatures): s
   if (features.hasImportSorting) {
     suggestions.push('');
     suggestions.push('Import sorting detected:');
-    suggestions.push('  - experimentalSortImports enabled');
+    suggestions.push('  - sortImports enabled');
     suggestions.push('  - Imports will be sorted alphabetically with newlines between groups');
   }
 
@@ -152,7 +149,7 @@ export function generateFeatureSpecificSuggestions(features: ProjectFeatures): s
   if (features.hasMonorepo) {
     suggestions.push('');
     suggestions.push('Monorepo detected:');
-    suggestions.push('  - experimentalSortPackageJson enabled for all package.json files');
+    suggestions.push('  - sortPackageJson enabled for all package.json files');
     suggestions.push('  - Consider using workspace-specific overrides');
   }
 

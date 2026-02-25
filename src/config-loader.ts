@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs'; // Keep synchronous check for simple path resolution if needed, but prefer async access usually.
+ // Keep synchronous check for simple path resolution if needed, but prefer async access usually.
 // Actually, strict async migration means avoiding blocking calls.
 import { stat } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
@@ -126,7 +126,7 @@ export async function resolveBiomeExtends(
       );
 
       mergedConfig = deepMerge(mergedConfig, resolvedExtendedConfig);
-    } catch (error) {
+    } catch  {
       reporter.warn(`Failed to load extended config: ${extendPath}`);
     }
   }

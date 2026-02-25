@@ -4,8 +4,6 @@ import type {
   BiomeConfig,
   MigrationOptions,
   MigrationReport,
-  OxlintConfig,
-  OxfmtConfig,
   PackageUpdateSummary,
 } from './types.js';
 import { DefaultReporter } from './reporter.js';
@@ -26,7 +24,7 @@ import {
   generateESLintFormatterBridgeSuggestions,
 } from './eslint-detector.js';
 import { detectPrettier, generatePrettierMigrationSuggestions } from './prettier-detector.js';
-import { writeReportToFile, enhanceReportWithSuggestions } from './report-writer.js';
+import { writeReportToFile } from './report-writer.js';
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js';
 
 async function fileExists(path: string): Promise<boolean> {
@@ -66,7 +64,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     biomeConfig = await loadBiomeConfig(biomeConfigPath, reporter);
     const configDir = dirname(biomeConfigPath);
     biomeConfig = await resolveBiomeExtends(biomeConfig, configDir, reporter);
-  } catch (error) {
+  } catch  {
     return createErrorReport(reporter, biomeConfigPath);
   }
 
@@ -95,7 +93,8 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     turborepo: options.turborepo ? detectTurborepo(outputDir) : false,
     eslint: options.eslintBridge ? detectESLint(outputDir) : false,
     prettier: options.prettier ? !!detectPrettier(outputDir) : false,
-    typescript: oxlintConfig.plugins?.includes('typescript') || false,
+    typescript:
+      projectFeatures.hasTypeScript || oxlintConfig.plugins?.includes('typescript') || false,
   };
 
   const oxlintConfigPath = resolve(outputDir, '.oxlintrc.json');
@@ -107,6 +106,9 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     suggestions.push('Type-aware linting detected. Install oxlint-tsgolint:');
     suggestions.push('  pnpm add -D oxlint-tsgolint@latest');
     suggestions.push('  npx oxlint --type-aware');
+    suggestions.push('Type-aware mode uses the tsgolint backend.');
+    suggestions.push('Use --type-check to include TypeScript compiler diagnostics:');
+    suggestions.push('  npx oxlint --type-aware --type-check');
   }
 
   if (detectedIntegrations.turborepo) {
@@ -146,6 +148,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
     packageJsonSummary = updatePackageJson(outputDir, reporter, false, {
       updateScripts: options.updateScripts,
+      typeAware: options.typeAware,
     });
 
     if (options.turborepo && detectedIntegrations.turborepo) {
@@ -158,13 +161,10 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
     packageJsonSummary = updatePackageJson(outputDir, reporter, true, {
       updateScripts: options.updateScripts,
+      typeAware: options.typeAware,
     });
 
     if (options.verbose) {
-
-
-
-
     }
   }
 
