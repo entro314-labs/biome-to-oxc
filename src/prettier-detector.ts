@@ -1,6 +1,7 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
-import type { Reporter } from './types.js';
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+import  { type Reporter } from './types.js'
 
 const PRETTIER_CONFIG_NAMES = [
   '.prettierrc',
@@ -14,16 +15,16 @@ const PRETTIER_CONFIG_NAMES = [
   'prettier.config.js',
   'prettier.config.cjs',
   'prettier.config.mjs',
-];
+]
 
 export function detectPrettier(projectDir: string): string | undefined {
   for (const name of PRETTIER_CONFIG_NAMES) {
-    const configPath = resolve(projectDir, name);
+    const configPath = resolve(projectDir, name)
     if (existsSync(configPath)) {
-      return configPath;
+      return configPath
     }
   }
-  return undefined;
+  return undefined
 }
 
 export function generatePrettierMigrationSuggestions(
@@ -48,8 +49,8 @@ export function generatePrettierMigrationSuggestions(
     '',
     'Note: Oxfmt is Prettier-compatible but may have minor differences.',
     'Test thoroughly before committing changes.',
-  ];
+  ]
 
-  reporter.info('Prettier migration suggestions generated');
-  return suggestions;
+  reporter.info('Prettier migration suggestions generated')
+  return suggestions
 }

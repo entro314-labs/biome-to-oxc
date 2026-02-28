@@ -1,10 +1,10 @@
-import type {
-  BiomeLinterRules,
-  BiomeRuleGroup,
-  BiomeRuleSeverity,
-  OxlintRuleSeverity,
-  Reporter,
-} from './types.js';
+import  {
+  type BiomeLinterRules,
+  type BiomeRuleGroup,
+  type BiomeRuleSeverity,
+  type OxlintRuleSeverity,
+  type Reporter,
+} from './types.js'
 
 const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
   correctness: 'correctness',
@@ -15,7 +15,7 @@ const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
   security: 'restriction',
   a11y: 'restriction',
   nursery: 'nursery',
-};
+}
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noAccumulatingSpread: 'oxc/no-accumulating-spread',
@@ -103,103 +103,103 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   useValidForDirection: 'for-direction',
   useValidTypeof: 'valid-typeof',
   useYield: 'require-yield',
-};
+}
 
 function normalizeOxlintRuleName(ruleName: string): string {
   // Keep compatibility with older mapping values and normalize to current keys.
   if (ruleName.startsWith('react-hooks/')) {
-    return ruleName.replace('react-hooks/', 'react/');
+    return ruleName.replace('react-hooks/', 'react/')
   }
   if (ruleName.startsWith('jsx-a11y/')) {
-    return ruleName.replace('jsx-a11y/', 'jsx_a11y/');
+    return ruleName.replace('jsx-a11y/', 'jsx_a11y/')
   }
   if (ruleName.startsWith('react-perf/')) {
-    return ruleName.replace('react-perf/', 'react_perf/');
+    return ruleName.replace('react-perf/', 'react_perf/')
   }
-  return ruleName;
+  return ruleName
 }
 
 export function mapBiomeRuleSeverity(severity: BiomeRuleSeverity): OxlintRuleSeverity {
   if (typeof severity === 'string') {
-    return severity;
+    return severity
   }
 
   if (typeof severity === 'object' && severity.level) {
-    return severity.level;
+    return severity.level
   }
 
-  return 'warn';
+  return 'warn'
 }
 
 export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): string | null {
-  const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName];
+  const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName]
   if (mapped) {
-    return normalizeOxlintRuleName(mapped);
+    return normalizeOxlintRuleName(mapped)
   }
 
-  reporter.warn(`No Oxlint equivalent found for Biome rule: ${biomeName}`);
-  return null;
+  reporter.warn(`No Oxlint equivalent found for Biome rule: ${biomeName}`)
+  return null
 }
 
 export function mapBiomeCategoryToOxlint(biomeCategory: string): string | null {
-  return BIOME_TO_OXLINT_CATEGORY_MAP[biomeCategory] || null;
+  return BIOME_TO_OXLINT_CATEGORY_MAP[biomeCategory] || null
 }
 
 export function extractRulesFromBiomeConfig(
   linterRules: BiomeLinterRules | undefined,
   reporter: Reporter,
 ): {
-  rules: Record<string, OxlintRuleSeverity>;
-  categories: Record<string, 'off' | 'warn' | 'error'>;
+  rules: Record<string, OxlintRuleSeverity>
+  categories: Record<string, 'off' | 'warn' | 'error'>
 } {
-  const rules: Record<string, OxlintRuleSeverity> = {};
-  const categories: Record<string, 'off' | 'warn' | 'error'> = {};
+  const rules: Record<string, OxlintRuleSeverity> = {}
+  const categories: Record<string, 'off' | 'warn' | 'error'> = {}
 
   if (!linterRules) {
-    return { rules, categories };
+    return { rules, categories }
   }
 
   for (const [key, value] of Object.entries(linterRules)) {
     if (key === 'recommended' || key === 'all') {
-      continue;
+      continue
     }
 
     if (typeof value === 'boolean') {
-      continue;
+      continue
     }
 
     if (isRuleGroup(value)) {
-      const oxlintCategory = mapBiomeCategoryToOxlint(key);
+      const oxlintCategory = mapBiomeCategoryToOxlint(key)
 
       for (const [ruleName, ruleSeverity] of Object.entries(value)) {
         if (ruleName === 'recommended' || ruleName === 'all') {
-          continue;
+          continue
         }
 
         if (typeof ruleSeverity === 'boolean' || ruleSeverity === undefined) {
-          continue;
+          continue
         }
 
-        const oxlintRuleName = mapBiomeRuleToOxlint(ruleName, reporter);
+        const oxlintRuleName = mapBiomeRuleToOxlint(ruleName, reporter)
         if (oxlintRuleName) {
-          rules[oxlintRuleName] = mapBiomeRuleSeverity(ruleSeverity);
+          rules[oxlintRuleName] = mapBiomeRuleSeverity(ruleSeverity)
         }
       }
 
       if (oxlintCategory && value.recommended !== undefined) {
-        categories[oxlintCategory] = value.recommended ? 'warn' : 'off';
+        categories[oxlintCategory] = value.recommended ? 'warn' : 'off'
       }
     }
   }
 
   if (linterRules.recommended) {
-    categories.correctness = 'warn';
-    categories.suspicious = 'warn';
+    categories.correctness = 'warn'
+    categories.suspicious = 'warn'
   }
 
-  return { rules, categories };
+  return { rules, categories }
 }
 
 function isRuleGroup(value: unknown): value is BiomeRuleGroup {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

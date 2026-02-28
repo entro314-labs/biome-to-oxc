@@ -1,6 +1,7 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
-import type { Reporter } from './types.js';
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+import  { type Reporter } from './types.js'
 
 const ESLINT_CONFIG_NAMES = [
   'eslint.config.js',
@@ -15,15 +16,15 @@ const ESLINT_CONFIG_NAMES = [
   '.eslintrc.yml',
   '.eslintrc.json',
   '.eslintrc',
-];
+]
 
 export function detectESLint(projectDir: string): boolean {
   for (const name of ESLINT_CONFIG_NAMES) {
     if (existsSync(resolve(projectDir, name))) {
-      return true;
+      return true
     }
   }
-  return false;
+  return false
 }
 
 export function generateESLintBridgeSuggestions(reporter: Reporter): string[] {
@@ -47,10 +48,10 @@ export function generateESLintBridgeSuggestions(reporter: Reporter): string[] {
     '',
     '4. Run both tools:',
     '   pnpm oxlint && pnpm eslint .',
-  ];
+  ]
 
-  reporter.info('ESLint bridge suggestions generated');
-  return suggestions;
+  reporter.info('ESLint bridge suggestions generated')
+  return suggestions
 }
 
 export function generateESLintFormatterBridgeSuggestions(): string[] {
@@ -69,5 +70,5 @@ export function generateESLintFormatterBridgeSuggestions(): string[] {
     '       files: ["**/*.{js,ts,mjs,cjs,jsx,tsx}"],',
     '     }',
     '   ];',
-  ];
+  ]
 }

@@ -7,10 +7,10 @@ All notable changes to this project will be documented in this file.
 ### Added - New Migration Controls
 
 - **Type-aware profile selection** via `--type-aware-profile`:
-	- `standard` → `oxlint --type-aware`
-	- `strict` → `oxlint --type-aware --type-check`
+  - `standard` → `oxlint --type-aware`
+  - `strict` → `oxlint --type-aware --type-check`
 - **Fix strategy levels** for script rewrites via `--fix-strategy`:
-	- `safe`, `suggestions`, `dangerous`
+  - `safe`, `suggestions`, `dangerous`
 - **Import graph recipe** via `--import-graph` with configurable `--import-cycle-max-depth`
 - **JS plugin scaffolding** via `--js-plugins` and repeatable `--js-plugin <specifier>`
 - New module: `src/js-plugin-scaffolder.ts` for alias-safe JS plugin generation and unsupported-rule extraction
@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 ### Added - Oxlint Configuration Coverage
 
 - **Plugin settings scaffolds** generation for detected ecosystems:
-	- `react`, `jsx-a11y`, `next`, `vitest`, `jsdoc`
+  - `react`, `jsx-a11y`, `next`, `vitest`, `jsdoc`
 - **Import cycle baseline** generation (`import/no-cycle`) with configurable max depth
 - **Monorepo strategy guidance** for nested configs + `extends`
 - **Ignore migration guidance** when `.eslintignore` is present (prefers `ignorePatterns`)
@@ -35,9 +35,9 @@ All notable changes to this project will be documented in this file.
 - **Plugin emission policy**: migration no longer emits `plugins: []` by default; preserves Oxlint defaults when explicit plugin arrays are unnecessary
 - **Script rewrite engine** now supports strategy-aware rewrite output and typed profile command generation
 - **Type system expanded** to include:
-	- built-in plugin unions
-	- `settings` and `jsPlugins` config shapes
-	- migration option enums and advanced flags
+  - built-in plugin unions
+  - `settings` and `jsPlugins` config shapes
+  - migration option enums and advanced flags
 - **README/CLI surface updated** with new flags, examples, and guidance
 - **Formatter naming alignment** in docs and suggestions (`sortImports`, `sortPackageJson`, `sortTailwindcss`)
 

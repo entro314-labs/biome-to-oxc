@@ -31,9 +31,12 @@
   },
   "scripts": {
     "test": "vitest",
-    "lint": "oxlint .",
-    "format": "oxfmt .",
-    "check": "oxlint . && oxfmt --check .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check src/",
+    "lint": "oxlint src/",
+    "lint:fix": "oxlint --fix src/",
+    "lint:fix-unsafe": "oxlint --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
+    "check:fix-suggestions": "oxlint --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions src/ && oxfmt --write src/",
     "build": "tsdown",
     "dev": "tsdown --watch",
     "prepublishOnly": "pnpm build"

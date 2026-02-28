@@ -1,55 +1,55 @@
-import type {
-  BiomeOverride,
-  BiomeFormatterConfig,
-  BiomeJavaScriptConfig,
-  OxfmtOverride,
-  Reporter,
-} from './types.js';
+import  {
+  type BiomeOverride,
+  type BiomeFormatterConfig,
+  type BiomeJavaScriptConfig,
+  type OxfmtOverride,
+  type Reporter,
+} from './types.js'
 
 export function generateOxfmtOverrides(
   biomeOverrides: BiomeOverride[] | undefined,
   reporter: Reporter,
 ): OxfmtOverride[] {
   if (!biomeOverrides || biomeOverrides.length === 0) {
-    return [];
+    return []
   }
 
-  const oxfmtOverrides: OxfmtOverride[] = [];
+  const oxfmtOverrides: OxfmtOverride[] = []
 
   for (const override of biomeOverrides) {
-    const files = override.include;
+    const files = override.include
     if (!files || files.length === 0) {
-      continue;
+      continue
     }
 
-    const hasFormatterConfig = override.formatter || override.javascript?.formatter;
+    const hasFormatterConfig = override.formatter ?? override.javascript?.formatter
     if (!hasFormatterConfig) {
-      continue;
+      continue
     }
 
     const options = mapFormatterOptions(
       override.formatter,
       override.javascript?.formatter,
       reporter,
-    );
+    )
 
     if (Object.keys(options).length === 0) {
-      continue;
+      continue
     }
 
     const oxfmtOverride: OxfmtOverride = {
       files,
       options,
-    };
-
-    if (override.ignore && override.ignore.length > 0) {
-      oxfmtOverride.excludeFiles = override.ignore;
     }
 
-    oxfmtOverrides.push(oxfmtOverride);
+    if (override.ignore && override.ignore.length > 0) {
+      oxfmtOverride.excludeFiles = override.ignore
+    }
+
+    oxfmtOverrides.push(oxfmtOverride)
   }
 
-  return oxfmtOverrides;
+  return oxfmtOverrides
 }
 
 function mapFormatterOptions(
@@ -57,70 +57,70 @@ function mapFormatterOptions(
   jsFormatter: BiomeJavaScriptConfig['formatter'] | undefined,
   reporter: Reporter,
 ): Partial<Record<string, unknown>> {
-  const options: Record<string, unknown> = {};
+  const options: Record<string, unknown> = {}
 
-  const jsLineWidth = jsFormatter?.lineWidth;
-  const globalLineWidth = formatter?.lineWidth;
+  const jsLineWidth = jsFormatter?.lineWidth
+  const globalLineWidth = formatter?.lineWidth
   if (jsLineWidth !== undefined || globalLineWidth !== undefined) {
-    options.printWidth = jsLineWidth ?? globalLineWidth;
+    options.printWidth = jsLineWidth ?? globalLineWidth
   }
 
-  const jsIndentStyle = jsFormatter?.indentStyle;
-  const globalIndentStyle = formatter?.indentStyle;
+  const jsIndentStyle = jsFormatter?.indentStyle
+  const globalIndentStyle = formatter?.indentStyle
   if (jsIndentStyle !== undefined || globalIndentStyle !== undefined) {
-    options.useTabs = (jsIndentStyle ?? globalIndentStyle) === 'tab';
+    options.useTabs = (jsIndentStyle ?? globalIndentStyle) === 'tab'
   }
 
-  const jsIndentWidth = jsFormatter?.indentWidth;
-  const globalIndentWidth = formatter?.indentWidth;
+  const jsIndentWidth = jsFormatter?.indentWidth
+  const globalIndentWidth = formatter?.indentWidth
   if (jsIndentWidth !== undefined || globalIndentWidth !== undefined) {
-    options.tabWidth = jsIndentWidth ?? globalIndentWidth;
+    options.tabWidth = jsIndentWidth ?? globalIndentWidth
   }
 
-  const jsLineEnding = jsFormatter?.lineEnding;
-  const globalLineEnding = formatter?.lineEnding;
+  const jsLineEnding = jsFormatter?.lineEnding
+  const globalLineEnding = formatter?.lineEnding
   if (jsLineEnding !== undefined || globalLineEnding !== undefined) {
-    options.endOfLine = jsLineEnding ?? globalLineEnding;
+    options.endOfLine = jsLineEnding ?? globalLineEnding
   }
 
   if (jsFormatter?.quoteStyle !== undefined) {
-    options.singleQuote = jsFormatter.quoteStyle === 'single';
+    options.singleQuote = jsFormatter.quoteStyle === 'single'
   }
 
   if (jsFormatter?.jsxQuoteStyle !== undefined) {
-    options.jsxSingleQuote = jsFormatter.jsxQuoteStyle === 'single';
+    options.jsxSingleQuote = jsFormatter.jsxQuoteStyle === 'single'
   }
 
   if (jsFormatter?.quoteProperties !== undefined) {
-    options.quoteProps = jsFormatter.quoteProperties === 'preserve' ? 'preserve' : 'as-needed';
+    options.quoteProps = jsFormatter.quoteProperties === 'preserve' ? 'preserve' : 'as-needed'
   }
 
   if (jsFormatter?.trailingCommas !== undefined) {
-    const tc = jsFormatter.trailingCommas;
-    options.trailingComma = tc === 'none' ? 'none' : tc === 'es5' ? 'es5' : 'all';
+    const tc = jsFormatter.trailingCommas
+    options.trailingComma = tc === 'none' ? 'none' : tc === 'es5' ? 'es5' : 'all'
   }
 
   if (jsFormatter?.semicolons !== undefined) {
-    options.semi = jsFormatter.semicolons === 'always';
+    options.semi = jsFormatter.semicolons === 'always'
   }
 
   if (jsFormatter?.arrowParentheses !== undefined) {
-    options.arrowParens = jsFormatter.arrowParentheses === 'always' ? 'always' : 'avoid';
+    options.arrowParens = jsFormatter.arrowParentheses === 'always' ? 'always' : 'avoid'
   }
 
-  const jsBracketSpacing = jsFormatter?.bracketSpacing;
-  const globalBracketSpacing = formatter?.bracketSpacing;
+  const jsBracketSpacing = jsFormatter?.bracketSpacing
+  const globalBracketSpacing = formatter?.bracketSpacing
   if (jsBracketSpacing !== undefined || globalBracketSpacing !== undefined) {
-    options.bracketSpacing = jsBracketSpacing ?? globalBracketSpacing;
+    options.bracketSpacing = jsBracketSpacing ?? globalBracketSpacing
   }
 
   if (jsFormatter?.bracketSameLine !== undefined) {
-    options.bracketSameLine = jsFormatter.bracketSameLine;
+    options.bracketSameLine = jsFormatter.bracketSameLine
   }
 
-  const attributePosition = formatter?.attributePosition;
+  const attributePosition = formatter?.attributePosition
   if (attributePosition !== undefined) {
-    options.singleAttributePerLine = attributePosition === 'multiline';
+    options.singleAttributePerLine = attributePosition === 'multiline'
   }
 
   // Check for any additional experimental options that might be passed through
@@ -142,14 +142,14 @@ function mapFormatterOptions(
         'indentWidth',
         'lineEnding',
         'lineWidth',
-      ];
+      ]
 
       if (!mappedKeys.includes(key) && value !== undefined) {
         // Pass through unknown options (might be experimental features)
-        options[key] = value;
+        options[key] = value
       }
     }
   }
 
-  return options;
+  return options
 }

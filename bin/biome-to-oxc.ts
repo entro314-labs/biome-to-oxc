@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
-import pc from 'picocolors';
-import { z } from 'zod';
-import { migrate } from '../src/index.js';
-import type { MigrationOptions } from '../src/types.js';
+import { program } from 'commander'
+import pc from 'picocolors'
+import { z } from 'zod'
+
+import { migrate } from '../src/index.js'
+import  { type MigrationOptions } from '../src/types.js'
 
 const packageJson = {
   name: 'biome-to-oxc',
   version: '0.1.0',
   description: 'Migrate from Biome to Oxc ecosystem (oxlint + oxfmt)',
-};
+}
 
 // Zod schema for runtime validation
 const MigrationOptionsSchema = z.object({
@@ -31,28 +32,28 @@ const MigrationOptionsSchema = z.object({
   eslintBridge: z.boolean().default(false),
   prettier: z.boolean().default(false),
   report: z.string().optional(),
-});
+})
 
 // Handle interrupt signals
 const handleSignal = (signal: string, code: number) => {
-  console.error(pc.red(`\n✖ Received ${signal}, exiting...`));
-  process.exit(code);
-};
+  console.error(pc.red(`\n✖ Received ${signal}, exiting...`))
+  process.exit(code)
+}
 
-process.on('SIGINT', () => handleSignal('SIGINT', 130));
-process.on('SIGTERM', () => handleSignal('SIGTERM', 143));
+process.on('SIGINT', () => handleSignal('SIGINT', 130))
+process.on('SIGTERM', () => handleSignal('SIGTERM', 143))
 
 process.on('unhandledRejection', (reason) => {
-  console.error(pc.red('\n✖ Unhandled Promise Rejection:'));
-  console.error(reason);
-  process.exit(1);
-});
+  console.error(pc.red('\n✖ Unhandled Promise Rejection:'))
+  console.error(reason)
+  process.exit(1)
+})
 
 process.on('uncaughtException', (error) => {
-  console.error(pc.red('\n✖ Uncaught Exception:'));
-  console.error(error);
-  process.exit(1);
-});
+  console.error(pc.red('\n✖ Uncaught Exception:'))
+  console.error(error)
+  process.exit(1)
+})
 
 async function main() {
   program
@@ -80,12 +81,15 @@ async function main() {
       '--js-plugin <specifier>',
       'JS plugin specifier to scaffold (repeatable). Example: eslint-plugin-playwright',
       (value: string, previous: string[] = []) => {
-        previous.push(value);
-        return previous;
+        previous.push(value)
+        return previous
       },
       [],
     )
-    .option('--import-graph', 'Add import graph baseline (import/no-cycle) to generated Oxlint config')
+    .option(
+      '--import-graph',
+      'Add import graph baseline (import/no-cycle) to generated Oxlint config',
+    )
     .option(
       '--import-cycle-max-depth <depth>',
       'Max depth for import/no-cycle when --import-graph is enabled',
@@ -103,141 +107,81 @@ async function main() {
         const opts = {
           ...rawOptions,
           noBackup: !rawOptions.backup, // map from commander's negation
-        };
+        }
         // Remove the auxiliary backup prop from commander
-        delete opts.backup;
+        delete opts.backup
 
-        const validationResult = MigrationOptionsSchema.safeParse(opts);
+        const validationResult = MigrationOptionsSchema.safeParse(opts)
 
         if (!validationResult.success) {
-          console.error(pc.red('✖ Invalid options:'));
+          console.error(pc.red('✖ Invalid options:'))
           validationResult.error.issues.forEach((err: z.ZodIssue) => {
-            console.error(`  - ${err.path.join('.')}: ${err.message}`);
-          });
-          process.exit(1);
+            console.error(`  - ${err.path.join('.')}: ${err.message}`)
+          })
+          process.exit(1)
         }
 
-        const migrationOptions: MigrationOptions = validationResult.data;
+        const migrationOptions: MigrationOptions = validationResult.data
 
-        const report = await migrate(migrationOptions);
+        const report = await migrate(migrationOptions)
 
         if (report.success) {
-          const dryRun = migrationOptions.dryRun ?? false;
-
-
-
-
-
-
-
-
+          
 
           if (report.packageJson) {
-            const pkg = report.packageJson;
+            const pkg = report.packageJson
 
+            
 
-            if (!pkg.found) {
-
-            } else if (!pkg.changed) {
-
-            } else {
-              for (const removal of pkg.dependenciesRemoved) {
-
-
-              }
-
-              const devDepChanges = pkg.devDependencies.filter(
-                (change) => change.action !== 'already-present',
-              );
-
-              for (const change of devDepChanges) {
-                if (change.action === 'added') {
-
-                } else {
-
-
-                }
-              }
-
-              for (const _scriptChange of pkg.scriptsUpdated) {
-
-              }
-            }
-
-            if (pkg.found && migrationOptions.updateScripts && pkg.scriptsUpdated.length === 0) {
-
-            }
+            
           }
 
           if (report.detectedIntegrations) {
             const integrations = Object.entries(report.detectedIntegrations)
               .filter(([_, detected]) => detected)
-              .map(([name]) => name);
+              .map(([name]) => name)
 
-            if (integrations.length > 0) {
-
-
-            }
+            
           }
 
           if (report.warnings.length > 0) {
-
-            if (migrationOptions.verbose) {
-              report.warnings.forEach((w) => {
-
-              });
-            } else {
-
-            }
+            
           }
 
           if (report.suggestions.length > 0) {
-
-            if (migrationOptions.verbose) {
-              report.suggestions.forEach((s) => {
-
-              });
-            } else {
-
-            }
+            
           }
 
-          if (!migrationOptions.updateScripts) {
-
-          }
+          
 
           if (migrationOptions.report) {
-            if (migrationOptions.dryRun) {
-
-            } else {
-
-            }
+            
           }
 
-          process.exit(0);
+          process.exit(0)
         } else {
-          console.error(pc.red('\n✖ Migration failed.'));
+          console.error(pc.red('\n✖ Migration failed.'))
 
           if (report.errors.length > 0) {
-            console.error(pc.red(`Errors (${report.errors.length}):`));
+            console.error(pc.red(`Errors (${report.errors.length}):`))
             report.errors.forEach((e) => {
-              console.error(`  - ${e}`);
-            });
+              console.error(`  - ${e}`)
+            })
           }
 
-          process.exit(1);
+          process.exit(1)
         }
-      } catch (error) {
-        console.error(pc.red('\n✖ Unexpected error during migration:'));
-        console.error(error instanceof Error ? error.stack : error);
-        process.exit(1);
+      } catch (err) {
+        console.error(pc.red('\n✖ Unexpected error during migration:'))
+        console.error(err instanceof Error ? err.stack : err)
+        process.exit(1)
       }
-    });
+    })
 
-  await program.parseAsync(process.argv);
+  await program.parseAsync(process.argv)
 }
 
-main().catch((error) => {
-  console.error(pc.red('✖ Fatal error:'), error);
-  process.exit(1);
-});
+main().catch((err) => {
+  console.error(pc.red('✖ Fatal error:'), err)
+  process.exit(1)
+})

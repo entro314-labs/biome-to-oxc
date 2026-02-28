@@ -307,10 +307,13 @@ npx biome-to-oxc --import-graph --import-cycle-max-depth 5
 
    # Run with type-aware rules
    npx oxlint --type-aware
-
-  # Strict profile (include TS compiler diagnostics)
-  npx oxlint --type-aware --type-check
    ```
+
+# Strict profile (include TS compiler diagnostics)
+
+npx oxlint --type-aware --type-check
+
+```
 
 ## Known Limitations
 
@@ -327,35 +330,38 @@ npx biome-to-oxc --import-graph --import-cycle-max-depth 5
 After migration, you'll see a comprehensive summary:
 
 ```
+
 ✓ Migration completed successfully!
 
 Summary:
-  Biome config: /path/to/biome.json
-  Oxlint config: /path/to/.oxlintrc.json
-  Oxfmt config: /path/to/.oxfmtrc.jsonc
-  Rules converted: 42
-  Rules skipped: 3
-  Linter overrides: 2
-  Formatter overrides: 1
+Biome config: /path/to/biome.json
+Oxlint config: /path/to/.oxlintrc.json
+Oxfmt config: /path/to/.oxfmtrc.jsonc
+Rules converted: 42
+Rules skipped: 3
+Linter overrides: 2
+Formatter overrides: 1
 
 🔍 Detected integrations: typescript, turborepo
 
 ⚠ Warnings (3):
-  Run with --verbose to see all warnings
+Run with --verbose to see all warnings
 
 💡 Suggestions:
-  5 suggestions available. Run with --verbose to see them.
+5 suggestions available. Run with --verbose to see them.
 
 📝 Next steps:
-  1. Review the generated .oxlintrc.json and .oxfmtrc.jsonc files
-  2. Install dependencies: pnpm add -D oxlint oxfmt
-  3. Run oxlint to lint your code
-  4. Run oxfmt to format your code
-  5. Update your CI/CD pipelines to use oxlint and oxfmt
-  6. Consider running with --update-scripts to update package.json
+
+1. Review the generated .oxlintrc.json and .oxfmtrc.jsonc files
+2. Install dependencies: pnpm add -D oxlint oxfmt
+3. Run oxlint to lint your code
+4. Run oxfmt to format your code
+5. Update your CI/CD pipelines to use oxlint and oxfmt
+6. Consider running with --update-scripts to update package.json
 
 📊 Detailed report saved to: migration-report.json
-```
+
+````
 
 ### JSON Report Format
 
@@ -383,7 +389,7 @@ When using `--report`, a detailed JSON file is generated:
     "typescript": true
   }
 }
-```
+````
 
 ## Troubleshooting
 
