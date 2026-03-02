@@ -326,6 +326,7 @@ export interface MigrationOptions {
   updateScripts?: boolean
   verbose?: boolean
   typeAware?: boolean
+  typeCheck?: boolean
   typeAwareProfile?: TypeAwareProfile
   fixStrategy?: FixStrategy
   jsPlugins?: boolean

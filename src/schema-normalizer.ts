@@ -1,4 +1,4 @@
-import  { type BiomeConfig, type Reporter } from './types.js'
+import type { BiomeConfig, Reporter } from './types.js'
 
 export function normalizeIncludeFields<T extends { include?: string[]; includes?: string[] }>(
   obj: T,

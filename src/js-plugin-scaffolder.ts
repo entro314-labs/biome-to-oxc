@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 
-import  { type OxlintJsPlugin } from './types.js'
+import type { OxlintJsPlugin } from './types.js'
 
 const RESERVED_JS_PLUGIN_NAMES = new Set([
   'react',

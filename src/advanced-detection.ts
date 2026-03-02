@@ -1,4 +1,4 @@
-import  { type BiomeConfig, type Reporter } from './types.js'
+import type { BiomeConfig, Reporter } from './types.js'
 
 export interface ProjectFeatures {
   hasVue: boolean
@@ -16,6 +16,8 @@ export function detectProjectFeatures(
   biomeConfig: BiomeConfig,
   reporter: Reporter,
 ): ProjectFeatures {
+  const biomeConfigWithHtml = biomeConfig as BiomeConfig & { html?: unknown }
+
   const features: ProjectFeatures = {
     hasVue: false,
     hasReact: false,
@@ -98,7 +100,7 @@ export function detectProjectFeatures(
   // HTML detection
   features.hasHTML =
     allIncludes.some((pattern) => pattern.includes('.html') || pattern.includes('.htm')) ||
-    !!(biomeConfig as any).html
+    biomeConfigWithHtml.html !== undefined
 
   // Log detected features
   const detectedFeatures = Object.entries(features)

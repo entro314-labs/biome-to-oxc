@@ -1,14 +1,14 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import  {
-  type FixStrategy,
-  type PackageDependencyRemoval,
-  type PackageDevDependencyChange,
-  type PackageScriptUpdate,
-  type PackageUpdateSummary,
-  type Reporter,
-  type TypeAwareProfile,
+import type {
+  FixStrategy,
+  PackageDependencyRemoval,
+  PackageDevDependencyChange,
+  PackageScriptUpdate,
+  PackageUpdateSummary,
+  Reporter,
+  TypeAwareProfile,
 } from './types.js'
 
 interface PackageJson {
@@ -29,6 +29,7 @@ export function updatePackageJson(
   options: {
     updateScripts?: boolean
     typeAware?: boolean
+    typeCheck?: boolean
     typeAwareProfile?: TypeAwareProfile
     fixStrategy?: FixStrategy
   } = {},
@@ -56,15 +57,17 @@ export function updatePackageJson(
 
     let modified = false
     const updateScriptsEnabled = options.updateScripts ?? false
-    const typeAwareEnabled = options.typeAware ?? false
     const typeAwareProfile = options.typeAwareProfile ?? 'standard'
+    const typeCheckEnabled = options.typeCheck ?? typeAwareProfile === 'strict'
+    const typeAwareEnabled =
+      options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
     const fixStrategy = options.fixStrategy ?? 'safe'
 
     if (updateScriptsEnabled && packageJson.scripts) {
       modified =
         updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated, {
           typeAwareEnabled,
-          typeAwareProfile,
+          typeCheckEnabled,
           fixStrategy,
         }) || modified
     }
@@ -106,7 +109,7 @@ export function updatePackageJson(
         summary.devDependencies,
       ) || modified
 
-    if (typeAwareEnabled) {
+    if (typeAwareEnabled || typeCheckEnabled) {
       modified =
         ensureDevDependency(
           packageJson.devDependencies,
@@ -119,7 +122,7 @@ export function updatePackageJson(
     summary.changed = modified
 
     if (modified && !dryRun) {
-      writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf-8')
+      writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf-8')
       reporter.info('Updated package.json')
     } else if (modified && dryRun) {
       reporter.info('Would update package.json (dry-run mode)')
@@ -139,12 +142,12 @@ function updateScripts(
   updates: PackageScriptUpdate[],
   options: {
     typeAwareEnabled: boolean
-    typeAwareProfile: TypeAwareProfile
+    typeCheckEnabled: boolean
     fixStrategy: FixStrategy
   },
 ): boolean {
   let modified = false
-  const lintBase = buildLintBaseCommand(options.typeAwareEnabled, options.typeAwareProfile)
+  const lintBase = buildLintBaseCommand(options.typeAwareEnabled, options.typeCheckEnabled)
 
   const lintFixByStrategy: Record<FixStrategy, string> = {
     safe: `${lintBase} --fix`,
@@ -161,18 +164,18 @@ function updateScripts(
         command: 'check',
         check: `${lintBase} && oxfmt --check`,
         fixByStrategy: {
-          safe: `${lintFixByStrategy.safe} && oxfmt`,
-          suggestions: `${lintFixByStrategy.suggestions} && oxfmt`,
-          dangerous: `${lintFixByStrategy.dangerous} && oxfmt`,
+          safe: `${lintFixByStrategy.safe} && oxfmt --write`,
+          suggestions: `${lintFixByStrategy.suggestions} && oxfmt --write`,
+          dangerous: `${lintFixByStrategy.dangerous} && oxfmt --write`,
         },
       },
       {
         command: 'ci',
         check: `${lintBase} && oxfmt --check`,
         fixByStrategy: {
-          safe: `${lintFixByStrategy.safe} && oxfmt`,
-          suggestions: `${lintFixByStrategy.suggestions} && oxfmt`,
-          dangerous: `${lintFixByStrategy.dangerous} && oxfmt`,
+          safe: `${lintFixByStrategy.safe} && oxfmt --write`,
+          suggestions: `${lintFixByStrategy.suggestions} && oxfmt --write`,
+          dangerous: `${lintFixByStrategy.dangerous} && oxfmt --write`,
         },
       },
       {
@@ -184,9 +187,9 @@ function updateScripts(
         command: 'format',
         check: 'oxfmt --check',
         fixByStrategy: {
-          safe: 'oxfmt',
-          suggestions: 'oxfmt',
-          dangerous: 'oxfmt',
+          safe: 'oxfmt --write',
+          suggestions: 'oxfmt --write',
+          dangerous: 'oxfmt --write',
         },
       },
     ]
@@ -235,7 +238,7 @@ function replaceBiomeCommand(
     const cleanedArgs = args.replace(/\s--(write|fix|unsafe)\b/g, '').trim()
     const suffix = cleanedArgs.length > 0 ? ` ${cleanedArgs}` : ''
     const effectiveFixStrategy = hasUnsafe
-      ? escalateFixStrategy(defaultFixStrategy, 'suggestions')
+      ? escalateFixStrategy(defaultFixStrategy, 'dangerous')
       : defaultFixStrategy
 
     const replacement = hasFix || hasUnsafe ? fixByStrategy[effectiveFixStrategy] : checkReplacement
@@ -260,15 +263,12 @@ function applySuffixToCommands(replacement: string, suffix: string): string {
     .join(' && ')
 }
 
-function buildLintBaseCommand(
-  typeAwareEnabled: boolean,
-  typeAwareProfile: TypeAwareProfile,
-): string {
-  if (!typeAwareEnabled) {
+function buildLintBaseCommand(typeAwareEnabled: boolean, typeCheckEnabled: boolean): string {
+  if (!typeAwareEnabled && !typeCheckEnabled) {
     return 'oxlint'
   }
 
-  if (typeAwareProfile === 'strict') {
+  if (typeCheckEnabled) {
     return 'oxlint --type-aware --type-check'
   }
 

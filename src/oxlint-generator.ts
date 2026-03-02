@@ -1,11 +1,11 @@
 import { extractRulesFromBiomeConfig } from './rule-mapper.js'
-import  {
-  type BiomeConfig,
-  type OxlintBuiltinPlugin,
-  type OxlintConfig,
-  type OxlintSettings,
-  type Reporter,
-  type TypeAwareProfile,
+import type {
+  BiomeConfig,
+  OxlintBuiltinPlugin,
+  OxlintConfig,
+  OxlintSettings,
+  Reporter,
+  TypeAwareProfile,
 } from './types.js'
 
 interface OxlintGenerationOptions {
@@ -71,7 +71,7 @@ export function generateOxlintConfig(
 }
 
 function addImportGraphRecipe(oxlintConfig: OxlintConfig, maxDepth: number): void {
-  oxlintConfig.rules ??= {};
+  oxlintConfig.rules ??= {}
 
   if (!oxlintConfig.rules['import/no-cycle']) {
     oxlintConfig.rules['import/no-cycle'] = ['error', { maxDepth: Math.max(1, maxDepth) }]
@@ -118,9 +118,7 @@ function determinePlugins(oxlintConfig: OxlintConfig): void {
     return
   }
 
-  const usesNonDefaultPlugin = [...plugins].some(
-    (plugin) => !DEFAULT_PLUGINS.includes(plugin),
-  )
+  const usesNonDefaultPlugin = [...plugins].some((plugin) => !DEFAULT_PLUGINS.includes(plugin))
 
   if (!usesNonDefaultPlugin) {
     // Keep Oxlint defaults by omitting `plugins` entirely.
@@ -187,8 +185,7 @@ function mapSettings(
   const hasReact =
     activePlugins.has('react') ||
     biomeConfig.javascript?.parser?.jsxEverywhere === true ||
-    biomeConfig.files?.include?.some((pattern) => /\.(jsx|tsx)$/.test(pattern)) ??
-    false
+    (biomeConfig.files?.include?.some((pattern) => /\.(jsx|tsx)$/.test(pattern)) ?? false)
 
   if (hasReact) {
     settings.react = {
@@ -209,11 +206,11 @@ function mapSettings(
 
   const nextHints =
     activePlugins.has('nextjs') ||
-    biomeConfig.files?.include?.some(
+    (biomeConfig.files?.include?.some(
       (pattern) =>
         pattern.includes('next') || pattern.includes('app/') || pattern.includes('pages/'),
     ) ??
-    false
+      false)
 
   if (nextHints) {
     settings.next = {

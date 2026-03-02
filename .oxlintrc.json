@@ -6,8 +6,9 @@
     "typescript",
     "unicorn",
     "import",
-    "promise"
-    // no react, no jsx-a11y, no nextjs, no vitest (add vitest if you have tests)
+    "promise",
+    "vitest"
+    // no react, no jsx-a11y, no nextjs
   ],
 
   "env": {
@@ -116,7 +117,7 @@
     "typescript/consistent-indexed-object-style": ["error", "record"],
     "typescript/consistent-type-assertions": "error",
     "typescript/consistent-type-definitions": ["error", "interface"],
-    "typescript/consistent-type-imports": ["error", { "fixStyle": "inline-type-imports" }],
+    "typescript/consistent-type-imports": ["error", { "fixStyle": "separate-type-imports" }],
     "typescript/prefer-enum-initializers": "error",
     "typescript/prefer-includes": "error",
     "typescript/prefer-ts-expect-error": "error",
@@ -136,7 +137,7 @@
 
     // ─── Import ───────────────────────────────────────────────────────────────
 
-    "import/consistent-type-specifier-style": ["error", "prefer-inline"],
+    "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
     "import/default": "error",
     "import/namespace": "error",
     "import/no-cycle": ["error", { "maxDepth": 3 }],

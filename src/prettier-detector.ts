@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import  { type Reporter } from './types.js'
+import type { Reporter } from './types.js'
 
 const PRETTIER_CONFIG_NAMES = [
   '.prettierrc',

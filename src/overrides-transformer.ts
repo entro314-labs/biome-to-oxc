@@ -1,5 +1,5 @@
 import { extractRulesFromBiomeConfig } from './rule-mapper.js'
-import  { type BiomeOverride, type OxlintOverride, type Reporter } from './types.js'
+import type { BiomeOverride, OxlintOverride, Reporter } from './types.js'
 
 export function transformOverridesToOxlint(
   biomeOverrides: BiomeOverride[] | undefined,

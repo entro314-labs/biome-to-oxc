@@ -22,11 +22,11 @@ import {
   updateTurboConfig,
   generateTurborepoSuggestions,
 } from './turbo-updater.js'
-import  {
-  type BiomeConfig,
-  type MigrationOptions,
-  type MigrationReport,
-  type PackageUpdateSummary,
+import type {
+  BiomeConfig,
+  MigrationOptions,
+  MigrationReport,
+  PackageUpdateSummary,
 } from './types.js'
 
 async function fileExists(path: string): Promise<boolean> {
@@ -58,6 +58,9 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   const reporter = new DefaultReporter()
   const cwd = process.cwd()
   const outputDir = options.outputDir ?? cwd
+  const typeAwareProfile = options.typeAwareProfile ?? 'standard'
+  const typeCheckEnabled = options.typeCheck ?? typeAwareProfile === 'strict'
+  const typeAwareEnabled = options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
 
   let biomeConfigPath: string | undefined
 
@@ -92,7 +95,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   const oxlintConfig = generateOxlintConfig(biomeConfig, reporter, {
     enableImportGraph: options.importGraph ?? false,
     importCycleMaxDepth: options.importCycleMaxDepth ?? 3,
-    typeAwareProfile: options.typeAwareProfile ?? 'standard',
+    typeAwareProfile: typeCheckEnabled ? 'strict' : typeAwareProfile,
   })
   const oxfmtConfig = generateOxfmtConfig(biomeConfig, reporter)
 
@@ -116,7 +119,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     eslint: options.eslintBridge ? detectESLint(outputDir) : false,
     prettier: options.prettier ? !!detectPrettier(outputDir) : false,
     typescript:
-      projectFeatures.hasTypeScript || oxlintConfig.plugins?.includes('typescript') ?? false,
+      projectFeatures.hasTypeScript || (oxlintConfig.plugins?.includes('typescript') ?? false),
   }
 
   const oxlintConfigPath = resolve(outputDir, '.oxlintrc.json')
@@ -149,12 +152,10 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     )
   }
 
-  if (options.typeAware && detectedIntegrations.typescript) {
-    const typeAwareProfile = options.typeAwareProfile ?? 'standard'
-    const typeAwareCommand =
-      typeAwareProfile === 'strict'
-        ? 'npx oxlint --type-aware --type-check'
-        : 'npx oxlint --type-aware'
+  if (typeAwareEnabled && detectedIntegrations.typescript) {
+    const typeAwareCommand = typeCheckEnabled
+      ? 'npx oxlint --type-aware --type-check'
+      : 'npx oxlint --type-aware'
 
     suggestions.push('Type-aware linting profile detected. Install oxlint-tsgolint:')
     suggestions.push('  pnpm add -D oxlint-tsgolint@latest')
@@ -216,16 +217,17 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
       await backupExistingConfigs(oxlintConfigPath, oxfmtConfigPath, reporter)
     }
 
-    await writeFile(oxlintConfigPath, JSON.stringify(oxlintConfig, null, 2) + '\n', 'utf-8')
+    await writeFile(oxlintConfigPath, `${JSON.stringify(oxlintConfig, null, 2)}\n`, 'utf-8')
     reporter.info(`Created Oxlint config: ${oxlintConfigPath}`)
 
-    await writeFile(oxfmtConfigPath, JSON.stringify(oxfmtConfig, null, 2) + '\n', 'utf-8')
+    await writeFile(oxfmtConfigPath, `${JSON.stringify(oxfmtConfig, null, 2)}\n`, 'utf-8')
     reporter.info(`Created Oxfmt config: ${oxfmtConfigPath}`)
 
     packageJsonSummary = updatePackageJson(outputDir, reporter, false, {
       updateScripts: options.updateScripts,
-      typeAware: options.typeAware,
-      typeAwareProfile: options.typeAwareProfile,
+      typeAware: typeAwareEnabled,
+      typeCheck: typeCheckEnabled,
+      typeAwareProfile,
       fixStrategy: options.fixStrategy,
     })
 
@@ -239,8 +241,9 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
     packageJsonSummary = updatePackageJson(outputDir, reporter, true, {
       updateScripts: options.updateScripts,
-      typeAware: options.typeAware,
-      typeAwareProfile: options.typeAwareProfile,
+      typeAware: typeAwareEnabled,
+      typeCheck: typeCheckEnabled,
+      typeAwareProfile,
       fixStrategy: options.fixStrategy,
     })
   }

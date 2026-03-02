@@ -57,9 +57,12 @@ If a Biome rule has no native Oxlint equivalent yet, migration reports now surfa
 
 - Detects TypeScript usage
 - Provides `oxlint-tsgolint` installation guidance
-- Supports profile-based guidance:
-  - `standard`: `oxlint --type-aware`
-  - `strict`: `oxlint --type-aware --type-check`
+- Supports explicit typed lint flags:
+  - `--type-aware`: `oxlint --type-aware`
+  - `--type-check` (implies `--type-aware`): `oxlint --type-aware --type-check`
+- Supports profile-based compatibility guidance:
+  - `--type-aware-profile standard`: `oxlint --type-aware`
+  - `--type-aware-profile strict`: `oxlint --type-aware --type-check`
 - Surfaces alpha stability + TS compatibility caveats
 
 ✅ **Turborepo Integration** (`--turborepo`)
@@ -133,6 +136,9 @@ If a Biome rule has no native Oxlint equivalent yet, migration reports now surfa
   - `safe` → `--fix`
   - `suggestions` → `--fix --fix-suggestions`
   - `dangerous` → `--fix --fix-suggestions --fix-dangerously`
+- Robust Biome fix conversion when rewriting scripts:
+  - `biome ... --write` maps to at least `safe`
+  - `biome ... --write --unsafe` maps to at least `dangerous`
 
 ## Installation
 
@@ -169,6 +175,7 @@ Options:
   --no-backup              Skip backup of existing config files
   --update-scripts         Update package.json scripts to use oxlint/oxfmt
   --type-aware             Include type-aware linting guidance and dependencies
+  --type-check             Enable strict typed linting mode (implies --type-aware)
   --type-aware-profile     Type-aware profile: standard | strict
   --fix-strategy           Fix mode for rewritten scripts: safe | suggestions | dangerous
   --js-plugins             Emit jsPlugins scaffold for unsupported mappings
@@ -194,7 +201,7 @@ npx biome-to-oxc --dry-run --verbose
 npx biome-to-oxc --update-scripts
 
 # Full migration with all integrations
-npx biome-to-oxc --update-scripts --type-aware --type-aware-profile strict --fix-strategy suggestions --import-graph --js-plugins --js-plugin eslint-plugin-playwright --turborepo --eslint-bridge --prettier
+npx biome-to-oxc --update-scripts --type-check --fix-strategy suggestions --import-graph --js-plugins --js-plugin eslint-plugin-playwright --turborepo --eslint-bridge --prettier
 
 # Generate detailed JSON report
 npx biome-to-oxc --report migration-report.json
@@ -210,6 +217,9 @@ npx biome-to-oxc --turborepo --update-scripts
 
 # TypeScript project with type-aware linting
 npx biome-to-oxc --type-aware --verbose
+
+# TypeScript project with type-check diagnostics
+npx biome-to-oxc --type-check --verbose
 
 # Strict type-aware profile + dangerous script fix strategy
 npx biome-to-oxc --type-aware --type-aware-profile strict --update-scripts --fix-strategy dangerous

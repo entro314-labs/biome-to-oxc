@@ -19,6 +19,9 @@ npx biome-to-oxc
 
 # Or with options
 npx biome-to-oxc --update-scripts --verbose
+
+# Type-aware + type-check migration profile
+npx biome-to-oxc --update-scripts --type-check --verbose
 ```
 
 ## Step 3: Review Generated Configs

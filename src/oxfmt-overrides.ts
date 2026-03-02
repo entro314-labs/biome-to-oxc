@@ -1,9 +1,9 @@
-import  {
-  type BiomeOverride,
-  type BiomeFormatterConfig,
-  type BiomeJavaScriptConfig,
-  type OxfmtOverride,
-  type Reporter,
+import type {
+  BiomeOverride,
+  BiomeFormatterConfig,
+  BiomeJavaScriptConfig,
+  OxfmtOverride,
+  Reporter,
 } from './types.js'
 
 export function generateOxfmtOverrides(

@@ -1,13 +1,10 @@
-import { readFile } from 'node:fs/promises'
-// Keep synchronous check for simple path resolution if needed, but prefer async access usually.
-// Actually, strict async migration means avoiding blocking calls.
-import { stat } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { resolve, dirname, join } from 'node:path'
 
 import { parse as parseJsonc } from 'jsonc-parser'
 
 import { normalizeBiomeConfig } from './schema-normalizer.js'
-import  { type BiomeConfig, type Reporter } from './types.js'
+import type { BiomeConfig, Reporter } from './types.js'
 
 const BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc']
 

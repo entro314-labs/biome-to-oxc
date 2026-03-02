@@ -1,6 +1,6 @@
 import pc from 'picocolors'
 
-import  { type Reporter } from './types.js'
+import type { Reporter } from './types.js'
 
 export class DefaultReporter implements Reporter {
   private warnings: string[] = []

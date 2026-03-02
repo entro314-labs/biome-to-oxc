@@ -1,9 +1,9 @@
-import  {
-  type BiomeLinterRules,
-  type BiomeRuleGroup,
-  type BiomeRuleSeverity,
-  type OxlintRuleSeverity,
-  type Reporter,
+import type {
+  BiomeLinterRules,
+  BiomeRuleGroup,
+  BiomeRuleSeverity,
+  OxlintRuleSeverity,
+  Reporter,
 } from './types.js'
 
 const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {

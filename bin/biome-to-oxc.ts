@@ -5,7 +5,7 @@ import pc from 'picocolors'
 import { z } from 'zod'
 
 import { migrate } from '../src/index.js'
-import  { type MigrationOptions } from '../src/types.js'
+import type { MigrationOptions } from '../src/types.js'
 
 const packageJson = {
   name: 'biome-to-oxc',
@@ -22,6 +22,7 @@ const MigrationOptionsSchema = z.object({
   updateScripts: z.boolean().default(false),
   verbose: z.boolean().default(false),
   typeAware: z.boolean().default(false),
+  typeCheck: z.boolean().default(false),
   typeAwareProfile: z.enum(['standard', 'strict']).default('standard'),
   fixStrategy: z.enum(['safe', 'suggestions', 'dangerous']).default('safe'),
   jsPlugins: z.boolean().default(false),
@@ -66,6 +67,7 @@ async function main() {
     .option('--no-backup', 'Skip backup of existing config files')
     .option('--update-scripts', 'Update package.json scripts to use oxlint/oxfmt')
     .option('--type-aware', 'Include type-aware linting guidance and dependencies')
+    .option('--type-check', 'Enable strict typed linting mode (implies --type-aware)')
     .option(
       '--type-aware-profile <profile>',
       'Type-aware profile: standard (--type-aware) or strict (--type-aware --type-check)',
@@ -108,6 +110,14 @@ async function main() {
           ...rawOptions,
           noBackup: !rawOptions.backup, // map from commander's negation
         }
+
+        const profile = opts.typeAwareProfile ?? 'standard'
+        const derivedTypeCheck = (opts.typeCheck ?? false) || profile === 'strict'
+        const derivedTypeAware = (opts.typeAware ?? false) || derivedTypeCheck
+
+        opts.typeCheck = derivedTypeCheck
+        opts.typeAware = derivedTypeAware
+
         // Remove the auxiliary backup prop from commander
         delete opts.backup
 
@@ -126,37 +136,19 @@ async function main() {
         const report = await migrate(migrationOptions)
 
         if (report.success) {
-          
-
           if (report.packageJson) {
-            const pkg = report.packageJson
 
-            
-
-            
           }
 
           if (report.detectedIntegrations) {
-            const integrations = Object.entries(report.detectedIntegrations)
-              .filter(([_, detected]) => detected)
-              .map(([name]) => name)
 
-            
           }
 
-          if (report.warnings.length > 0) {
-            
-          }
 
-          if (report.suggestions.length > 0) {
-            
-          }
 
-          
 
-          if (migrationOptions.report) {
-            
-          }
+
+
 
           process.exit(0)
         } else {

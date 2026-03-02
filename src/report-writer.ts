@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs'
 
-import  { type MigrationReport, type Reporter } from './types.js'
+import type { MigrationReport, Reporter } from './types.js'
 
 export function writeReportToFile(
   report: MigrationReport,

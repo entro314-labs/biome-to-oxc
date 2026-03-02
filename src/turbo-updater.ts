@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import  { type Reporter } from './types.js'
+import type { Reporter } from './types.js'
 
 interface TurboConfig {
   $schema?: string
