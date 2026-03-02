@@ -9,7 +9,12 @@ import {
   generateESLintFormatterBridgeSuggestions,
 } from './eslint-detector.js'
 import { generateOxfmtConfig } from './formatter-mapper.js'
-import { buildJsPluginScaffold, collectUnsupportedBiomeRules } from './js-plugin-scaffolder.js'
+import {
+  buildJsPluginScaffold,
+  buildUnsupportedRuleFallbackSuggestions,
+  collectUnsupportedBiomeRules,
+  recommendJsPluginSpecifiersForUnsupportedRules,
+} from './js-plugin-scaffolder.js'
 import { transformOverridesToOxlint } from './overrides-transformer.js'
 import { generateOxfmtOverrides } from './oxfmt-overrides.js'
 import { generateOxlintConfig } from './oxlint-generator.js'
@@ -129,6 +134,12 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   const unsupportedRules = collectUnsupportedBiomeRules(reporter.getWarnings())
   const workspaceMonorepo = await detectWorkspaceMonorepo(outputDir)
 
+  const unsupportedFallbackSuggestions = buildUnsupportedRuleFallbackSuggestions(unsupportedRules)
+  if (unsupportedFallbackSuggestions.length > 0) {
+    suggestions.push('Fallback guidance for currently unsupported Biome rules:')
+    suggestions.push(...unsupportedFallbackSuggestions)
+  }
+
   if (options.jsPlugins && unsupportedRules.length > 0) {
     const jsPluginEntries = buildJsPluginScaffold(options.jsPlugin)
 
@@ -139,12 +150,19 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
         `  ${jsPluginEntries.map((entry) => (typeof entry === 'string' ? entry : `${entry.name} <= ${entry.specifier}`)).join(', ')}`,
       )
     } else {
+      const recommendedSpecifiers = recommendJsPluginSpecifiersForUnsupportedRules(unsupportedRules)
+
       suggestions.push(
         'Unsupported rules detected. Add JS plugin specifiers to scaffold plugin aliases:',
       )
-      suggestions.push(
-        '  --js-plugin eslint-plugin-<name> [--js-plugin @scope/eslint-plugin-<name>]',
-      )
+
+      if (recommendedSpecifiers.length > 0) {
+        suggestions.push(`  Recommended: ${recommendedSpecifiers.join(', ')}`)
+      } else {
+        suggestions.push(
+          '  --js-plugin eslint-plugin-<name> [--js-plugin @scope/eslint-plugin-<name>]',
+        )
+      }
     }
 
     suggestions.push(

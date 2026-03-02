@@ -18,8 +18,10 @@ const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
 }
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
+  noArguments: 'prefer-rest-params',
   noAccumulatingSpread: 'oxc/no-accumulating-spread',
   noApproximativeNumericConstant: 'oxc/approx-constant',
+  noBarrelFile: 'oxc/no-barrel-file',
   noArrayIndexKey: 'react/no-array-index-key',
   noAssignInExpressions: 'no-cond-assign',
   noAsyncPromiseExecutor: 'no-async-promise-executor',
@@ -31,6 +33,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noCompareNegZero: 'no-compare-neg-zero',
   noConfusingLabels: 'no-labels',
   noConfusingVoidType: 'typescript/no-confusing-void-expression',
+  noConsole: 'no-console',
   noConsoleLog: 'no-console',
   noConstAssign: 'no-const-assign',
   noConstEnum: 'oxc/no-const-enum',
@@ -41,36 +44,51 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noDangerouslySetInnerHtml: 'react/no-danger',
   noDangerouslySetInnerHtmlWithChildren: 'react/no-danger-with-children',
   noDebugger: 'no-debugger',
+  noDefaultExport: 'import/no-default-export',
   noDoubleEquals: 'eqeqeq',
   noDuplicateCase: 'no-duplicate-case',
   noDuplicateClassMembers: 'no-dupe-class-members',
   noDuplicateJsxProps: 'react/jsx-no-duplicate-props',
   noDuplicateObjectKeys: 'no-dupe-keys',
+  noEmptyBlockStatements: 'no-empty',
   noEmptyCharacterClassInRegex: 'no-empty-character-class',
   noEmptyPattern: 'no-empty-pattern',
+  noExcessiveCognitiveComplexity: 'complexity',
   noExplicitAny: 'typescript/no-explicit-any',
   noExtraBooleanCast: 'no-extra-boolean-cast',
   noFallthroughSwitchClause: 'no-fallthrough',
+  noFloatingPromises: 'typescript/no-floating-promises',
+  noFocusedTests: 'jest/no-focused-tests',
+  noForEach: 'unicorn/no-array-for-each',
   noFunctionAssign: 'no-func-assign',
+  noGlobalEval: 'no-eval',
   noGlobalObjectCalls: 'no-obj-calls',
   noImportAssign: 'no-import-assign',
   noInnerDeclarations: 'no-inner-declarations',
+  noImplicitBoolean: 'no-implicit-coercion',
+  noInvalidUseBeforeDeclaration: 'no-use-before-define',
   noInvalidConstructorSuper: 'no-this-before-super',
   noInvalidNewBuiltin: 'no-new-native-nonconstructor',
   noLabelVar: 'no-label-var',
   noMisleadingCharacterClass: 'no-misleading-character-class',
   noMisleadingInstantiator: 'typescript/no-misused-new',
   noNewSymbol: 'no-new-native-nonconstructor',
+  noNodejsModules: 'import/no-nodejs-modules',
   noNonoctalDecimalEscape: 'no-nonoctal-decimal-escape',
+  noParameterAssign: 'no-param-reassign',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
   noRenderReturnValue: 'react/no-render-return-value',
   noRestrictedGlobals: 'no-restricted-globals',
+  noSelfCompare: 'no-self-compare',
   noSelfAssign: 'no-self-assign',
   noSetterReturn: 'no-setter-return',
   noShadowRestrictedNames: 'no-shadow-restricted-names',
+  noSkippedTests: 'jest/no-disabled-tests',
   noSparseArray: 'no-sparse-arrays',
   noUndeclaredVariables: 'no-undef',
+  noUnusedFunctionParameters: 'no-unused-vars',
+  noUnusedImports: 'no-unused-vars',
   noUnnecessaryContinue: 'no-continue',
   noUnreachable: 'no-unreachable',
   noUnreachableSuper: 'constructor-super',
@@ -87,6 +105,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noUselessFragments: 'react/jsx-no-useless-fragment',
   noUselessLabel: 'no-extra-label',
   noUselessRename: 'no-useless-rename',
+  noUselessTernary: 'no-unneeded-ternary',
   noUselessSwitchCase: 'unicorn/no-useless-switch-case',
   noUselessTypeConstraint: 'typescript/no-unnecessary-type-constraint',
   noVar: 'no-var',
@@ -95,14 +114,35 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noWith: 'no-with',
   useAriaPropTypes: 'jsx_a11y/aria-proptypes',
   useAriaPropsForRole: 'jsx_a11y/role-has-required-aria-props',
+  useAwait: 'require-await',
   useConst: 'prefer-const',
   useDefaultParameterLast: 'default-param-last',
+  useExportType: 'typescript/consistent-type-exports',
   useExhaustiveDependencies: 'react/exhaustive-deps',
+  useFilenamingConvention: 'unicorn/filename-case',
   useHookAtTopLevel: 'react/rules-of-hooks',
+  useImportType: 'typescript/consistent-type-imports',
   useIsNan: 'use-isnan',
+  useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
+  useOptionalChain: 'typescript/prefer-optional-chain',
+  useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
+  useTemplate: 'prefer-template',
   useValidForDirection: 'for-direction',
   useValidTypeof: 'valid-typeof',
   useYield: 'require-yield',
+}
+
+const WARNED_UNMAPPED_RULES_BY_REPORTER = new WeakMap<Reporter, Set<string>>()
+const WARNED_UNSUPPORTED_SEVERITIES_BY_REPORTER = new WeakMap<Reporter, Set<string>>()
+const OXLINT_SEVERITY_NORMALIZATION: Record<string, 'off' | 'warn' | 'error'> = {
+  allow: 'off',
+  off: 'off',
+  on: 'warn',
+  warn: 'warn',
+  warning: 'warn',
+  info: 'warn',
+  deny: 'error',
+  error: 'error',
 }
 
 function normalizeOxlintRuleName(ruleName: string): string {
@@ -119,15 +159,24 @@ function normalizeOxlintRuleName(ruleName: string): string {
   return ruleName
 }
 
-export function mapBiomeRuleSeverity(severity: BiomeRuleSeverity): OxlintRuleSeverity {
-  if (typeof severity === 'string') {
-    return severity
+export function mapBiomeRuleSeverity(
+  severity: BiomeRuleSeverity,
+  reporter?: Reporter,
+  biomeRuleName?: string,
+): OxlintRuleSeverity {
+  const rawSeverity =
+    typeof severity === 'string'
+      ? severity
+      : typeof severity === 'object' && severity !== null && 'level' in severity
+        ? String(severity.level)
+        : ''
+
+  const normalized = OXLINT_SEVERITY_NORMALIZATION[rawSeverity.trim().toLowerCase()]
+  if (normalized) {
+    return normalized
   }
 
-  if (typeof severity === 'object' && severity.level) {
-    return severity.level
-  }
-
+  warnUnsupportedSeverityOnce(rawSeverity, reporter, biomeRuleName)
   return 'warn'
 }
 
@@ -137,8 +186,60 @@ export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): str
     return normalizeOxlintRuleName(mapped)
   }
 
-  reporter.warn(`No Oxlint equivalent found for Biome rule: ${biomeName}`)
+  warnUnmappedRuleOnce(biomeName, reporter)
   return null
+}
+
+function warnUnmappedRuleOnce(biomeName: string, reporter: Reporter): void {
+  let warnedRules = WARNED_UNMAPPED_RULES_BY_REPORTER.get(reporter)
+
+  if (!warnedRules) {
+    warnedRules = new Set<string>()
+    WARNED_UNMAPPED_RULES_BY_REPORTER.set(reporter, warnedRules)
+  }
+
+  if (warnedRules.has(biomeName)) {
+    return
+  }
+
+  warnedRules.add(biomeName)
+  reporter.warn(`No Oxlint equivalent found for Biome rule: ${biomeName}`)
+}
+
+function warnUnsupportedSeverityOnce(
+  rawSeverity: string,
+  reporter: Reporter | undefined,
+  biomeRuleName?: string,
+): void {
+  if (!reporter) {
+    return
+  }
+
+  let warnedSeverities = WARNED_UNSUPPORTED_SEVERITIES_BY_REPORTER.get(reporter)
+
+  if (!warnedSeverities) {
+    warnedSeverities = new Set<string>()
+    WARNED_UNSUPPORTED_SEVERITIES_BY_REPORTER.set(reporter, warnedSeverities)
+  }
+
+  const normalizedRawSeverity = rawSeverity.trim().toLowerCase() || '<empty>'
+  const cacheKey = `${biomeRuleName ?? '*'}::${normalizedRawSeverity}`
+
+  if (warnedSeverities.has(cacheKey)) {
+    return
+  }
+
+  warnedSeverities.add(cacheKey)
+  if (biomeRuleName) {
+    reporter.warn(
+      `Unsupported Biome severity "${rawSeverity}" for rule ${biomeRuleName}. Normalized to "warn" for Oxlint compatibility.`,
+    )
+    return
+  }
+
+  reporter.warn(
+    `Unsupported Biome severity "${rawSeverity}". Normalized to "warn" for Oxlint compatibility.`,
+  )
 }
 
 export function mapBiomeCategoryToOxlint(biomeCategory: string): string | null {
@@ -182,7 +283,7 @@ export function extractRulesFromBiomeConfig(
 
         const oxlintRuleName = mapBiomeRuleToOxlint(ruleName, reporter)
         if (oxlintRuleName) {
-          rules[oxlintRuleName] = mapBiomeRuleSeverity(ruleSeverity)
+          rules[oxlintRuleName] = mapBiomeRuleSeverity(ruleSeverity, reporter, ruleName)
         }
       }
 

@@ -2,6 +2,13 @@ import { basename } from 'node:path'
 
 import type { OxlintJsPlugin } from './types.js'
 
+interface UnsupportedRuleGuidance {
+  nativeAlternatives?: string[]
+  jsPluginSpecifiers?: string[]
+  jsPluginRuleExamples?: string[]
+  notes?: string
+}
+
 const RESERVED_JS_PLUGIN_NAMES = new Set([
   'react',
   'unicorn',
@@ -19,6 +26,25 @@ const RESERVED_JS_PLUGIN_NAMES = new Set([
   'vue',
   'eslint',
 ])
+
+const UNSUPPORTED_BIOME_RULE_GUIDANCE: Record<string, UnsupportedRuleGuidance> = {
+  noReExportAll: {
+    nativeAlternatives: ['import/no-cycle', 'import/no-self-import'],
+    jsPluginSpecifiers: ['eslint-plugin-import'],
+    jsPluginRuleExamples: ['import/export'],
+    notes:
+      'No native Oxlint rule currently blocks `export *` directly. Use JS plugin fallback if strict re-export controls are required.',
+  },
+  noRedundantUseStrict: {
+    nativeAlternatives: ['unicorn/prefer-module'],
+    notes:
+      'No native Oxlint equivalent for redundant `"use strict"` directives. For ESM, strict mode is already implicit.',
+  },
+  useSingleVarDeclarator: {
+    notes:
+      'No native Oxlint equivalent for enforcing single declarators (ESLint `one-var`). Consider custom JS plugin policy if this is mandatory.',
+  },
+}
 
 export function collectUnsupportedBiomeRules(warnings: string[]): string[] {
   const unsupported = new Set<string>()
@@ -55,6 +81,58 @@ export function buildJsPluginScaffold(specifiers: string[] | undefined): OxlintJ
   }
 
   return entries
+}
+
+export function recommendJsPluginSpecifiersForUnsupportedRules(
+  unsupportedRules: string[],
+): string[] {
+  const specifiers = new Set<string>()
+
+  for (const rule of unsupportedRules) {
+    const guidance = UNSUPPORTED_BIOME_RULE_GUIDANCE[rule]
+    if (!guidance?.jsPluginSpecifiers) {
+      continue
+    }
+
+    for (const specifier of guidance.jsPluginSpecifiers) {
+      specifiers.add(specifier)
+    }
+  }
+
+  return [...specifiers].sort()
+}
+
+export function buildUnsupportedRuleFallbackSuggestions(unsupportedRules: string[]): string[] {
+  const suggestions: string[] = []
+
+  for (const rule of unsupportedRules) {
+    const guidance = UNSUPPORTED_BIOME_RULE_GUIDANCE[rule]
+    if (!guidance) {
+      continue
+    }
+
+    suggestions.push(`Fallback for ${rule}:`)
+
+    if (guidance.nativeAlternatives && guidance.nativeAlternatives.length > 0) {
+      suggestions.push(`  - Native alternatives: ${guidance.nativeAlternatives.join(', ')}`)
+    }
+
+    if (guidance.jsPluginRuleExamples && guidance.jsPluginRuleExamples.length > 0) {
+      suggestions.push(`  - JS plugin rule candidates: ${guidance.jsPluginRuleExamples.join(', ')}`)
+    }
+
+    if (guidance.jsPluginSpecifiers && guidance.jsPluginSpecifiers.length > 0) {
+      suggestions.push(
+        `  - Suggested --js-plugin values: ${guidance.jsPluginSpecifiers.join(', ')}`,
+      )
+    }
+
+    if (guidance.notes) {
+      suggestions.push(`  - Note: ${guidance.notes}`)
+    }
+  }
+
+  return suggestions
 }
 
 function getBaseAlias(specifier: string): string {

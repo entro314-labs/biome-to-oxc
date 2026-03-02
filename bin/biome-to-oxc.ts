@@ -136,13 +136,7 @@ async function main() {
         const report = await migrate(migrationOptions)
 
         if (report.success) {
-          if (report.packageJson) {
 
-          }
-
-          if (report.detectedIntegrations) {
-
-          }
 
 
 
