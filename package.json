@@ -1,6 +1,6 @@
 {
   "name": "biome-to-oxc",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt) - Exhaustive, cutting-edge, with all experimental features",
   "keywords": [
     "biome",
@@ -35,8 +35,8 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
-    "lint:fix-unsafe": "oxlint --import-plugin   --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
-    "check:fix-suggestions": "oxlint --import-plugin   --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .",
+    "lint:fix-unsafe": "oxlint --import-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
+    "check:fix-suggestions": "oxlint --import-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .",
     "build": "tsdown",
     "dev": "tsdown --watch",
     "prepublishOnly": "pnpm build"
@@ -51,7 +51,7 @@
     "@types/node": "^25.3.3",
     "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
-    "oxlint-tsgolint": "^0.15.0",
+    "oxlint-tsgolint": "^0.16.0",
     "tsdown": "0.21.0-beta.2",
     "typescript": "beta",
     "vitest": "beta"
