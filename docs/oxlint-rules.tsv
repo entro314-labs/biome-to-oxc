@@ -192,6 +192,7 @@ no-caller	eslint
 no-case-declarations	eslint
 no-children-prop	react
 no-class-assign	eslint
+no-clone-element	react
 no-commented-out-tests	jest
 no-commonjs	import
 no-compare-neg-zero	eslint
@@ -368,6 +369,7 @@ no-promise-executor-return	eslint
 no-promise-in-callback	promise
 no-proto	eslint
 no-prototype-builtins	eslint
+no-react-children	react
 no-redeclare	eslint
 no-redundant-roles	jsx_a11y
 no-redundant-should-component-update	react
@@ -439,6 +441,7 @@ no-unnecessary-template-expression	typescript
 no-unnecessary-type-arguments	typescript
 no-unnecessary-type-assertion	typescript
 no-unnecessary-type-constraint	typescript
+no-unnecessary-type-conversion	typescript
 no-unnecessary-type-parameters	typescript
 no-unneeded-async-expect-function	jest
 no-unneeded-ternary	eslint

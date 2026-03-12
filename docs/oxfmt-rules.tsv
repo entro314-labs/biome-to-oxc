@@ -37,7 +37,12 @@ singleQuote	top-level
 sortImports	override.options
 sortImports	top-level
 sortImports.customGroups	sortImports
+sortImports.customGroups[].elementNamePattern	sortImports.customGroups
+sortImports.customGroups[].groupName	sortImports.customGroups
+sortImports.customGroups[].modifiers	sortImports.customGroups
+sortImports.customGroups[].selector	sortImports.customGroups
 sortImports.groups	sortImports
+sortImports.groups[].newlinesBetween	sortImports.groups
 sortImports.ignoreCase	sortImports
 sortImports.internalPattern	sortImports
 sortImports.newlinesBetween	sortImports
