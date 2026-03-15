@@ -12,6 +12,7 @@ interface OxlintGenerationOptions {
   enableImportGraph?: boolean
   importCycleMaxDepth?: number
   typeAwareProfile?: TypeAwareProfile
+  biomeIgnorePatterns?: string[]
 }
 
 const DEFAULT_PLUGINS: OxlintBuiltinPlugin[] = ['oxc', 'typescript', 'unicorn']
@@ -63,7 +64,7 @@ export function generateOxlintConfig(
   }
 
   determinePlugins(oxlintConfig)
-  mapIgnorePatterns(biomeConfig, oxlintConfig)
+  mapIgnorePatterns(biomeConfig, oxlintConfig, options.biomeIgnorePatterns ?? [])
   mapEnvironment(biomeConfig, oxlintConfig)
   mapSettings(biomeConfig, oxlintConfig, options.typeAwareProfile ?? 'standard')
 
@@ -144,8 +145,16 @@ function sortPlugins(plugins: OxlintBuiltinPlugin[]): OxlintBuiltinPlugin[] {
   })
 }
 
-function mapIgnorePatterns(biomeConfig: BiomeConfig, oxlintConfig: OxlintConfig): void {
+function mapIgnorePatterns(
+  biomeConfig: BiomeConfig,
+  oxlintConfig: OxlintConfig,
+  additionalIgnorePatterns: string[],
+): void {
   const ignorePatterns: string[] = []
+
+  if (additionalIgnorePatterns.length > 0) {
+    ignorePatterns.push(...additionalIgnorePatterns)
+  }
 
   if (biomeConfig.files?.ignore) {
     ignorePatterns.push(...biomeConfig.files.ignore)

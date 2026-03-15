@@ -1,4 +1,4 @@
-import { writeFile, rename, stat, readFile } from 'node:fs/promises'
+import { writeFile, rename, stat, readFile, unlink } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js'
@@ -15,6 +15,7 @@ import {
   collectUnsupportedBiomeRules,
   recommendJsPluginSpecifiersForUnsupportedRules,
 } from './js-plugin-scaffolder.js'
+import { loadBiomeIgnorePatterns } from './biome-ignore-loader.js'
 import { transformOverridesToOxlint } from './overrides-transformer.js'
 import { generateOxfmtOverrides } from './oxfmt-overrides.js'
 import { generateOxlintConfig } from './oxlint-generator.js'
@@ -32,7 +33,10 @@ import type {
   MigrationOptions,
   MigrationReport,
   PackageUpdateSummary,
+  Reporter,
 } from './types.js'
+
+const LEGACY_BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc', '.biome.json', '.biome.jsonc']
 
 async function fileExists(path: string): Promise<boolean> {
   try {
@@ -59,6 +63,45 @@ async function detectWorkspaceMonorepo(projectDir: string): Promise<boolean> {
   }
 }
 
+async function cleanupLegacyBiomeFiles(
+  outputDir: string,
+  primaryBiomeConfigPath: string,
+  dryRun: boolean,
+  reporter: Reporter,
+): Promise<string[]> {
+  const candidates = new Set<string>([
+    primaryBiomeConfigPath,
+    resolve(outputDir, '.biomeignore'),
+  ])
+
+  for (const configName of LEGACY_BIOME_CONFIG_NAMES) {
+    candidates.add(resolve(outputDir, configName))
+  }
+
+  const touchedPaths: string[] = []
+
+  for (const candidatePath of candidates) {
+    if (!(await fileExists(candidatePath))) {
+      continue
+    }
+
+    if (dryRun) {
+      touchedPaths.push(candidatePath)
+      continue
+    }
+
+    try {
+      await unlink(candidatePath)
+      touchedPaths.push(candidatePath)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      reporter.warn(`Failed to delete legacy Biome file ${candidatePath}: ${message}`)
+    }
+  }
+
+  return touchedPaths.sort((a, b) => a.localeCompare(b))
+}
+
 export async function migrate(options: MigrationOptions = {}): Promise<MigrationReport> {
   const reporter = new DefaultReporter()
   const cwd = process.cwd()
@@ -83,6 +126,11 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     }
   }
 
+  if (!biomeConfigPath) {
+    reporter.error('Biome configuration path could not be resolved.')
+    return createErrorReport(reporter)
+  }
+
   reporter.info(`Found Biome config: ${biomeConfigPath}`)
 
   let biomeConfig: BiomeConfig
@@ -96,11 +144,13 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
   // Detect advanced project features for cutting-edge optimizations
   const projectFeatures = detectProjectFeatures(biomeConfig, reporter)
+  const biomeIgnorePatterns = await loadBiomeIgnorePatterns(outputDir, reporter)
 
   const oxlintConfig = generateOxlintConfig(biomeConfig, reporter, {
     enableImportGraph: options.importGraph ?? false,
     importCycleMaxDepth: options.importCycleMaxDepth ?? 3,
     typeAwareProfile: typeCheckEnabled ? 'strict' : typeAwareProfile,
+    biomeIgnorePatterns,
   })
   const oxfmtConfig = generateOxfmtConfig(biomeConfig, reporter)
 
@@ -138,6 +188,13 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   if (unsupportedFallbackSuggestions.length > 0) {
     suggestions.push('Fallback guidance for currently unsupported Biome rules:')
     suggestions.push(...unsupportedFallbackSuggestions)
+  }
+
+  if (biomeIgnorePatterns.length > 0) {
+    const patternWord = biomeIgnorePatterns.length === 1 ? 'pattern' : 'patterns'
+    suggestions.push(
+      `.biomeignore detected: migrated ${biomeIgnorePatterns.length} ${patternWord} into Oxlint ignorePatterns as a compatibility alias.`,
+    )
   }
 
   if (options.jsPlugins && unsupportedRules.length > 0) {
@@ -229,6 +286,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
   }
 
   let packageJsonSummary: PackageUpdateSummary | undefined
+  let deletedLegacyFiles: string[] = []
 
   if (!options.dryRun) {
     if (!options.noBackup) {
@@ -243,6 +301,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
     packageJsonSummary = updatePackageJson(outputDir, reporter, false, {
       updateScripts: options.updateScripts,
+      dom: options.dom,
       typeAware: typeAwareEnabled,
       typeCheck: typeCheckEnabled,
       typeAwareProfile,
@@ -252,6 +311,15 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     if (options.turborepo && detectedIntegrations.turborepo) {
       updateTurboConfig(outputDir, reporter, false)
     }
+
+    if (options.delete) {
+      deletedLegacyFiles = await cleanupLegacyBiomeFiles(
+        outputDir,
+        biomeConfigPath,
+        false,
+        reporter,
+      )
+    }
   } else {
     reporter.info('Dry-run mode: No files will be written')
     reporter.info(`Would create: ${oxlintConfigPath}`)
@@ -259,11 +327,31 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
     packageJsonSummary = updatePackageJson(outputDir, reporter, true, {
       updateScripts: options.updateScripts,
+      dom: options.dom,
       typeAware: typeAwareEnabled,
       typeCheck: typeCheckEnabled,
       typeAwareProfile,
       fixStrategy: options.fixStrategy,
     })
+
+    if (options.delete) {
+      deletedLegacyFiles = await cleanupLegacyBiomeFiles(
+        outputDir,
+        biomeConfigPath,
+        true,
+        reporter,
+      )
+    }
+  }
+
+  if (options.delete) {
+    if (deletedLegacyFiles.length > 0) {
+      const verb = options.dryRun ? 'would remove' : 'removed'
+      suggestions.push(`--delete enabled: ${verb} legacy Biome files:`)
+      suggestions.push(...deletedLegacyFiles.map((filePath) => `  - ${filePath}`))
+    } else {
+      suggestions.push('--delete enabled: no legacy Biome files were found to remove.')
+    }
   }
 
   const rulesConverted = Object.keys(oxlintConfig.rules ?? {}).length

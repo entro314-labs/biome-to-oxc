@@ -1,6 +1,6 @@
 {
   "name": "biome-to-oxc",
-  "version": "0.7.6",
+  "version": "0.8.0",
   "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt) - Exhaustive, cutting-edge, with all experimental features",
   "keywords": [
     "biome",
@@ -51,8 +51,8 @@
     "@types/node": "^25.5.0",
     "oxfmt": "^0.40.0",
     "oxlint": "^1.55.0",
-    "oxlint-tsgolint": "^0.16.0",
-    "tsdown": "0.21.2",
+    "oxlint-tsgolint": "^0.17.0",
+    "tsdown": "0.21.3",
     "typescript": "rc",
     "vitest": "4.1.0"
   },

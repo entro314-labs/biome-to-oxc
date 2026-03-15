@@ -18,6 +18,20 @@ interface PackageJson {
   [key: string]: unknown
 }
 
+const DOM_SCRIPT_PRESET: Record<string, string> = {
+  check: 'oxlint . && oxfmt --check .',
+  'check:fix': 'oxlint --fix . && oxfmt .',
+  format: 'oxfmt --write .',
+  'format:check': 'oxfmt --check .',
+  lint: 'oxlint -f github . > lint.md 2>&1',
+  'lint:fix': 'oxlint -f stylish --fix .',
+  'lint:fix-unsafe':
+    'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .',
+  'check:fix-suggestions':
+    'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .',
+  'type-check': 'tsgo --noEmit',
+}
+
 const OXLINT_VERSION = '^1.50.0'
 const OXFMT_VERSION = '^0.33.0'
 const OXLINT_TSGOLINT_VERSION = '^0.15.0'
@@ -28,6 +42,7 @@ export function updatePackageJson(
   dryRun: boolean,
   options: {
     updateScripts?: boolean
+    dom?: boolean
     typeAware?: boolean
     typeCheck?: boolean
     typeAwareProfile?: TypeAwareProfile
@@ -57,13 +72,18 @@ export function updatePackageJson(
 
     let modified = false
     const updateScriptsEnabled = options.updateScripts ?? false
+    const domModeEnabled = options.dom ?? false
     const typeAwareProfile = options.typeAwareProfile ?? 'standard'
     const typeCheckEnabled = options.typeCheck ?? typeAwareProfile === 'strict'
     const typeAwareEnabled =
       options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
+    const needsTypeAwareDependency = typeAwareEnabled || typeCheckEnabled || domModeEnabled
     const fixStrategy = options.fixStrategy ?? 'safe'
 
-    if (updateScriptsEnabled && packageJson.scripts) {
+    if (domModeEnabled) {
+      packageJson.scripts ??= {}
+      modified = applyDomScriptPreset(packageJson.scripts, summary.scriptsUpdated) || modified
+    } else if (updateScriptsEnabled && packageJson.scripts) {
       modified =
         updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated, {
           typeAwareEnabled,
@@ -109,7 +129,7 @@ export function updatePackageJson(
         summary.devDependencies,
       ) || modified
 
-    if (typeAwareEnabled || typeCheckEnabled) {
+    if (needsTypeAwareDependency) {
       modified =
         ensureDevDependency(
           packageJson.devDependencies,
@@ -134,6 +154,27 @@ export function updatePackageJson(
     reporter.error(`Failed to update package.json: ${message}`)
     return summary
   }
+}
+
+function applyDomScriptPreset(
+  scripts: Record<string, string>,
+  updates: PackageScriptUpdate[],
+): boolean {
+  let modified = false
+
+  for (const [scriptName, scriptValue] of Object.entries(DOM_SCRIPT_PRESET)) {
+    const before = scripts[scriptName]
+
+    if (before === scriptValue) {
+      continue
+    }
+
+    scripts[scriptName] = scriptValue
+    updates.push({ name: scriptName, before: before ?? '<missing>', after: scriptValue })
+    modified = true
+  }
+
+  return modified
 }
 
 function updateScripts(

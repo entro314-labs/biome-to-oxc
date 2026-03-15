@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander'
+import { Option, program } from 'commander'
 import pc from 'picocolors'
 import { z } from 'zod'
 
@@ -18,8 +18,10 @@ const MigrationOptionsSchema = z.object({
   configPath: z.string().optional(),
   outputDir: z.string().optional(),
   dryRun: z.boolean().default(false),
+  delete: z.boolean().default(false),
   noBackup: z.boolean().default(false),
   updateScripts: z.boolean().default(false),
+  dom: z.boolean().default(false),
   verbose: z.boolean().default(false),
   typeAware: z.boolean().default(false),
   typeCheck: z.boolean().default(false),
@@ -64,8 +66,13 @@ async function main() {
     .option('-c, --config <path>', 'Path to biome.json or biome.jsonc')
     .option('-o, --output-dir <path>', 'Output directory for generated configs')
     .option('--dry-run', 'Show what would be done without making changes')
+    .option(
+      '--delete',
+      'Delete legacy Biome files after migration (biome.json/biome.jsonc and .biomeignore)',
+    )
     .option('--no-backup', 'Skip backup of existing config files')
     .option('--update-scripts', 'Update package.json scripts to use oxlint/oxfmt')
+    .addOption(new Option('--dom').hideHelp())
     .option('--type-aware', 'Include type-aware linting guidance and dependencies')
     .option('--type-check', 'Enable strict typed linting mode (implies --type-aware)')
     .option(

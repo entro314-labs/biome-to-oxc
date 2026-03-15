@@ -322,8 +322,10 @@ export interface MigrationOptions {
   configPath?: string
   outputDir?: string
   dryRun?: boolean
+  delete?: boolean
   noBackup?: boolean
   updateScripts?: boolean
+  dom?: boolean
   verbose?: boolean
   typeAware?: boolean
   typeCheck?: boolean

@@ -39,6 +39,7 @@ If a Biome rule has no native Oxlint equivalent yet, migration reports now surfa
 ✅ **Preserves Your Setup**
 
 - File patterns and ignore patterns
+- `.biomeignore` patterns migrated into Oxlint `ignorePatterns` (compatibility alias)
 - Linter configuration overrides
 - **NEW**: Formatter configuration overrides (per-file formatting rules)
 - JavaScript globals and environments
@@ -172,6 +173,7 @@ Options:
   -c, --config <path>      Path to biome.json or biome.jsonc
   -o, --output-dir <path>  Output directory for generated configs
   --dry-run                Show what would be done without making changes
+  --delete                 Delete legacy Biome files after migration (biome.json/biome.jsonc and .biomeignore)
   --no-backup              Skip backup of existing config files
   --update-scripts         Update package.json scripts to use oxlint/oxfmt
   --type-aware             Include type-aware linting guidance and dependencies
@@ -212,6 +214,9 @@ npx biome-to-oxc --output-dir ./config
 # Migrate without creating backups
 npx biome-to-oxc --no-backup
 
+# Migrate and remove legacy Biome files
+npx biome-to-oxc --delete
+
 # Monorepo setup with Turborepo
 npx biome-to-oxc --turborepo --update-scripts
 
@@ -237,7 +242,7 @@ npx biome-to-oxc --import-graph --import-cycle-max-depth 5
    - `.oxfmtrc.jsonc` - Formatter configuration
 4. **Maps** Biome rules to Oxlint equivalents
 5. **Transforms** formatter options to Prettier-compatible format
-6. **Preserves** overrides and ignore patterns
+6. **Preserves** overrides and ignore patterns (including `.biomeignore` alias migration)
 7. **Optionally updates** package.json scripts
 
 ## Configuration Mapping
