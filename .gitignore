@@ -7,6 +7,4 @@ coverage/
 .idea/
 *.tsbuildinfo
 examples/
-EXPERIMENTAL_FEATURES.md
-IMPLEMENTATION_SUMMARY.md
-MIGRATION_HANDOFF.md
+.nope

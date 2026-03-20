@@ -56,6 +56,7 @@ typescript/no-unnecessary-template-expression	yes	implemented
 typescript/no-unnecessary-type-arguments	yes	implemented
 typescript/no-unnecessary-type-assertion	yes	implemented
 typescript/no-unnecessary-type-constraint	no	n/a
+typescript/no-unnecessary-type-conversion	yes	implemented
 typescript/no-unnecessary-type-parameters	yes	implemented
 typescript/no-unsafe-argument	yes	implemented
 typescript/no-unsafe-assignment	yes	implemented

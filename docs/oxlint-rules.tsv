@@ -100,6 +100,7 @@ google-font-preconnect	nextjs
 group-exports	import
 grouped-accessor-pairs	eslint
 guard-for-in	eslint
+handle-callback-err	node
 heading-has-content	jsx_a11y
 hoisted-apis-on-top	vitest
 html-has-lang	jsx_a11y

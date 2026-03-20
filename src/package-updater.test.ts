@@ -7,6 +7,10 @@ import { describe, expect, it } from 'vitest'
 import { updatePackageJson } from './package-updater.js'
 import type { Reporter } from './types.js'
 
+const EXPECTED_OXLINT_VERSION = '^1.56.0'
+const EXPECTED_OXFMT_VERSION = '^0.41.0'
+const EXPECTED_OXLINT_TSGOLINT_VERSION = '^0.17.1'
+
 class SilentReporter implements Reporter {
   private readonly warnings: string[] = []
   private readonly errors: string[] = []
@@ -72,7 +76,9 @@ describe('updatePackageJson', () => {
         'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .',
       'type-check': 'tsgo --noEmit',
     })
-    expect(pkg.devDependencies['oxlint-tsgolint']).toBeDefined()
+    expect(pkg.devDependencies.oxlint).toBe(EXPECTED_OXLINT_VERSION)
+    expect(pkg.devDependencies.oxfmt).toBe(EXPECTED_OXFMT_VERSION)
+    expect(pkg.devDependencies['oxlint-tsgolint']).toBe(EXPECTED_OXLINT_TSGOLINT_VERSION)
   })
 
   it('maps Biome unsafe fixes to dangerous oxlint fix level and formatter write mode', () => {
@@ -123,7 +129,9 @@ describe('updatePackageJson', () => {
     }
 
     expect(pkg.scripts.lint).toBe('oxlint --type-aware --type-check')
-    expect(pkg.devDependencies['oxlint-tsgolint']).toBeDefined()
+    expect(pkg.devDependencies.oxlint).toBe(EXPECTED_OXLINT_VERSION)
+    expect(pkg.devDependencies.oxfmt).toBe(EXPECTED_OXFMT_VERSION)
+    expect(pkg.devDependencies['oxlint-tsgolint']).toBe(EXPECTED_OXLINT_TSGOLINT_VERSION)
   })
 
   it('preserves compatibility with strict type-aware profile', () => {
@@ -149,6 +157,8 @@ describe('updatePackageJson', () => {
     }
 
     expect(pkg.scripts.lint).toBe('oxlint --type-aware --type-check --fix src')
-    expect(pkg.devDependencies['oxlint-tsgolint']).toBeDefined()
+    expect(pkg.devDependencies.oxlint).toBe(EXPECTED_OXLINT_VERSION)
+    expect(pkg.devDependencies.oxfmt).toBe(EXPECTED_OXFMT_VERSION)
+    expect(pkg.devDependencies['oxlint-tsgolint']).toBe(EXPECTED_OXLINT_TSGOLINT_VERSION)
   })
 })

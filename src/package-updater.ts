@@ -32,9 +32,9 @@ const DOM_SCRIPT_PRESET: Record<string, string> = {
   'type-check': 'tsgo --noEmit',
 }
 
-const OXLINT_VERSION = '^1.50.0'
-const OXFMT_VERSION = '^0.33.0'
-const OXLINT_TSGOLINT_VERSION = '^0.15.0'
+const OXLINT_VERSION = '^1.56.0'
+const OXFMT_VERSION = '^0.41.0'
+const OXLINT_TSGOLINT_VERSION = '^0.17.1'
 
 export function updatePackageJson(
   projectDir: string,

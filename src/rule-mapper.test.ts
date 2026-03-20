@@ -42,6 +42,7 @@ describe('rule-mapper parity expansion', () => {
       noEmptyBlockStatements: 'no-empty',
       noExcessiveCognitiveComplexity: 'complexity',
       noConfusingVoidType: 'typescript/no-invalid-void-type',
+      noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
       noFloatingPromises: 'typescript/no-floating-promises',
       noFocusedTests: 'jest/no-focused-tests',
       noForEach: 'unicorn/no-array-for-each',
@@ -49,6 +50,7 @@ describe('rule-mapper parity expansion', () => {
       noImplicitBoolean: 'no-implicit-coercion',
       noInvalidUseBeforeDeclaration: 'no-use-before-define',
       noNodejsModules: 'import/no-nodejs-modules',
+      noNonNullAssertion: 'typescript/no-non-null-assertion',
       noParameterAssign: 'no-param-reassign',
       noParameterProperties: 'typescript/parameter-properties',
       noShadow: 'no-shadow',
@@ -56,6 +58,7 @@ describe('rule-mapper parity expansion', () => {
       noUnusedFunctionParameters: 'no-unused-vars',
       noUnusedImports: 'no-unused-vars',
       noUselessTernary: 'no-unneeded-ternary',
+      useAsConstAssertion: 'typescript/prefer-as-const',
       useAwait: 'require-await',
       useExportType: 'typescript/consistent-type-exports',
       useFilenamingConvention: 'unicorn/filename-case',
@@ -111,15 +114,18 @@ describe('rule-mapper parity expansion', () => {
         noInvalidUseBeforeDeclaration: 'error',
         noEmptyBlockStatements: 'warn',
         noFloatingPromises: 'error',
+        noExtraNonNullAssertion: 'warn',
       },
       style: {
         noForEach: 'warn',
         useTemplate: 'error',
         useImportType: 'warn',
+        useAsConstAssertion: 'warn',
       },
       suspicious: {
         noUselessTernary: 'error',
         noArguments: 'warn',
+        noNonNullAssertion: 'error',
       },
       security: {
         noGlobalEval: 'error',
@@ -135,9 +141,12 @@ describe('rule-mapper parity expansion', () => {
       'unicorn/no-array-for-each': 'warn',
       'prefer-template': 'error',
       'typescript/consistent-type-imports': 'warn',
+      'typescript/no-extra-non-null-assertion': 'warn',
       'no-unneeded-ternary': 'error',
       'prefer-rest-params': 'warn',
       'no-eval': 'error',
+      'typescript/no-non-null-assertion': 'error',
+      'typescript/prefer-as-const': 'warn',
     })
 
     expect(reporter.getWarnings()).toEqual([])
