@@ -2,6 +2,7 @@ import { writeFile, rename, stat, readFile, unlink } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js'
+import { loadBiomeIgnorePatterns } from './biome-ignore-loader.js'
 import { findBiomeConfig, loadBiomeConfig, resolveBiomeExtends } from './config-loader.js'
 import {
   detectESLint,
@@ -15,7 +16,6 @@ import {
   collectUnsupportedBiomeRules,
   recommendJsPluginSpecifiersForUnsupportedRules,
 } from './js-plugin-scaffolder.js'
-import { loadBiomeIgnorePatterns } from './biome-ignore-loader.js'
 import { transformOverridesToOxlint } from './overrides-transformer.js'
 import { generateOxfmtOverrides } from './oxfmt-overrides.js'
 import { generateOxlintConfig } from './oxlint-generator.js'
@@ -69,10 +69,7 @@ async function cleanupLegacyBiomeFiles(
   dryRun: boolean,
   reporter: Reporter,
 ): Promise<string[]> {
-  const candidates = new Set<string>([
-    primaryBiomeConfigPath,
-    resolve(outputDir, '.biomeignore'),
-  ])
+  const candidates = new Set<string>([primaryBiomeConfigPath, resolve(outputDir, '.biomeignore')])
 
   for (const configName of LEGACY_BIOME_CONFIG_NAMES) {
     candidates.add(resolve(outputDir, configName))
@@ -335,12 +332,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     })
 
     if (options.delete) {
-      deletedLegacyFiles = await cleanupLegacyBiomeFiles(
-        outputDir,
-        biomeConfigPath,
-        true,
-        reporter,
-      )
+      deletedLegacyFiles = await cleanupLegacyBiomeFiles(outputDir, biomeConfigPath, true, reporter)
     }
   }
 

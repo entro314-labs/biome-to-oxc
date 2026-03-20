@@ -119,8 +119,8 @@ async function main() {
         }
 
         const profile = opts.typeAwareProfile ?? 'standard'
-        const derivedTypeCheck = (opts.typeCheck ?? false) || profile === 'strict'
-        const derivedTypeAware = (opts.typeAware ?? false) || derivedTypeCheck
+        const derivedTypeCheck = opts.typeCheck ?? false ?? profile === 'strict'
+        const derivedTypeAware = opts.typeAware ?? false ?? derivedTypeCheck
 
         opts.typeCheck = derivedTypeCheck
         opts.typeAware = derivedTypeAware
@@ -143,14 +143,6 @@ async function main() {
         const report = await migrate(migrationOptions)
 
         if (report.success) {
-
-
-
-
-
-
-
-
           process.exit(0)
         } else {
           console.error(pc.red('\n✖ Migration failed.'))

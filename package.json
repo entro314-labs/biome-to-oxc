@@ -35,8 +35,8 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
-    "lint:fix-unsafe": "oxlint --import-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
-    "check:fix-suggestions": "oxlint --import-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .",
+    "lint:fix-unsafe": "oxlint --import-plugin --node-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
+    "check:fix-suggestions": "oxlint --import-plugin --node-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .",
     "build": "tsdown",
     "dev": "tsdown --watch",
     "prepublishOnly": "pnpm build"
