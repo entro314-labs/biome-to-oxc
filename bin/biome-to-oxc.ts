@@ -9,8 +9,8 @@ import type { MigrationOptions } from '../src/types.js'
 
 const packageJson = {
   name: 'biome-to-oxc',
-  version: '0.1.0',
-  description: 'Migrate from Biome to Oxc ecosystem (oxlint + oxfmt)',
+  version: '0.9.0',
+  description: 'Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint)',
 }
 
 // Zod schema for runtime validation
@@ -119,8 +119,8 @@ async function main() {
         }
 
         const profile = opts.typeAwareProfile ?? 'standard'
-        const derivedTypeCheck = opts.typeCheck ?? false ?? profile === 'strict'
-        const derivedTypeAware = opts.typeAware ?? false ?? derivedTypeCheck
+        const derivedTypeCheck = opts.typeCheck ?? profile === 'strict'
+        const derivedTypeAware = opts.typeAware ?? (derivedTypeCheck ?? profile === 'strict')
 
         opts.typeCheck = derivedTypeCheck
         opts.typeAware = derivedTypeAware

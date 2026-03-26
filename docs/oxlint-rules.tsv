@@ -61,6 +61,7 @@ consistent-vitest-vi	vitest
 const-comparisons	oxc
 constructor-super	eslint
 curly	eslint
+custom-error-definition	unicorn
 default	import
 default-case	eslint
 default-case-last	eslint
@@ -599,6 +600,7 @@ prefer-set-size	unicorn
 prefer-spread	eslint
 prefer-spread	unicorn
 prefer-spy-on	jest
+prefer-strict-boolean-matchers	vitest
 prefer-strict-equal	jest
 prefer-string-raw	unicorn
 prefer-string-replace-all	unicorn

@@ -1,7 +1,7 @@
 {
   "name": "biome-to-oxc",
-  "version": "0.8.1",
-  "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt) - Exhaustive, cutting-edge, with all experimental features",
+  "version": "0.9.0",
+  "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint) ",
   "keywords": [
     "biome",
     "formatter",
@@ -9,7 +9,10 @@
     "migration",
     "oxc",
     "oxfmt",
-    "oxlint"
+    "oxlint",
+    "oxlint-tsgolint",
+    "prettier",
+    "typescript"
   ],
   "license": "MIT",
   "author": "Dominikos Pritis",
@@ -49,16 +52,16 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.56.0",
-    "oxlint-tsgolint": "^0.17.1",
-    "tsdown": "^0.21.4",
-    "typescript": "rc",
-    "vitest": "^4.1.0"
+    "oxfmt": "^0.42.0",
+    "oxlint": "^1.57.0",
+    "oxlint-tsgolint": "^0.17.4",
+    "tsdown": "^0.21.5",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.1"
   },
   "engines": {
     "node": ">=22.22.0",
-    "pnpm": ">=10.32.1"
+    "pnpm": ">=10.33.0"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.33.0"
 }
