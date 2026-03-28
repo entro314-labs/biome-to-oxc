@@ -1,6 +1,9 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
+import { z } from 'zod'
+
+import { findClosestPackageJson, readJsonFile, writeTextFileAtomically } from './fs-utils.js'
 import type {
   FixStrategy,
   PackageDependencyRemoval,
@@ -18,9 +21,15 @@ interface PackageJson {
   [key: string]: unknown
 }
 
+interface RecommendedToolVersions {
+  oxlint: string
+  oxfmt: string
+  'oxlint-tsgolint': string
+}
+
 const DOM_SCRIPT_PRESET: Record<string, string> = {
   check: 'oxlint . && oxfmt --check .',
-  'check:fix': 'oxlint --fix . && oxfmt .',
+  'check:fix': 'oxlint --fix . && oxfmt --write .',
   format: 'oxfmt --write .',
   'format:check': 'oxfmt --check .',
   lint: 'oxlint -f github . > lint.md 2>&1',
@@ -31,12 +40,23 @@ const DOM_SCRIPT_PRESET: Record<string, string> = {
     'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .',
   'type-check': 'tsgo --noEmit',
 }
+const PackageJsonSchema: z.ZodType<PackageJson> = z
+  .object({
+    scripts: z.record(z.string(), z.string()).optional(),
+    devDependencies: z.record(z.string(), z.string()).optional(),
+    dependencies: z.record(z.string(), z.string()).optional(),
+  })
+  .catchall(z.unknown())
+const ToolVersionManifestSchema = z
+  .object({
+    dependencies: z.record(z.string(), z.string()).optional(),
+    devDependencies: z.record(z.string(), z.string()).optional(),
+  })
+  .passthrough()
 
-const OXLINT_VERSION = '^1.56.0'
-const OXFMT_VERSION = '^0.41.0'
-const OXLINT_TSGOLINT_VERSION = '^0.17.1'
+let recommendedToolVersionsPromise: Promise<RecommendedToolVersions> | undefined
 
-export function updatePackageJson(
+export async function updatePackageJson(
   projectDir: string,
   reporter: Reporter,
   dryRun: boolean,
@@ -47,8 +67,9 @@ export function updatePackageJson(
     typeCheck?: boolean
     typeAwareProfile?: TypeAwareProfile
     fixStrategy?: FixStrategy
+    signal?: AbortSignal
   } = {},
-): PackageUpdateSummary {
+): Promise<PackageUpdateSummary> {
   const packageJsonPath = resolve(projectDir, 'package.json')
   const summary: PackageUpdateSummary = {
     packageJsonPath,
@@ -60,15 +81,15 @@ export function updatePackageJson(
     changed: false,
   }
 
-  if (!existsSync(packageJsonPath)) {
-    reporter.warn('package.json not found, skipping dependency and script updates')
-    return summary
-  }
-
   try {
+    const packageJson = await readJsonFile(
+      packageJsonPath,
+      PackageJsonSchema,
+      `package manifest at ${packageJsonPath}`,
+    )
+    const recommendedVersions = await getRecommendedToolVersions()
+
     summary.found = true
-    const content = readFileSync(packageJsonPath, 'utf-8')
-    const packageJson: PackageJson = JSON.parse(content)
 
     let modified = false
     const updateScriptsEnabled = options.updateScripts ?? false
@@ -118,14 +139,14 @@ export function updatePackageJson(
       ensureDevDependency(
         packageJson.devDependencies,
         'oxlint',
-        OXLINT_VERSION,
+        recommendedVersions.oxlint,
         summary.devDependencies,
       ) || modified
     modified =
       ensureDevDependency(
         packageJson.devDependencies,
         'oxfmt',
-        OXFMT_VERSION,
+        recommendedVersions.oxfmt,
         summary.devDependencies,
       ) || modified
 
@@ -134,7 +155,7 @@ export function updatePackageJson(
         ensureDevDependency(
           packageJson.devDependencies,
           'oxlint-tsgolint',
-          OXLINT_TSGOLINT_VERSION,
+          recommendedVersions['oxlint-tsgolint'],
           summary.devDependencies,
         ) || modified
     }
@@ -142,7 +163,10 @@ export function updatePackageJson(
     summary.changed = modified
 
     if (modified && !dryRun) {
-      writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf-8')
+      options.signal?.throwIfAborted()
+      await writeTextFileAtomically(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, {
+        signal: options.signal,
+      })
       reporter.info('Updated package.json')
     } else if (modified && dryRun) {
       reporter.info('Would update package.json (dry-run mode)')
@@ -151,6 +175,12 @@ export function updatePackageJson(
     return summary
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
+
+    if (isMissingFileError(err)) {
+      reporter.warn('package.json not found, skipping dependency and script updates')
+      return summary
+    }
+
     reporter.error(`Failed to update package.json: ${message}`)
     return summary
   }
@@ -222,7 +252,11 @@ function updateScripts(
       {
         command: 'lint',
         check: lintBase,
-        fixByStrategy: lintFixByStrategy,
+        fixByStrategy: {
+          safe: lintFixByStrategy.safe,
+          suggestions: lintFixByStrategy.suggestions,
+          dangerous: lintFixByStrategy.dangerous,
+        },
       },
       {
         command: 'format',
@@ -379,4 +413,51 @@ function ensureDevDependency(
 
   changes.push({ name, action: 'already-present', to: existing })
   return false
+}
+
+async function getRecommendedToolVersions(): Promise<RecommendedToolVersions> {
+  if (!recommendedToolVersionsPromise) {
+    recommendedToolVersionsPromise = loadRecommendedToolVersions()
+  }
+
+  return recommendedToolVersionsPromise
+}
+
+async function loadRecommendedToolVersions(): Promise<RecommendedToolVersions> {
+  const packageDirectory = dirname(fileURLToPath(import.meta.url))
+  const packageManifestPath = await findClosestPackageJson(packageDirectory)
+
+  if (!packageManifestPath) {
+    throw new Error('Unable to locate the biome-to-oxc package manifest.')
+  }
+
+  const packageManifest = await readJsonFile(
+    packageManifestPath,
+    ToolVersionManifestSchema,
+    `tool version manifest at ${packageManifestPath}`,
+  )
+
+  const knownVersions = {
+    ...packageManifest.dependencies,
+    ...packageManifest.devDependencies,
+  }
+
+  const { oxlint, oxfmt } = knownVersions
+  const oxlintTsgolint = knownVersions['oxlint-tsgolint']
+
+  if (!oxlint || !oxfmt || !oxlintTsgolint) {
+    throw new Error(
+      'Unable to determine the recommended oxlint, oxfmt, and oxlint-tsgolint versions.',
+    )
+  }
+
+  return {
+    oxlint,
+    oxfmt,
+    'oxlint-tsgolint': oxlintTsgolint,
+  }
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT'
 }

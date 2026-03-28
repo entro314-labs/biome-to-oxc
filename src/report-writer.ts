@@ -1,15 +1,18 @@
-import { writeFileSync } from 'node:fs'
-
+import { writeTextFileAtomically } from './fs-utils.js'
 import type { MigrationReport, Reporter } from './types.js'
 
-export function writeReportToFile(
+export async function writeReportToFile(
   report: MigrationReport,
   outputPath: string,
   reporter: Reporter,
-): void {
+  signal?: AbortSignal,
+): Promise<void> {
   try {
-    const reportContent = JSON.stringify(report, null, 2)
-    writeFileSync(outputPath, reportContent, 'utf-8')
+    const reportContent = `${JSON.stringify(report, null, 2)}\n`
+    await writeTextFileAtomically(outputPath, reportContent, {
+      ensureDirectory: true,
+      signal,
+    })
     reporter.info(`Migration report written to: ${outputPath}`)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

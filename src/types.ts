@@ -9,6 +9,7 @@ export interface BiomeConfig {
   javascript?: BiomeJavaScriptConfig
   json?: BiomeJsonConfig
   css?: BiomeCssConfig
+  html?: Record<string, unknown>
   overrides?: BiomeOverride[]
 }
 
@@ -339,6 +340,7 @@ export interface MigrationOptions {
   eslintBridge?: boolean
   prettier?: boolean
   report?: string
+  signal?: AbortSignal
 }
 
 export interface PackageScriptUpdate {

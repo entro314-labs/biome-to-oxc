@@ -1,6 +1,6 @@
-import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
+import { pathExists } from './fs-utils.js'
 import type { Reporter } from './types.js'
 
 const PRETTIER_CONFIG_NAMES = [
@@ -9,18 +9,24 @@ const PRETTIER_CONFIG_NAMES = [
   '.prettierrc.json5',
   '.prettierrc.yaml',
   '.prettierrc.yml',
+  '.prettierrc.ts',
+  '.prettierrc.mts',
+  '.prettierrc.cts',
   '.prettierrc.js',
   '.prettierrc.cjs',
   '.prettierrc.mjs',
+  'prettier.config.ts',
+  'prettier.config.mts',
+  'prettier.config.cts',
   'prettier.config.js',
   'prettier.config.cjs',
   'prettier.config.mjs',
 ]
 
-export function detectPrettier(projectDir: string): string | undefined {
+export async function detectPrettier(projectDir: string): Promise<string | undefined> {
   for (const name of PRETTIER_CONFIG_NAMES) {
     const configPath = resolve(projectDir, name)
-    if (existsSync(configPath)) {
+    if (await pathExists(configPath)) {
       return configPath
     }
   }
@@ -37,7 +43,7 @@ export function generatePrettierMigrationSuggestions(
     'Oxfmt can automatically migrate Prettier configs:',
     '',
     '1. Run the Oxfmt migration command:',
-    '   npx oxfmt --migrate=prettier',
+    '   pnpm exec oxfmt --migrate=prettier',
     '',
     '2. This will:',
     '   - Read your Prettier config',
@@ -45,7 +51,7 @@ export function generatePrettierMigrationSuggestions(
     '   - Preserve your formatting preferences',
     '',
     '3. Review the generated config and test:',
-    '   npx oxfmt --check',
+    '   pnpm exec oxfmt --check .',
     '',
     'Note: Oxfmt is Prettier-compatible but may have minor differences.',
     'Test thoroughly before committing changes.',

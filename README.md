@@ -1,29 +1,16 @@
 # biome-to-oxc
 
-🚀 Migrate from [Biome](https://biomejs.dev) to the [Oxc](https://oxc.rs) ecosystem (oxlint + oxfmt)
+Migrate a Biome setup to the Oxc toolchain (`oxlint`, `oxfmt`, and optional `oxlint-tsgolint` guidance).
 
-## Why Migrate?
+The CLI reads a Biome config, resolves `extends`, generates `.oxlintrc.json` and `.oxfmtrc.jsonc`, updates package scripts if requested, and reports anything it could not map directly.
 
-The Oxc project provides blazing-fast alternatives to existing JavaScript tooling:
+Current capabilities:
 
-- **oxlint**: 10x faster than ESLint with 600+ rules and type-aware linting (alpha)
-- **oxfmt**: 30x faster than Prettier, 3x faster than Biome, with Prettier compatibility
-
-Both tools are production-ready and actively developed, even in alpha/beta stages.
-
-## Current State (v0.6.0)
-
-`biome-to-oxc` is currently in an advanced migration state focused on practical, production migration paths:
-
-- ✅ Rich CLI controls for migration behavior (`type-aware-profile`, `fix-strategy`, `import-graph`, `js-plugins`)
-- ✅ Rule + category migration with unsupported-rule reporting
-- ✅ Oxfmt generation aligned with current sort key names (`sortImports`, `sortPackageJson`, `sortTailwindcss`)
-- ✅ Strategy-aware script rewrites for safe/suggestions/dangerous fix workflows
-- ✅ Monorepo-aware guidance and ignore migration recommendations
-- ✅ Typed linting guidance with alpha stability + TypeScript compatibility caveats
-- ✅ Reference datasets committed under `docs/*.tsv` for rules/options coverage analysis
-
-If a Biome rule has no native Oxlint equivalent yet, migration reports now surface it clearly and can scaffold `jsPlugins` for compatibility workflows.
+- Rule and category migration with unsupported-rule reporting
+- Oxfmt generation with override support
+- Strategy-aware script rewrites for safe, suggestions, and dangerous fix modes
+- Monorepo-aware guidance, ignore migration, and typed linting guidance
+- Optional JSON report output to stdout or a report file
 
 ## Features
 
@@ -69,7 +56,7 @@ If a Biome rule has no native Oxlint equivalent yet, migration reports now surfa
 ✅ **Turborepo Integration** (`--turborepo`)
 
 - Detects `turbo.json` configuration
-- Provides task update suggestions
+- Updates existing `lint`, `check`, `format`, and `format:check` task metadata when present
 - Maintains monorepo workflow compatibility
 
 ✅ **ESLint Bridge** (`--eslint-bridge`)
@@ -82,7 +69,7 @@ If a Biome rule has no native Oxlint equivalent yet, migration reports now surfa
 ✅ **Prettier Migration** (`--prettier`)
 
 - Detects Prettier configurations
-- Suggests `oxfmt --migrate=prettier` workflow
+- Suggests `pnpm exec oxfmt --migrate=prettier`
 - Helps transition from Prettier to Oxfmt
 
 ✅ **Smart Updates**
@@ -184,10 +171,11 @@ Options:
   --js-plugin              JS plugin specifier to scaffold (repeatable)
   --import-graph           Add import plugin + import/no-cycle baseline recipe
   --import-cycle-max-depth Max depth for import/no-cycle (default: 3)
-  --turborepo              Detect and update turbo.json for Turborepo integration
+  --turborepo              Detect and update turbo.json task metadata for Turborepo integration
   --eslint-bridge          Provide ESLint bridge suggestions for running alongside ESLint
   --prettier               Detect Prettier config and provide migration suggestions
-  --report <path>          Write detailed JSON migration report to specified path
+  --report <path>          Write the migration report to a JSON file
+  --json                   Print the migration report as JSON to stdout
   -v, --verbose            Show detailed migration information
   -V, --version            Output the version number
   -h, --help               Display help for command
@@ -207,6 +195,9 @@ npx biome-to-oxc --update-scripts --type-check --fix-strategy suggestions --impo
 
 # Generate detailed JSON report
 npx biome-to-oxc --report migration-report.json
+
+# Print the migration report to stdout as JSON
+npx biome-to-oxc --json
 
 # Migrate with custom output directory
 npx biome-to-oxc --output-dir ./config

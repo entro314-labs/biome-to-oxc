@@ -1,5 +1,7 @@
-import { writeFile, rename, stat, readFile, unlink } from 'node:fs/promises'
-import { resolve, dirname } from 'node:path'
+import { unlink } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+
+import { z } from 'zod'
 
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js'
 import { loadBiomeIgnorePatterns } from './biome-ignore-loader.js'
@@ -10,6 +12,7 @@ import {
   generateESLintFormatterBridgeSuggestions,
 } from './eslint-detector.js'
 import { generateOxfmtConfig } from './formatter-mapper.js'
+import { writeTextFileAtomically, copyFileIfExists, pathExists, readJsonFile } from './fs-utils.js'
 import {
   buildJsPluginScaffold,
   buildUnsupportedRuleFallbackSuggestions,
@@ -22,11 +25,11 @@ import { generateOxlintConfig } from './oxlint-generator.js'
 import { updatePackageJson } from './package-updater.js'
 import { detectPrettier, generatePrettierMigrationSuggestions } from './prettier-detector.js'
 import { writeReportToFile } from './report-writer.js'
-import { DefaultReporter } from './reporter.js'
+import { CollectingReporter } from './reporter.js'
 import {
   detectTurborepo,
-  updateTurboConfig,
   generateTurborepoSuggestions,
+  updateTurboConfig,
 } from './turbo-updater.js'
 import type {
   BiomeConfig,
@@ -37,81 +40,29 @@ import type {
 } from './types.js'
 
 const LEGACY_BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc', '.biome.json', '.biome.jsonc']
+const WorkspacePackageJsonSchema = z
+  .object({
+    workspaces: z.union([z.array(z.string()), z.record(z.string(), z.unknown())]).optional(),
+  })
+  .passthrough()
 
-async function fileExists(path: string): Promise<boolean> {
-  try {
-    await stat(path)
-    return true
-  } catch {
-    return false
-  }
-}
-
-async function detectWorkspaceMonorepo(projectDir: string): Promise<boolean> {
-  const packageJsonPath = resolve(projectDir, 'package.json')
-
-  if (!(await fileExists(packageJsonPath))) {
-    return false
-  }
-
-  try {
-    const content = await readFile(packageJsonPath, 'utf-8')
-    const parsed = JSON.parse(content) as { workspaces?: unknown }
-    return parsed.workspaces !== undefined
-  } catch {
-    return false
-  }
-}
-
-async function cleanupLegacyBiomeFiles(
-  outputDir: string,
-  primaryBiomeConfigPath: string,
-  dryRun: boolean,
-  reporter: Reporter,
-): Promise<string[]> {
-  const candidates = new Set<string>([primaryBiomeConfigPath, resolve(outputDir, '.biomeignore')])
-
-  for (const configName of LEGACY_BIOME_CONFIG_NAMES) {
-    candidates.add(resolve(outputDir, configName))
-  }
-
-  const touchedPaths: string[] = []
-
-  for (const candidatePath of candidates) {
-    if (!(await fileExists(candidatePath))) {
-      continue
-    }
-
-    if (dryRun) {
-      touchedPaths.push(candidatePath)
-      continue
-    }
-
-    try {
-      await unlink(candidatePath)
-      touchedPaths.push(candidatePath)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      reporter.warn(`Failed to delete legacy Biome file ${candidatePath}: ${message}`)
-    }
-  }
-
-  return touchedPaths.sort((a, b) => a.localeCompare(b))
-}
-
-export async function migrate(options: MigrationOptions = {}): Promise<MigrationReport> {
-  const reporter = new DefaultReporter()
+export async function migrate(
+  options: MigrationOptions = {},
+  reporter: Reporter = new CollectingReporter(),
+): Promise<MigrationReport> {
   const cwd = process.cwd()
-  const outputDir = options.outputDir ?? cwd
+  const outputDir = resolve(cwd, options.outputDir ?? '.')
   const typeAwareProfile = options.typeAwareProfile ?? 'standard'
   const typeCheckEnabled = options.typeCheck ?? typeAwareProfile === 'strict'
   const typeAwareEnabled = options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
+
+  throwIfAborted(options.signal)
 
   let biomeConfigPath: string | undefined
 
   if (options.configPath) {
     biomeConfigPath = resolve(cwd, options.configPath)
-    if (!(await fileExists(biomeConfigPath))) {
+    if (!(await pathExists(biomeConfigPath))) {
       reporter.error(`Biome config not found at: ${biomeConfigPath}`)
       return createErrorReport(reporter, biomeConfigPath)
     }
@@ -123,26 +74,20 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     }
   }
 
-  if (!biomeConfigPath) {
-    reporter.error('Biome configuration path could not be resolved.')
-    return createErrorReport(reporter)
-  }
-
   reporter.info(`Found Biome config: ${biomeConfigPath}`)
 
   let biomeConfig: BiomeConfig
   try {
     biomeConfig = await loadBiomeConfig(biomeConfigPath, reporter)
-    const configDir = dirname(biomeConfigPath)
-    biomeConfig = await resolveBiomeExtends(biomeConfig, configDir, reporter)
+    biomeConfig = await resolveBiomeExtends(biomeConfig, dirname(biomeConfigPath), reporter)
   } catch {
     return createErrorReport(reporter, biomeConfigPath)
   }
 
-  // Detect advanced project features for cutting-edge optimizations
+  throwIfAborted(options.signal)
+
   const projectFeatures = detectProjectFeatures(biomeConfig, reporter)
   const biomeIgnorePatterns = await loadBiomeIgnorePatterns(outputDir, reporter)
-
   const oxlintConfig = generateOxlintConfig(biomeConfig, reporter, {
     enableImportGraph: options.importGraph ?? false,
     importCycleMaxDepth: options.importCycleMaxDepth ?? 3,
@@ -166,22 +111,185 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     }
   }
 
+  const prettierConfigPath = options.prettier ? await detectPrettier(outputDir) : undefined
   const detectedIntegrations = {
-    turborepo: options.turborepo ? detectTurborepo(outputDir) : false,
-    eslint: options.eslintBridge ? detectESLint(outputDir) : false,
-    prettier: options.prettier ? !!detectPrettier(outputDir) : false,
+    turborepo: options.turborepo ? await detectTurborepo(outputDir) : false,
+    eslint: options.eslintBridge ? await detectESLint(outputDir) : false,
+    prettier: prettierConfigPath !== undefined,
     typescript:
       projectFeatures.hasTypeScript || (oxlintConfig.plugins?.includes('typescript') ?? false),
   }
 
   const oxlintConfigPath = resolve(outputDir, '.oxlintrc.json')
   const oxfmtConfigPath = resolve(outputDir, '.oxfmtrc.jsonc')
+  const suggestions = await buildSuggestions({
+    biomeIgnorePatterns,
+    detectedIntegrations,
+    options,
+    oxlintConfig,
+    outputDir,
+    prettierConfigPath,
+    projectFeatures,
+    reporter,
+    typeAwareEnabled,
+    typeCheckEnabled,
+    typeAwareProfile,
+    workspaceMonorepo: await detectWorkspaceMonorepo(outputDir),
+  })
+  let packageJsonSummary: PackageUpdateSummary | undefined
+  let deletedLegacyFiles: string[] = []
 
+  try {
+    if (!options.dryRun) {
+      if (!options.noBackup) {
+        await backupExistingConfigs(oxlintConfigPath, oxfmtConfigPath, reporter, options.signal)
+      }
+
+      throwIfAborted(options.signal)
+      await writeTextFileAtomically(
+        oxlintConfigPath,
+        `${JSON.stringify(oxlintConfig, null, 2)}\n`,
+        {
+          signal: options.signal,
+        },
+      )
+      reporter.info(`Created Oxlint config: ${oxlintConfigPath}`)
+
+      throwIfAborted(options.signal)
+      await writeTextFileAtomically(oxfmtConfigPath, `${JSON.stringify(oxfmtConfig, null, 2)}\n`, {
+        signal: options.signal,
+      })
+      reporter.info(`Created Oxfmt config: ${oxfmtConfigPath}`)
+
+      packageJsonSummary = await updatePackageJson(outputDir, reporter, false, {
+        updateScripts: options.updateScripts,
+        dom: options.dom,
+        typeAware: typeAwareEnabled,
+        typeCheck: typeCheckEnabled,
+        typeAwareProfile,
+        fixStrategy: options.fixStrategy,
+        signal: options.signal,
+      })
+
+      if (options.turborepo && detectedIntegrations.turborepo) {
+        await updateTurboConfig(outputDir, reporter, false, options.signal)
+      }
+
+      if (options.delete) {
+        deletedLegacyFiles = await cleanupLegacyBiomeFiles(
+          outputDir,
+          biomeConfigPath,
+          false,
+          reporter,
+          options.signal,
+        )
+      }
+    } else {
+      reporter.info('Dry-run mode: No files will be written')
+      reporter.info(`Would create: ${oxlintConfigPath}`)
+      reporter.info(`Would create: ${oxfmtConfigPath}`)
+
+      packageJsonSummary = await updatePackageJson(outputDir, reporter, true, {
+        updateScripts: options.updateScripts,
+        dom: options.dom,
+        typeAware: typeAwareEnabled,
+        typeCheck: typeCheckEnabled,
+        typeAwareProfile,
+        fixStrategy: options.fixStrategy,
+        signal: options.signal,
+      })
+
+      if (options.turborepo && detectedIntegrations.turborepo) {
+        await updateTurboConfig(outputDir, reporter, true, options.signal)
+      }
+
+      if (options.delete) {
+        deletedLegacyFiles = await cleanupLegacyBiomeFiles(
+          outputDir,
+          biomeConfigPath,
+          true,
+          reporter,
+          options.signal,
+        )
+      }
+    }
+  } catch (err) {
+    if (isAbortError(err)) {
+      throw err
+    }
+
+    reporter.error(`Migration failed while writing files: ${formatErrorMessage(err)}`)
+  }
+
+  if (options.delete) {
+    if (deletedLegacyFiles.length > 0) {
+      const verb = options.dryRun ? 'would remove' : 'removed'
+      suggestions.push(`--delete enabled: ${verb} legacy Biome files:`)
+      suggestions.push(...deletedLegacyFiles.map((filePath) => `  - ${filePath}`))
+    } else {
+      suggestions.push('--delete enabled: no legacy Biome files were found to remove.')
+    }
+  }
+
+  const buildReport = (): MigrationReport => ({
+    success: reporter.getErrors().length === 0,
+    warnings: reporter.getWarnings(),
+    errors: reporter.getErrors(),
+    suggestions,
+    summary: {
+      biomeConfigPath,
+      oxlintConfigPath,
+      oxfmtConfigPath,
+      rulesConverted: Object.keys(oxlintConfig.rules ?? {}).length,
+      rulesSkipped: reporter
+        .getWarnings()
+        .filter((warning) => warning.includes('No Oxlint equivalent')).length,
+      overridesConverted: (oxlintConfig.overrides ?? []).length,
+      formatterOverridesConverted: formatterOverridesCount,
+    },
+    packageJson: packageJsonSummary,
+    detectedIntegrations,
+  })
+
+  if (options.report && !options.dryRun) {
+    const reportPath = resolve(outputDir, options.report)
+    await writeReportToFile(buildReport(), reportPath, reporter, options.signal)
+  }
+
+  return buildReport()
+}
+
+async function buildSuggestions({
+  biomeIgnorePatterns,
+  detectedIntegrations,
+  options,
+  oxlintConfig,
+  outputDir,
+  prettierConfigPath,
+  projectFeatures,
+  reporter,
+  typeAwareEnabled,
+  typeCheckEnabled,
+  typeAwareProfile,
+  workspaceMonorepo,
+}: {
+  biomeIgnorePatterns: string[]
+  detectedIntegrations: NonNullable<MigrationReport['detectedIntegrations']>
+  options: MigrationOptions
+  oxlintConfig: ReturnType<typeof generateOxlintConfig>
+  outputDir: string
+  prettierConfigPath: string | undefined
+  projectFeatures: ReturnType<typeof detectProjectFeatures>
+  reporter: Reporter
+  typeAwareEnabled: boolean
+  typeCheckEnabled: boolean
+  typeAwareProfile: NonNullable<MigrationOptions['typeAwareProfile']>
+  workspaceMonorepo: boolean
+}): Promise<string[]> {
   const suggestions: string[] = []
   const unsupportedRules = collectUnsupportedBiomeRules(reporter.getWarnings())
-  const workspaceMonorepo = await detectWorkspaceMonorepo(outputDir)
-
   const unsupportedFallbackSuggestions = buildUnsupportedRuleFallbackSuggestions(unsupportedRules)
+
   if (unsupportedFallbackSuggestions.length > 0) {
     suggestions.push('Fallback guidance for currently unsupported Biome rules:')
     suggestions.push(...unsupportedFallbackSuggestions)
@@ -205,7 +313,6 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
       )
     } else {
       const recommendedSpecifiers = recommendJsPluginSpecifiersForUnsupportedRules(unsupportedRules)
-
       suggestions.push(
         'Unsupported rules detected. Add JS plugin specifiers to scaffold plugin aliases:',
       )
@@ -226,17 +333,18 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
 
   if (typeAwareEnabled && detectedIntegrations.typescript) {
     const typeAwareCommand = typeCheckEnabled
-      ? 'npx oxlint --type-aware --type-check'
-      : 'npx oxlint --type-aware'
+      ? 'pnpm exec oxlint --type-aware --type-check .'
+      : 'pnpm exec oxlint --type-aware .'
 
     suggestions.push('Type-aware linting profile detected. Install oxlint-tsgolint:')
     suggestions.push('  pnpm add -D oxlint-tsgolint@latest')
     suggestions.push(`  ${typeAwareCommand}`)
     suggestions.push('Type-aware mode uses the tsgolint backend.')
-    suggestions.push('Note: Type-aware linting is alpha and not semver-stable.')
+    suggestions.push('Note: type-aware linting is alpha and not semver-stable.')
     suggestions.push(
       'TypeScript compatibility caveat: migrate deprecated tsconfig options if needed (typescript-go / TS7+ behavior).',
     )
+    suggestions.push(`Resolved type-aware profile: ${typeAwareProfile}`)
   }
 
   if (options.importGraph) {
@@ -254,7 +362,7 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     )
   }
 
-  if (await fileExists(resolve(outputDir, '.eslintignore'))) {
+  if (await pathExists(resolve(outputDir, '.eslintignore'))) {
     suggestions.push(
       '.eslintignore detected: Oxlint supports it, but prefer migrating to ignorePatterns for long-term consistency.',
     )
@@ -269,131 +377,90 @@ export async function migrate(options: MigrationOptions = {}): Promise<Migration
     suggestions.push(...generateESLintFormatterBridgeSuggestions())
   }
 
-  if (detectedIntegrations.prettier) {
-    const prettierPath = detectPrettier(outputDir)
-    if (prettierPath) {
-      suggestions.push(...generatePrettierMigrationSuggestions(prettierPath, reporter))
-    }
+  if (detectedIntegrations.prettier && prettierConfigPath) {
+    suggestions.push(...generatePrettierMigrationSuggestions(prettierConfigPath, reporter))
   }
 
-  // Add cutting-edge feature-specific suggestions
-  const featureSuggestions = generateFeatureSpecificSuggestions(projectFeatures)
-  if (featureSuggestions.length > 0) {
-    suggestions.push(...featureSuggestions)
+  suggestions.push(...generateFeatureSpecificSuggestions(projectFeatures))
+
+  return suggestions
+}
+
+async function detectWorkspaceMonorepo(projectDir: string): Promise<boolean> {
+  const packageJsonPath = resolve(projectDir, 'package.json')
+
+  if (!(await pathExists(packageJsonPath))) {
+    return false
   }
 
-  let packageJsonSummary: PackageUpdateSummary | undefined
-  let deletedLegacyFiles: string[] = []
+  try {
+    const packageJson = await readJsonFile(
+      packageJsonPath,
+      WorkspacePackageJsonSchema,
+      `package manifest at ${packageJsonPath}`,
+    )
+    return packageJson.workspaces !== undefined
+  } catch {
+    return false
+  }
+}
 
-  if (!options.dryRun) {
-    if (!options.noBackup) {
-      await backupExistingConfigs(oxlintConfigPath, oxfmtConfigPath, reporter)
+async function cleanupLegacyBiomeFiles(
+  outputDir: string,
+  primaryBiomeConfigPath: string,
+  dryRun: boolean,
+  reporter: Reporter,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const candidates = new Set<string>([primaryBiomeConfigPath, resolve(outputDir, '.biomeignore')])
+
+  for (const configName of LEGACY_BIOME_CONFIG_NAMES) {
+    candidates.add(resolve(outputDir, configName))
+  }
+
+  const touchedPaths: string[] = []
+
+  for (const candidatePath of candidates) {
+    throwIfAborted(signal)
+
+    if (!(await pathExists(candidatePath))) {
+      continue
     }
 
-    await writeFile(oxlintConfigPath, `${JSON.stringify(oxlintConfig, null, 2)}\n`, 'utf-8')
-    reporter.info(`Created Oxlint config: ${oxlintConfigPath}`)
-
-    await writeFile(oxfmtConfigPath, `${JSON.stringify(oxfmtConfig, null, 2)}\n`, 'utf-8')
-    reporter.info(`Created Oxfmt config: ${oxfmtConfigPath}`)
-
-    packageJsonSummary = updatePackageJson(outputDir, reporter, false, {
-      updateScripts: options.updateScripts,
-      dom: options.dom,
-      typeAware: typeAwareEnabled,
-      typeCheck: typeCheckEnabled,
-      typeAwareProfile,
-      fixStrategy: options.fixStrategy,
-    })
-
-    if (options.turborepo && detectedIntegrations.turborepo) {
-      updateTurboConfig(outputDir, reporter, false)
+    if (dryRun) {
+      touchedPaths.push(candidatePath)
+      continue
     }
 
-    if (options.delete) {
-      deletedLegacyFiles = await cleanupLegacyBiomeFiles(
-        outputDir,
-        biomeConfigPath,
-        false,
-        reporter,
+    try {
+      await unlink(candidatePath)
+      touchedPaths.push(candidatePath)
+    } catch (err) {
+      reporter.warn(
+        `Failed to delete legacy Biome file ${candidatePath}: ${formatErrorMessage(err)}`,
       )
     }
-  } else {
-    reporter.info('Dry-run mode: No files will be written')
-    reporter.info(`Would create: ${oxlintConfigPath}`)
-    reporter.info(`Would create: ${oxfmtConfigPath}`)
-
-    packageJsonSummary = updatePackageJson(outputDir, reporter, true, {
-      updateScripts: options.updateScripts,
-      dom: options.dom,
-      typeAware: typeAwareEnabled,
-      typeCheck: typeCheckEnabled,
-      typeAwareProfile,
-      fixStrategy: options.fixStrategy,
-    })
-
-    if (options.delete) {
-      deletedLegacyFiles = await cleanupLegacyBiomeFiles(outputDir, biomeConfigPath, true, reporter)
-    }
   }
 
-  if (options.delete) {
-    if (deletedLegacyFiles.length > 0) {
-      const verb = options.dryRun ? 'would remove' : 'removed'
-      suggestions.push(`--delete enabled: ${verb} legacy Biome files:`)
-      suggestions.push(...deletedLegacyFiles.map((filePath) => `  - ${filePath}`))
-    } else {
-      suggestions.push('--delete enabled: no legacy Biome files were found to remove.')
-    }
-  }
-
-  const rulesConverted = Object.keys(oxlintConfig.rules ?? {}).length
-  const overridesConverted = (oxlintConfig.overrides ?? []).length
-
-  const report: MigrationReport = {
-    success: true,
-    warnings: reporter.getWarnings(),
-    errors: reporter.getErrors(),
-    suggestions,
-    summary: {
-      biomeConfigPath,
-      oxlintConfigPath,
-      oxfmtConfigPath,
-      rulesConverted,
-      rulesSkipped: reporter.getWarnings().filter((w) => w.includes('No Oxlint equivalent')).length,
-      overridesConverted,
-      formatterOverridesConverted: formatterOverridesCount,
-    },
-    packageJson: packageJsonSummary,
-    detectedIntegrations,
-  }
-
-  if (options.report && !options.dryRun) {
-    const reportPath = resolve(outputDir, options.report)
-    writeReportToFile(report, reportPath, reporter)
-  }
-
-  return report
+  return touchedPaths.sort((left, right) => left.localeCompare(right))
 }
 
 async function backupExistingConfigs(
   oxlintConfigPath: string,
   oxfmtConfigPath: string,
-  reporter: DefaultReporter,
+  reporter: Reporter,
+  signal?: AbortSignal,
 ): Promise<void> {
-  if (await fileExists(oxlintConfigPath)) {
-    const backupPath = `${oxlintConfigPath}.backup`
-    await rename(oxlintConfigPath, backupPath)
-    reporter.info(`Backed up existing Oxlint config to: ${backupPath}`)
+  if (await copyFileIfExists(oxlintConfigPath, `${oxlintConfigPath}.backup`, signal)) {
+    reporter.info(`Backed up existing Oxlint config to: ${oxlintConfigPath}.backup`)
   }
 
-  if (await fileExists(oxfmtConfigPath)) {
-    const backupPath = `${oxfmtConfigPath}.backup`
-    await rename(oxfmtConfigPath, backupPath)
-    reporter.info(`Backed up existing Oxfmt config to: ${backupPath}`)
+  if (await copyFileIfExists(oxfmtConfigPath, `${oxfmtConfigPath}.backup`, signal)) {
+    reporter.info(`Backed up existing Oxfmt config to: ${oxfmtConfigPath}.backup`)
   }
 }
 
-function createErrorReport(reporter: DefaultReporter, biomeConfigPath?: string): MigrationReport {
+function createErrorReport(reporter: Reporter, biomeConfigPath?: string): MigrationReport {
   return {
     success: false,
     warnings: reporter.getWarnings(),
@@ -409,6 +476,18 @@ function createErrorReport(reporter: DefaultReporter, biomeConfigPath?: string):
       formatterOverridesConverted: 0,
     },
   }
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  signal?.throwIfAborted()
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
+function formatErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 export * from './types.js'

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -52,8 +52,8 @@ describe('biome-ignore-loader', () => {
   })
 
   it('loads .biomeignore patterns from project root', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'biome-to-oxc-ignore-'))
-    writeFileSync(join(dir, '.biomeignore'), 'dist/**\n# c\n!dist/keep.js\n', 'utf-8')
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-ignore-'))
+    await writeFile(join(dir, '.biomeignore'), 'dist/**\n# c\n!dist/keep.js\n', 'utf-8')
 
     const reporter = new SilentReporter()
     const patterns = await loadBiomeIgnorePatterns(dir, reporter)
@@ -63,8 +63,8 @@ describe('biome-ignore-loader', () => {
   })
 
   it('warns when .biomeignore has no usable patterns', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'biome-to-oxc-ignore-empty-'))
-    writeFileSync(join(dir, '.biomeignore'), '# only comments\n\n', 'utf-8')
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-ignore-empty-'))
+    await writeFile(join(dir, '.biomeignore'), '# only comments\n\n', 'utf-8')
 
     const reporter = new SilentReporter()
     const patterns = await loadBiomeIgnorePatterns(dir, reporter)
@@ -76,8 +76,8 @@ describe('biome-ignore-loader', () => {
   })
 
   it('warns and falls back when .biomeignore cannot be read as a file', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'biome-to-oxc-ignore-error-'))
-    mkdirSync(join(dir, '.biomeignore'))
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-ignore-error-'))
+    await mkdir(join(dir, '.biomeignore'))
 
     const reporter = new SilentReporter()
     const patterns = await loadBiomeIgnorePatterns(dir, reporter)

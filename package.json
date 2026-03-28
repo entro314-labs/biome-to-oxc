@@ -1,7 +1,7 @@
 {
   "name": "biome-to-oxc",
-  "version": "0.9.0",
-  "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint) ",
+  "version": "1.0.0",
+  "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint)",
   "keywords": [
     "biome",
     "formatter",
@@ -25,7 +25,7 @@
   },
   "files": [
     "README.md",
-    "dist/*"
+    "dist"
   ],
   "type": "module",
   "exports": {
@@ -34,15 +34,19 @@
   },
   "scripts": {
     "test": "vitest",
+    "test:run": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "lint:fix-unsafe": "oxlint --import-plugin --node-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
     "check:fix-suggestions": "oxlint --import-plugin --node-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run",
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm check && pnpm build"
   },
   "dependencies": {
     "commander": "^14.0.3",
@@ -52,12 +56,13 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.2",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.17.4",
-    "tsdown": "^0.21.5",
+    "oxlint-tsgolint": "^0.18.1",
+    "tsdown": "^0.21.6",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.2"
   },
   "engines": {
     "node": ">=22.22.0",

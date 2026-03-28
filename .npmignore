@@ -5,7 +5,7 @@ examples/
 *.test.ts
 *.spec.ts
 tsconfig.json
-tsdown.config.js
+tsdown.config.ts
 vitest.config.ts
 .git/
 .github/
