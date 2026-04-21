@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve, dirname, join } from 'node:path'
 
 import { parse as parseJsonc, printParseErrorCode } from 'jsonc-parser'
+import type { ParseError as JsoncParseError } from 'jsonc-parser'
 import { z } from 'zod'
 
 import { formatZodIssues, pathExists, readJsonFile } from './fs-utils.js'
@@ -18,7 +19,6 @@ import type {
   BiomeRuleGroup,
   Reporter,
 } from './types.js'
-import type { ParseError as JsoncParseError } from 'jsonc-parser'
 
 const BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc']
 const IncludeFieldsSchema = z

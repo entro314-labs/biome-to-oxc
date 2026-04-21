@@ -1,6 +1,6 @@
 {
   "name": "biome-to-oxc",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint)",
   "keywords": [
     "biome",
@@ -18,10 +18,10 @@
   "author": "Dominikos Pritis",
   "repository": {
     "type": "git",
-    "url": "https://github.com/entro314-labs/biome-to-oxc"
+    "url": "git+https://github.com/entro314-labs/biome-to-oxc.git"
   },
   "bin": {
-    "biome-to-oxc": "./dist/bin/biome-to-oxc.mjs"
+    "biome-to-oxc": "dist/bin/biome-to-oxc.mjs"
   },
   "files": [
     "README.md",
