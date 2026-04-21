@@ -10,12 +10,24 @@ export interface AtomicWriteOptions {
   signal?: AbortSignal
 }
 
+export function isPathNotFoundError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return false
+  }
+
+  return error.code === 'ENOENT' || error.code === 'ENOTDIR'
+}
+
 export async function pathExists(path: string): Promise<boolean> {
   try {
     await access(path, constants.F_OK)
     return true
-  } catch {
-    return false
+  } catch (err) {
+    if (isPathNotFoundError(err)) {
+      return false
+    }
+
+    throw err
   }
 }
 

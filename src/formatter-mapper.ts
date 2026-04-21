@@ -6,6 +6,23 @@ import type {
   Reporter,
 } from './types.js'
 
+const EXPLICIT_OXFMT_OPTION_KEYS = [
+  'objectWrap',
+  'insertFinalNewline',
+  'embeddedLanguageFormatting',
+  'htmlWhitespaceSensitivity',
+  'proseWrap',
+  'vueIndentScriptAndStyle',
+  'sortImports',
+  'sortPackageJson',
+  'sortTailwindcss',
+] as const
+const LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES = {
+  experimentalSortImports: 'sortImports',
+  experimentalSortPackageJson: 'sortPackageJson',
+  experimentalTailwindcss: 'sortTailwindcss',
+} as const
+
 export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter): OxfmtConfig {
   const oxfmtConfig: OxfmtConfig = {
     $schema: './node_modules/oxfmt/configuration_schema.json',
@@ -22,6 +39,7 @@ export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter
 
   mapFormatterOptions(formatter, jsFormatter, oxfmtConfig, reporter)
   mapIgnorePatterns(biomeConfig, oxfmtConfig)
+  applyExplicitFormatterOptionPassThrough([formatter, jsFormatter], oxfmtConfig)
 
   return oxfmtConfig
 }
@@ -125,71 +143,33 @@ function mapIgnorePatterns(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): 
   if (ignorePatterns.length > 0) {
     oxfmtConfig.ignorePatterns = ignorePatterns
   }
-
-  // Advanced and experimental options
-  mapAdvancedOptions(biomeConfig, oxfmtConfig)
 }
 
-function mapAdvancedOptions(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): void {
-  // Object formatting - default to preserve for compatibility
-  oxfmtConfig.objectWrap = 'preserve'
+function applyExplicitFormatterOptionPassThrough(
+  sources: Array<Record<string, unknown> | undefined>,
+  oxfmtConfig: OxfmtConfig,
+): void {
+  const target = oxfmtConfig as Record<string, unknown>
 
-  // Insert final newline - common practice
-  oxfmtConfig.insertFinalNewline = true
-
-  // Embedded language formatting - auto detect
-  oxfmtConfig.embeddedLanguageFormatting = 'auto'
-
-  // HTML/Prose options - Prettier defaults
-  oxfmtConfig.htmlWhitespaceSensitivity = 'css'
-  oxfmtConfig.proseWrap = 'preserve'
-
-  // Vue support - detect from file patterns
-  const hasVueFiles =
-    biomeConfig.files?.include?.some(
-      (pattern) => pattern.includes('.vue') || pattern.includes('vue'),
-    ) ??
-    biomeConfig.formatter?.include?.some(
-      (pattern) => pattern.includes('.vue') || pattern.includes('vue'),
-    )
-
-  if (hasVueFiles) {
-    oxfmtConfig.vueIndentScriptAndStyle = false // Prettier default
-  }
-
-  // Sort imports
-  // Enable if project seems to use import sorting
-  const hasSortingHints =
-    biomeConfig.linter?.rules &&
-    typeof biomeConfig.linter.rules === 'object' &&
-    Object.keys(biomeConfig.linter.rules).some(
-      (key) => key.toLowerCase().includes('import') || key.toLowerCase().includes('sort'),
-    )
-
-  if (hasSortingHints) {
-    oxfmtConfig.sortImports = {
-      order: 'asc',
-      newlinesBetween: true,
+  for (const source of sources) {
+    if (!source) {
+      continue
     }
-  }
 
-  // Sort package.json
-  oxfmtConfig.sortPackageJson = {
-    sortScripts: true,
-  }
+    for (const key of EXPLICIT_OXFMT_OPTION_KEYS) {
+      const value = source[key]
 
-  // Sort Tailwind CSS classes
-  // Detect Tailwind usage from common patterns
-  const hasTailwindHints = biomeConfig.files?.include?.some(
-    (pattern) => pattern.includes('tailwind') || pattern.includes('tw-'),
-  )
+      if (value !== undefined) {
+        target[key] = value
+      }
+    }
 
-  if (hasTailwindHints) {
-    oxfmtConfig.sortTailwindcss = {
-      attributes: ['class', 'className', ':class'],
-      functions: ['clsx', 'cn', 'classNames', 'tw'],
-      preserveDuplicates: false,
-      preserveWhitespace: false,
+    for (const [legacyKey, targetKey] of Object.entries(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES)) {
+      const value = source[legacyKey]
+
+      if (value !== undefined && target[targetKey] === undefined) {
+        target[targetKey] = value
+      }
     }
   }
 }

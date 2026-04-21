@@ -50,6 +50,7 @@ consistent-function-scoping	unicorn
 consistent-generic-constructors	typescript
 consistent-indexed-object-style	typescript
 consistent-return	typescript
+consistent-template-literal-escape	unicorn
 consistent-test-filename	vitest
 consistent-test-it	jest
 consistent-type-assertions	typescript
@@ -82,6 +83,7 @@ exhaustive-deps	react
 expect-expect	jest
 explicit-function-return-type	typescript
 explicit-length-check	unicorn
+explicit-member-accessibility	typescript
 explicit-module-boundary-types	typescript
 export	import
 exports-last	import
@@ -104,6 +106,7 @@ guard-for-in	eslint
 handle-callback-err	node
 heading-has-content	jsx_a11y
 hoisted-apis-on-top	vitest
+hook-use-state	react
 html-has-lang	jsx_a11y
 id-length	eslint
 iframe-has-title	jsx_a11y
@@ -382,6 +385,7 @@ no-render-return-value	react
 no-require-imports	typescript
 no-required-prop-with-default	vue
 no-rest-spread-properties	oxc
+no-restricted-exports	eslint
 no-restricted-globals	eslint
 no-restricted-imports	eslint
 no-restricted-jest-methods	jest
@@ -471,6 +475,7 @@ no-unused-private-class-members	eslint
 no-unused-vars	eslint
 no-unwanted-polyfillio	nextjs
 no-use-before-define	eslint
+no-useless-assignment	eslint
 no-useless-backreference	eslint
 no-useless-call	eslint
 no-useless-catch	eslint
@@ -483,6 +488,7 @@ no-useless-empty-export	typescript
 no-useless-error-capture-stack-trace	unicorn
 no-useless-escape	eslint
 no-useless-fallback-in-spread	unicorn
+no-useless-iterator-to-array	unicorn
 no-useless-length-check	unicorn
 no-useless-promise-resolve-reject	unicorn
 no-useless-rename	eslint
@@ -503,10 +509,12 @@ non-nullable-type-assertion-style	typescript
 number-arg-out-of-range	oxc
 number-literal-case	unicorn
 numeric-separators-style	unicorn
+object-shorthand	eslint
 only-export-components	react
 only-throw-error	typescript
 only-used-in-recursion	oxc
 operator-assignment	eslint
+padding-around-after-all-blocks	jest
 padding-around-test-blocks	jest
 param-names	promise
 parameter-properties	typescript
@@ -522,6 +530,7 @@ prefer-await-to-callbacks	promise
 prefer-await-to-then	promise
 prefer-bigint-literals	unicorn
 prefer-blob-reading-methods	unicorn
+prefer-called-exactly-once-with	vitest
 prefer-called-once	vitest
 prefer-called-times	vitest
 prefer-called-with	jest
@@ -541,6 +550,7 @@ prefer-dom-node-dataset	unicorn
 prefer-dom-node-remove	unicorn
 prefer-dom-node-text-content	unicorn
 prefer-each	jest
+prefer-ending-with-an-expect	jest
 prefer-enum-initializers	typescript
 prefer-equality-matcher	jest
 prefer-es6-class	react
@@ -550,12 +560,16 @@ prefer-expect-type-of	vitest
 prefer-exponentiation-operator	eslint
 prefer-find	typescript
 prefer-for-of	typescript
+prefer-function-component	react
 prefer-function-type	typescript
 prefer-global-this	unicorn
 prefer-hooks-in-order	jest
 prefer-hooks-on-top	jest
 prefer-import-from-vue	vue
 prefer-import-in-mock	vitest
+prefer-import-meta-properties	unicorn
+prefer-importing-jest-globals	jest
+prefer-importing-vitest-globals	vitest
 prefer-includes	typescript
 prefer-includes	unicorn
 prefer-jest-mocked	jest
@@ -597,6 +611,7 @@ prefer-rest-params	eslint
 prefer-return-this-type	typescript
 prefer-set-has	unicorn
 prefer-set-size	unicorn
+prefer-snapshot-hint	jest
 prefer-spread	eslint
 prefer-spread	unicorn
 prefer-spy-on	jest
@@ -634,9 +649,11 @@ require-array-join-separator	unicorn
 require-array-sort-compare	typescript
 require-await	eslint
 require-await	typescript
+require-awaited-expect-poll	vitest
 require-default-export	vue
 require-hook	jest
 require-local-test-context-for-concurrent-snapshots	vitest
+require-mock-type-parameters	vitest
 require-module-attributes	unicorn
 require-module-specifiers	unicorn
 require-number-to-fixed-digits-argument	unicorn
@@ -653,6 +670,7 @@ require-render-return	react
 require-returns	jsdoc
 require-returns-description	jsdoc
 require-returns-type	jsdoc
+require-test-timeout	vitest
 require-to-throw-message	jest
 require-top-level-describe	jest
 require-typed-ref	vue
@@ -675,6 +693,7 @@ strict-boolean-expressions	typescript
 strict-void-return	typescript
 style-prop-object	react
 switch-case-braces	unicorn
+switch-case-break-position	unicorn
 switch-exhaustiveness-check	typescript
 symbol-description	eslint
 tabindex-no-positive	jsx_a11y
@@ -692,6 +711,7 @@ valid-define-emits	vue
 valid-define-props	vue
 valid-describe-callback	jest
 valid-expect	jest
+valid-expect-in-promise	jest
 valid-params	promise
 valid-title	jest
 valid-typeof	eslint

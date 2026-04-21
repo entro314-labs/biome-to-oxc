@@ -330,8 +330,12 @@ export async function resolveBiomeExtends(
       )
 
       mergedConfig = deepMerge(mergedConfig, resolvedExtendedConfig)
-    } catch {
-      reporter.warn(`Failed to load extended config: ${extendPath}`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      reporter.error(
+        `Failed to resolve extends entry "${extendPath}" at ${resolvedPath}: ${message}`,
+      )
+      throw new Error(`Unable to resolve extends entry "${extendPath}"`, { cause: err })
     }
   }
 

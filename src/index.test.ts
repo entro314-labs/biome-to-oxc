@@ -88,6 +88,74 @@ describe('migrate --delete', () => {
       true,
     )
   })
+
+  it('skips legacy file deletion when a requested package update fails', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-delete-failure-'))
+    const biomeConfigPath = join(dir, 'biome.json')
+    const biomeIgnorePath = join(dir, '.biomeignore')
+    const packageJsonPath = join(dir, 'package.json')
+
+    await writeFile(biomeConfigPath, '{}\n', 'utf-8')
+    await writeFile(biomeIgnorePath, 'dist/**\n', 'utf-8')
+    await writeFile(packageJsonPath, '{ invalid json }\n', 'utf-8')
+
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir: dir,
+      delete: true,
+      updateScripts: true,
+    })
+
+    expect(report.success).toBe(false)
+    expect(await pathExists(biomeConfigPath)).toBe(true)
+    expect(await pathExists(biomeIgnorePath)).toBe(true)
+    expect(report.suggestions).toContain(
+      '--delete skipped because migration did not complete successfully.',
+    )
+  })
+})
+
+describe('migrate output directory handling', () => {
+  it('creates a missing output directory before writing generated configs', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+    const outputDir = join(dir, 'generated', 'config')
+
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir,
+    })
+
+    expect(report.success).toBe(true)
+    expect(await pathExists(join(outputDir, '.oxlintrc.json'))).toBe(true)
+    expect(await pathExists(join(outputDir, '.oxfmtrc.jsonc'))).toBe(true)
+  })
+})
+
+describe('migrate extends handling', () => {
+  it('fails when an extends entry exists but cannot be parsed', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-extends-'))
+    const biomeConfigPath = join(dir, 'biome.json')
+    const brokenExtendsPath = join(dir, 'shared.json')
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({ extends: './shared.json' }, null, 2)}\n`,
+      'utf-8',
+    )
+    await writeFile(brokenExtendsPath, '{ "linter": { "rules": [ } }\n', 'utf-8')
+
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir: dir,
+    })
+
+    expect(report.success).toBe(false)
+    expect(
+      report.errors.some((message) => message.includes('Failed to resolve extends entry')),
+    ).toBe(true)
+    expect(await pathExists(join(dir, '.oxlintrc.json'))).toBe(false)
+    expect(await pathExists(join(dir, '.oxfmtrc.jsonc'))).toBe(false)
+  })
 })
 
 describe('runCli', () => {
@@ -219,6 +287,24 @@ describe('runCli', () => {
     expect(stdout.toString()).toContain('Created Oxlint config:')
   })
 
+  it('returns exit code 1 with a user-facing message when the operation is aborted', async () => {
+    const { dir, biomeConfigPath } = await setupMigrationFixture()
+    const stdout = new MemoryStream()
+    const stderr = new MemoryStream()
+    const controller = new AbortController()
+    controller.abort(new DOMException('Cancelled before run', 'AbortError'))
+
+    const exitCode = await runCli(['--config', biomeConfigPath, '--output-dir', dir], {
+      signal: controller.signal,
+      stdout,
+      stderr,
+    })
+
+    expect(exitCode).toBe(1)
+    expect(stdout.toString()).toBe('')
+    expect(stderr.toString()).toContain('Migration cancelled.')
+  })
+
   it('creates a termination handler that aborts in-flight work cleanly', () => {
     const controller = new AbortController()
     const stderr = new MemoryStream()
@@ -228,5 +314,19 @@ describe('runCli', () => {
 
     expect(controller.signal.aborted).toBe(true)
     expect(stderr.toString()).toContain('Received SIGINT')
+  })
+
+  it('creates a SIGTERM handler and ignores duplicate signals after aborting once', () => {
+    const controller = new AbortController()
+    const stderr = new MemoryStream()
+    const handleSigterm = createTerminationHandler('SIGTERM', controller, stderr)
+
+    handleSigterm()
+    handleSigterm()
+
+    expect(controller.signal.aborted).toBe(true)
+    const output = stderr.toString()
+    expect(output).toContain('Received SIGTERM')
+    expect((output.match(/Received SIGTERM/gu) ?? []).length).toBe(1)
   })
 })

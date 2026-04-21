@@ -17,6 +17,12 @@ export function transformOverridesToOxlint(
       continue
     }
 
+    if (override.ignore && override.ignore.length > 0) {
+      reporter.warn(
+        `Biome override ignore patterns cannot be represented in Oxlint overrides and require manual review: ${override.include.join(', ')}`,
+      )
+    }
+
     const oxlintOverride: OxlintOverride = {
       files: override.include,
     }

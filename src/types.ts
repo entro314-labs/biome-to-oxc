@@ -254,7 +254,7 @@ export interface OxfmtConfig {
   singleAttributePerLine?: boolean
 
   // Object formatting
-  objectWrap?: 'preserve' | 'collapse'
+  objectWrap?: boolean | 'preserve' | 'collapse'
 
   // Line endings
   insertFinalNewline?: boolean

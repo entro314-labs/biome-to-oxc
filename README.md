@@ -9,6 +9,7 @@ Current capabilities:
 - Rule and category migration with unsupported-rule reporting
 - Oxfmt generation with override support
 - Strategy-aware script rewrites for safe, suggestions, and dangerous fix modes
+- Conservative script rewrite safeguards with manual-review warnings for complex shell scripts
 - Monorepo-aware guidance, ignore migration, and typed linting guidance
 - Optional JSON report output to stdout or a report file
 
@@ -28,8 +29,8 @@ Current capabilities:
 - File patterns and ignore patterns
 - `.biomeignore` patterns migrated into Oxlint `ignorePatterns` (compatibility alias)
 - Linter configuration overrides
-- **NEW**: Formatter configuration overrides (per-file formatting rules)
-- JavaScript globals and environments
+- Formatter configuration overrides when they can be represented as Oxfmt file-glob overrides
+- JavaScript globals
 - Rule severities (error/warn/off)
 - Explicit `printWidth` handling (no silent changes)
 
@@ -99,10 +100,10 @@ Current capabilities:
 
 ✅ **Experimental Features** (Alpha/Beta)
 
-- **Import Sorting**: `sortImports` with configurable order
-- **Package.json Sorting**: `sortPackageJson` for consistent deps
-- **Tailwind Integration**: `sortTailwindcss` for class optimization
-- **Forward Compatibility**: Passes through unknown options for future features
+- **Import Sorting**: explicit `sortImports` passthrough when present in formatter config
+- **Package.json Sorting**: explicit `sortPackageJson` passthrough when present in formatter config
+- **Tailwind Integration**: explicit `sortTailwindcss` passthrough when present in formatter config
+- **Forward Compatibility**: preserves supported explicit Oxfmt-compatible formatter options, including legacy experimental aliases
 
 ✅ **Oxlint Config Enhancements**
 

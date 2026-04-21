@@ -40,6 +40,9 @@ import type {
 } from './types.js'
 
 const LEGACY_BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc', '.biome.json', '.biome.jsonc']
+
+class MigrationStepFailedError extends Error {}
+
 const WorkspacePackageJsonSchema = z
   .object({
     workspaces: z.union([z.array(z.string()), z.record(z.string(), z.unknown())]).optional(),
@@ -138,6 +141,7 @@ export async function migrate(
   })
   let packageJsonSummary: PackageUpdateSummary | undefined
   let deletedLegacyFiles: string[] = []
+  let deleteWasAttempted = false
 
   try {
     if (!options.dryRun) {
@@ -150,6 +154,7 @@ export async function migrate(
         oxlintConfigPath,
         `${JSON.stringify(oxlintConfig, null, 2)}\n`,
         {
+          ensureDirectory: true,
           signal: options.signal,
         },
       )
@@ -157,10 +162,12 @@ export async function migrate(
 
       throwIfAborted(options.signal)
       await writeTextFileAtomically(oxfmtConfigPath, `${JSON.stringify(oxfmtConfig, null, 2)}\n`, {
+        ensureDirectory: true,
         signal: options.signal,
       })
       reporter.info(`Created Oxfmt config: ${oxfmtConfigPath}`)
 
+      const packageJsonErrorCount = reporter.getErrors().length
       packageJsonSummary = await updatePackageJson(outputDir, reporter, false, {
         updateScripts: options.updateScripts,
         dom: options.dom,
@@ -170,12 +177,16 @@ export async function migrate(
         fixStrategy: options.fixStrategy,
         signal: options.signal,
       })
+      throwIfMigrationErrorsIncreased(packageJsonErrorCount, reporter)
 
       if (options.turborepo && detectedIntegrations.turborepo) {
+        const turboErrorCount = reporter.getErrors().length
         await updateTurboConfig(outputDir, reporter, false, options.signal)
+        throwIfMigrationErrorsIncreased(turboErrorCount, reporter)
       }
 
       if (options.delete) {
+        deleteWasAttempted = true
         deletedLegacyFiles = await cleanupLegacyBiomeFiles(
           outputDir,
           biomeConfigPath,
@@ -200,10 +211,13 @@ export async function migrate(
       })
 
       if (options.turborepo && detectedIntegrations.turborepo) {
+        const turboErrorCount = reporter.getErrors().length
         await updateTurboConfig(outputDir, reporter, true, options.signal)
+        throwIfMigrationErrorsIncreased(turboErrorCount, reporter)
       }
 
       if (options.delete) {
+        deleteWasAttempted = true
         deletedLegacyFiles = await cleanupLegacyBiomeFiles(
           outputDir,
           biomeConfigPath,
@@ -218,11 +232,15 @@ export async function migrate(
       throw err
     }
 
-    reporter.error(`Migration failed while writing files: ${formatErrorMessage(err)}`)
+    if (!(err instanceof MigrationStepFailedError)) {
+      reporter.error(`Migration failed while writing files: ${formatErrorMessage(err)}`)
+    }
   }
 
   if (options.delete) {
-    if (deletedLegacyFiles.length > 0) {
+    if (!deleteWasAttempted) {
+      suggestions.push('--delete skipped because migration did not complete successfully.')
+    } else if (deletedLegacyFiles.length > 0) {
       const verb = options.dryRun ? 'would remove' : 'removed'
       suggestions.push(`--delete enabled: ${verb} legacy Biome files:`)
       suggestions.push(...deletedLegacyFiles.map((filePath) => `  - ${filePath}`))
@@ -475,6 +493,12 @@ function createErrorReport(reporter: Reporter, biomeConfigPath?: string): Migrat
       overridesConverted: 0,
       formatterOverridesConverted: 0,
     },
+  }
+}
+
+function throwIfMigrationErrorsIncreased(previousErrorCount: number, reporter: Reporter): void {
+  if (reporter.getErrors().length > previousErrorCount) {
+    throw new MigrationStepFailedError()
   }
 }
 

@@ -172,4 +172,26 @@ describe('updatePackageJson', () => {
     expect(pkg.devDependencies.oxfmt).toBe(expectedToolVersions.oxfmt)
     expect(pkg.devDependencies['oxlint-tsgolint']).toBe(expectedToolVersions.oxlintTsgolint)
   })
+
+  it('skips rewriting scripts that contain unsafe shell syntax', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: {
+        check: 'biome check src > check.log 2>&1',
+      },
+      devDependencies: {},
+    })
+    const reporter = new SilentReporter()
+
+    await updatePackageJson(dir, reporter, false, {
+      updateScripts: true,
+    })
+
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts.check).toBe('biome check src > check.log 2>&1')
+    expect(reporter.getWarnings()).toContain(
+      'Skipping script "check" because it contains shell redirection that cannot be rewritten safely.',
+    )
+  })
 })

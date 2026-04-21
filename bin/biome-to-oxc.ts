@@ -324,7 +324,11 @@ async function runAsMain(): Promise<void> {
 }
 
 if (await isMainModule()) {
-  void runAsMain()
+  void runAsMain().catch((err) => {
+    const message = err instanceof Error ? err.message : String(err)
+    process.stderr.write(`${pc.red('✖')} ${message}\n`)
+    process.exitCode = 1
+  })
 }
 
 async function isMainModule(): Promise<boolean> {

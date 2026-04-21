@@ -7,7 +7,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/biome-to-oxc.git
+   git clone https://github.com/entro314-labs/biome-to-oxc.git
    cd biome-to-oxc
    ```
 
@@ -26,20 +26,27 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ```
 biome-to-oxc/
-├── src/
-│   ├── types.ts              # TypeScript type definitions
-│   ├── reporter.ts           # Logging and reporting utilities
-│   ├── config-loader.ts      # Biome config loading and parsing
-│   ├── rule-mapper.ts        # Biome → Oxlint rule mapping
-│   ├── formatter-mapper.ts   # Biome → Oxfmt formatter mapping
-│   ├── oxlint-generator.ts   # Generate .oxlintrc.json
-│   ├── overrides-transformer.ts # Handle config overrides
-│   ├── package-updater.ts    # Update package.json scripts
-│   └── index.ts              # Main migration orchestrator
 ├── bin/
 │   └── biome-to-oxc.ts       # CLI entry point
-├── examples/                  # Example configurations
-└── tests/                     # Test files (to be added)
+├── docs/                     # Rule/option inventory reference data
+├── src/
+│   ├── advanced-detection.ts # Feature detection and migration suggestions
+│   ├── biome-ignore-loader.ts # .biomeignore parsing and loading
+│   ├── config-loader.ts      # Biome config loading, validation, and extends resolution
+│   ├── formatter-mapper.ts   # Biome → Oxfmt formatter mapping
+│   ├── index.ts              # Main migration orchestrator
+│   ├── js-plugin-scaffolder.ts # JS plugin scaffolding + unsupported-rule guidance
+│   ├── oxfmt-overrides.ts    # Oxfmt override generation
+│   ├── oxlint-generator.ts   # Oxlint config generation
+│   ├── overrides-transformer.ts # Oxlint override generation
+│   ├── package-updater.ts    # package.json updates and script rewrites
+│   ├── reporter.ts           # Logging and reporting utilities
+│   ├── rule-mapper.ts        # Biome → Oxlint rule mapping
+│   ├── turbo-updater.ts      # Turborepo metadata updates
+│   └── *.test.ts             # Unit/integration tests
+├── README.md
+├── QUICKSTART.md
+└── vitest.config.ts
 ```
 
 ## Adding New Rule Mappings

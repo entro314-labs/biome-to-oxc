@@ -46,13 +46,13 @@ pnpm add -D oxlint oxfmt
 
 ```bash
 # Lint your code
-pnpm oxlint
+pnpm exec oxlint .
 
 # Format your code
-pnpm oxfmt
+pnpm exec oxfmt --write .
 
 # Check formatting without writing
-pnpm oxfmt --check
+pnpm exec oxfmt --check .
 ```
 
 ## Step 6: Update Your Workflow
@@ -85,11 +85,11 @@ jobs:
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.22.0'
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm oxlint
-      - run: pnpm oxfmt --check
+      - run: pnpm exec oxlint .
+      - run: pnpm exec oxfmt --check .
 ```
 
 ## Common Issues
@@ -109,7 +109,6 @@ Check the warnings in the migration report. Some Biome rules may not have direct
 ## Next Steps
 
 - Read the full [README.md](./README.md) for detailed documentation
-- Check [examples/](./examples/) for sample configurations
 - See [CONTRIBUTING.md](./CONTRIBUTING.md) if you want to contribute
 
 ## Need Help?

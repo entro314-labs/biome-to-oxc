@@ -1,6 +1,7 @@
 import { readFile, stat } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
+import { isPathNotFoundError } from './fs-utils.js'
 import type { Reporter } from './types.js'
 
 const BIOME_IGNORE_FILE = '.biomeignore'
@@ -9,8 +10,12 @@ async function fileExists(path: string): Promise<boolean> {
   try {
     await stat(path)
     return true
-  } catch {
-    return false
+  } catch (err) {
+    if (isPathNotFoundError(err)) {
+      return false
+    }
+
+    throw err
   }
 }
 
@@ -41,7 +46,13 @@ export async function loadBiomeIgnorePatterns(
 ): Promise<string[]> {
   const ignorePath = resolve(projectDir, BIOME_IGNORE_FILE)
 
-  if (!(await fileExists(ignorePath))) {
+  try {
+    if (!(await fileExists(ignorePath))) {
+      return []
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    reporter.warn(`Failed to inspect .biomeignore at ${ignorePath}: ${message}`)
     return []
   }
 

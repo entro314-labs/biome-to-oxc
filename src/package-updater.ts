@@ -3,7 +3,12 @@ import { fileURLToPath } from 'node:url'
 
 import { z } from 'zod'
 
-import { findClosestPackageJson, readJsonFile, writeTextFileAtomically } from './fs-utils.js'
+import {
+  findClosestPackageJson,
+  pathExists,
+  readJsonFile,
+  writeTextFileAtomically,
+} from './fs-utils.js'
 import type {
   FixStrategy,
   PackageDependencyRemoval,
@@ -181,6 +186,7 @@ export async function updatePackageJson(
       return summary
     }
 
+    summary.found = await pathExists(packageJsonPath)
     reporter.error(`Failed to update package.json: ${message}`)
     return summary
   }
@@ -229,6 +235,17 @@ function updateScripts(
   for (const [name, script] of Object.entries(scripts)) {
     let newScript = stripExecBiome(script)
     let updated = false
+
+    if (containsBiomeCommand(newScript)) {
+      const unsafeRewriteReason = findUnsafeRewriteReason(newScript)
+
+      if (unsafeRewriteReason) {
+        reporter.warn(
+          `Skipping script "${name}" because it contains ${unsafeRewriteReason} that cannot be rewritten safely.`,
+        )
+        continue
+      }
+    }
 
     const replacements = [
       {
@@ -295,6 +312,29 @@ function updateScripts(
   }
 
   return modified
+}
+
+function containsBiomeCommand(script: string): boolean {
+  return /\bbiome\s+(check|ci|lint|format)\b/u.test(script)
+}
+
+function findUnsafeRewriteReason(script: string): string | undefined {
+  const checks: Array<{ pattern: RegExp; reason: string }> = [
+    { pattern: /&&|\|\|/u, reason: 'command chaining' },
+    { pattern: /[<>]/u, reason: 'shell redirection' },
+    { pattern: /(?<!\|)\|(?!\|)/u, reason: 'shell piping' },
+    { pattern: /;/u, reason: 'multiple shell commands' },
+    { pattern: /[`]/u, reason: 'command substitution' },
+    { pattern: /\$\(/u, reason: 'command substitution' },
+  ]
+
+  for (const { pattern, reason } of checks) {
+    if (pattern.test(script)) {
+      return reason
+    }
+  }
+
+  return undefined
 }
 
 function replaceBiomeCommand(

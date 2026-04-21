@@ -63,10 +63,10 @@ export function detectProjectFeatures(
 
   // Import sorting detection
   if (biomeConfig.linter?.rules && typeof biomeConfig.linter.rules === 'object') {
-    features.hasImportSorting = Object.keys(biomeConfig.linter.rules).some(
-      (key) =>
-        key.toLowerCase().includes('import') &&
-        (key.toLowerCase().includes('sort') || key.toLowerCase().includes('order')),
+    features.hasImportSorting = collectNestedRuleNames(biomeConfig.linter.rules).some(
+      (ruleName) =>
+        ruleName.toLowerCase().includes('import') &&
+        (ruleName.toLowerCase().includes('sort') || ruleName.toLowerCase().includes('order')),
     )
   }
 
@@ -125,16 +125,15 @@ export function generateFeatureSpecificSuggestions(features: ProjectFeatures): s
   if (features.hasTailwind) {
     suggestions.push('')
     suggestions.push('Tailwind CSS detected:')
-    suggestions.push('  - sortTailwindcss enabled with common class attributes')
-    suggestions.push('  - Supports: class, className, :class attributes')
-    suggestions.push('  - Supports: clsx, cn, classNames, tw functions')
+    suggestions.push('  - Review whether to opt into Oxfmt sortTailwindcss manually')
+    suggestions.push('  - Common attributes: class, className, :class')
+    suggestions.push('  - Common functions: clsx, cn, classNames, tw')
   }
 
   if (features.hasImportSorting) {
     suggestions.push('')
     suggestions.push('Import sorting detected:')
-    suggestions.push('  - sortImports enabled')
-    suggestions.push('  - Imports will be sorted alphabetically with newlines between groups')
+    suggestions.push('  - Review whether to opt into Oxfmt sortImports manually')
   }
 
   if (features.hasGraphQL) {
@@ -147,9 +146,30 @@ export function generateFeatureSpecificSuggestions(features: ProjectFeatures): s
   if (features.hasMonorepo) {
     suggestions.push('')
     suggestions.push('Monorepo detected:')
-    suggestions.push('  - sortPackageJson enabled for all package.json files')
     suggestions.push('  - Consider using workspace-specific overrides')
   }
 
   return suggestions
+}
+
+function collectNestedRuleNames(rules: Record<string, unknown>): string[] {
+  const ruleNames: string[] = []
+
+  for (const [key, value] of Object.entries(rules)) {
+    if (key === 'recommended' || key === 'all') {
+      continue
+    }
+
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      for (const nestedKey of Object.keys(value)) {
+        if (nestedKey === 'recommended' || nestedKey === 'all') {
+          continue
+        }
+
+        ruleNames.push(nestedKey)
+      }
+    }
+  }
+
+  return ruleNames
 }
