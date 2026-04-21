@@ -18,6 +18,7 @@ import type {
   BiomeRuleGroup,
   Reporter,
 } from './types.js'
+import type { ParseError as JsoncParseError } from 'jsonc-parser'
 
 const BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc']
 const IncludeFieldsSchema = z
@@ -255,7 +256,7 @@ export async function loadBiomeConfig(
 ): Promise<BiomeConfig> {
   try {
     const content = await readFile(configPath, 'utf-8')
-    const parseErrors: Array<{ error: number; offset: number; length: number }> = []
+    const parseErrors: JsoncParseError[] = []
     const parsedConfig = parseJsonc(content, parseErrors) as unknown
 
     if (parseErrors.length > 0) {

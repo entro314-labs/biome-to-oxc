@@ -211,7 +211,7 @@ function createCommand(
     .option(
       '--js-plugin <specifier>',
       'JS plugin specifier to scaffold (repeatable). Example: eslint-plugin-playwright',
-      (value: string, previous: string[] = []) => [...previous, value],
+      (value: string, previous: string[]) => [...previous, value],
       [],
     )
     .option(

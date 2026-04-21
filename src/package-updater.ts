@@ -456,9 +456,7 @@ function ensureDevDependency(
 }
 
 async function getRecommendedToolVersions(): Promise<RecommendedToolVersions> {
-  if (!recommendedToolVersionsPromise) {
-    recommendedToolVersionsPromise = loadRecommendedToolVersions()
-  }
+  recommendedToolVersionsPromise ??= loadRecommendedToolVersions()
 
   return recommendedToolVersionsPromise
 }
