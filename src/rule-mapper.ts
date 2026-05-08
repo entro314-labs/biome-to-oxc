@@ -17,7 +17,9 @@ const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
   nursery: 'nursery',
 }
 
-const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
+type OxlintRuleMapping = string | readonly string[]
+
+const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noAccessKey: 'jsx_a11y/no-access-key',
   noArguments: 'prefer-rest-params',
   noAriaHiddenOnFocusable: 'jsx_a11y/no-aria-hidden-on-focusable',
@@ -63,7 +65,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
   noFallthroughSwitchClause: 'no-fallthrough',
   noFloatingPromises: 'typescript/no-floating-promises',
-  noFocusedTests: 'jest/no-focused-tests',
+  noFocusedTests: ['jest/no-focused-tests', 'vitest/no-focused-tests'],
   noForEach: 'unicorn/no-array-for-each',
   noFunctionAssign: 'no-func-assign',
   noGlobalEval: 'no-eval',
@@ -87,6 +89,11 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noParameterProperties: 'typescript/parameter-properties',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
+  noDuplicateTestHooks: ['jest/no-duplicate-hooks', 'vitest/no-duplicate-hooks'],
+  noConditionalExpect: ['jest/no-conditional-expect', 'vitest/no-conditional-expect'],
+  noExcessiveNestedTestSuites: ['jest/max-nested-describe', 'vitest/max-nested-describe'],
+  noIdenticalTestTitle: ['jest/no-identical-title', 'vitest/no-identical-title'],
+  noMisplacedAssertion: ['jest/no-standalone-expect', 'vitest/no-standalone-expect'],
   noRenderReturnValue: 'react/no-render-return-value',
   noRestrictedGlobals: 'no-restricted-globals',
   noSelfCompare: 'no-self-compare',
@@ -94,7 +101,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   noSetterReturn: 'no-setter-return',
   noShadow: 'no-shadow',
   noShadowRestrictedNames: 'no-shadow-restricted-names',
-  noSkippedTests: 'jest/no-disabled-tests',
+  noSkippedTests: ['jest/no-disabled-tests', 'vitest/no-disabled-tests'],
   noSparseArray: 'no-sparse-arrays',
   noSwitchDeclarations: 'no-case-declarations',
   noStaticElementInteractions: 'jsx_a11y/no-static-element-interactions',
@@ -135,12 +142,15 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   useAsConstAssertion: 'typescript/prefer-as-const',
   useAwait: 'require-await',
   useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
+  useConsistentTestIt: ['jest/consistent-test-it', 'vitest/consistent-test-it'],
   useConst: 'prefer-const',
   useDefaultParameterLast: 'default-param-last',
+  useExpect: ['jest/expect-expect', 'vitest/expect-expect'],
   useExportType: 'typescript/consistent-type-exports',
   useExhaustiveSwitchCases: 'typescript/switch-exhaustiveness-check',
   useExhaustiveDependencies: 'react/exhaustive-deps',
   useFilenamingConvention: 'unicorn/filename-case',
+  useFocusableInteractive: 'jsx_a11y/interactive-supports-focus',
   useHtmlLang: 'jsx_a11y/html-has-lang',
   useHookAtTopLevel: 'react/rules-of-hooks',
   useImportType: 'typescript/consistent-type-imports',
@@ -150,9 +160,12 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
   useLiteralKeys: 'typescript/dot-notation',
   useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
   useOptionalChain: 'typescript/prefer-optional-chain',
+  useReactFunctionComponents: 'react/prefer-function-component',
   useSemanticElements: 'jsx_a11y/prefer-tag-over-role',
   useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
   useTemplate: 'prefer-template',
+  useTestHooksOnTop: ['jest/prefer-hooks-on-top', 'vitest/prefer-hooks-on-top'],
+  useUnicodeRegex: 'require-unicode-regexp',
   useValidAriaRole: 'jsx_a11y/aria-role',
   useValidForDirection: 'for-direction',
   useValidLang: 'jsx_a11y/lang',
@@ -209,13 +222,18 @@ export function mapBiomeRuleSeverity(
 }
 
 export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): string | null {
+  return mapBiomeRuleToOxlintRules(biomeName, reporter)[0] ?? null
+}
+
+function mapBiomeRuleToOxlintRules(biomeName: string, reporter: Reporter): string[] {
   const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName]
   if (mapped) {
-    return normalizeOxlintRuleName(mapped)
+    const ruleNames = Array.isArray(mapped) ? mapped : [mapped]
+    return [...new Set(ruleNames.map((ruleName) => normalizeOxlintRuleName(ruleName)))]
   }
 
   warnUnmappedRuleOnce(biomeName, reporter)
-  return null
+  return []
 }
 
 function warnUnmappedRuleOnce(biomeName: string, reporter: Reporter): void {
@@ -309,9 +327,12 @@ export function extractRulesFromBiomeConfig(
           continue
         }
 
-        const oxlintRuleName = mapBiomeRuleToOxlint(ruleName, reporter)
-        if (oxlintRuleName) {
-          rules[oxlintRuleName] = mapBiomeRuleSeverity(ruleSeverity, reporter, ruleName)
+        const oxlintRuleNames = mapBiomeRuleToOxlintRules(ruleName, reporter)
+        if (oxlintRuleNames.length > 0) {
+          const oxlintSeverity = mapBiomeRuleSeverity(ruleSeverity, reporter, ruleName)
+          for (const oxlintRuleName of oxlintRuleNames) {
+            rules[oxlintRuleName] = oxlintSeverity
+          }
         }
       }
 

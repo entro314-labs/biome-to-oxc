@@ -49,12 +49,17 @@ describe('rule-mapper parity expansion', () => {
       noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
       noFloatingPromises: 'typescript/no-floating-promises',
       noFocusedTests: 'jest/no-focused-tests',
+      noConditionalExpect: 'jest/no-conditional-expect',
+      noDuplicateTestHooks: 'jest/no-duplicate-hooks',
+      noExcessiveNestedTestSuites: 'jest/max-nested-describe',
       noForEach: 'unicorn/no-array-for-each',
       noGlobalEval: 'no-eval',
+      noIdenticalTestTitle: 'jest/no-identical-title',
       noImplicitBoolean: 'no-implicit-coercion',
       noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
       noLabelWithoutControl: 'jsx_a11y/label-has-associated-control',
       noInvalidUseBeforeDeclaration: 'no-use-before-define',
+      noMisplacedAssertion: 'jest/no-standalone-expect',
       noNodejsModules: 'import/no-nodejs-modules',
       noNonNullAssertion: 'typescript/no-non-null-assertion',
       noParameterAssign: 'no-param-reassign',
@@ -75,9 +80,12 @@ describe('rule-mapper parity expansion', () => {
       useAwaitThenable: 'typescript/await-thenable',
       useButtonType: 'react/button-has-type',
       useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
+      useConsistentTestIt: 'jest/consistent-test-it',
+      useExpect: 'jest/expect-expect',
       useExportType: 'typescript/consistent-type-exports',
       useExhaustiveSwitchCases: 'typescript/switch-exhaustiveness-check',
       useFilenamingConvention: 'unicorn/filename-case',
+      useFocusableInteractive: 'jsx_a11y/interactive-supports-focus',
       useHtmlLang: 'jsx_a11y/html-has-lang',
       useImportType: 'typescript/consistent-type-imports',
       useJsxKeyInIterable: 'react/jsx-key',
@@ -85,9 +93,12 @@ describe('rule-mapper parity expansion', () => {
       useLiteralKeys: 'typescript/dot-notation',
       useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
       useOptionalChain: 'typescript/prefer-optional-chain',
+      useReactFunctionComponents: 'react/prefer-function-component',
       useSemanticElements: 'jsx_a11y/prefer-tag-over-role',
       useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
       useTemplate: 'prefer-template',
+      useTestHooksOnTop: 'jest/prefer-hooks-on-top',
+      useUnicodeRegex: 'require-unicode-regexp',
       useValidAriaRole: 'jsx_a11y/aria-role',
       useValidLang: 'jsx_a11y/lang',
     }
@@ -95,6 +106,56 @@ describe('rule-mapper parity expansion', () => {
     for (const [biomeRule, oxlintRule] of Object.entries(mappings)) {
       expect(mapBiomeRuleToOxlint(biomeRule, reporter)).toBe(oxlintRule)
     }
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('emits both Jest and Vitest equivalents for generic Biome test rules', () => {
+    const reporter = new SilentReporter()
+
+    const linterRules: BiomeLinterRules = {
+      complexity: {
+        noExcessiveNestedTestSuites: 'warn',
+      },
+      nursery: {
+        noConditionalExpect: 'error',
+        noIdenticalTestTitle: 'warn',
+        useConsistentTestIt: 'warn',
+        useExpect: 'error',
+        useTestHooksOnTop: 'warn',
+      },
+      suspicious: {
+        noDuplicateTestHooks: 'error',
+        noFocusedTests: 'error',
+        noMisplacedAssertion: 'warn',
+        noSkippedTests: 'warn',
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'jest/consistent-test-it': 'warn',
+      'jest/expect-expect': 'error',
+      'jest/max-nested-describe': 'warn',
+      'jest/no-conditional-expect': 'error',
+      'jest/no-disabled-tests': 'warn',
+      'jest/no-duplicate-hooks': 'error',
+      'jest/no-focused-tests': 'error',
+      'jest/no-identical-title': 'warn',
+      'jest/no-standalone-expect': 'warn',
+      'jest/prefer-hooks-on-top': 'warn',
+      'vitest/consistent-test-it': 'warn',
+      'vitest/expect-expect': 'error',
+      'vitest/max-nested-describe': 'warn',
+      'vitest/no-conditional-expect': 'error',
+      'vitest/no-disabled-tests': 'warn',
+      'vitest/no-duplicate-hooks': 'error',
+      'vitest/no-focused-tests': 'error',
+      'vitest/no-identical-title': 'warn',
+      'vitest/no-standalone-expect': 'warn',
+      'vitest/prefer-hooks-on-top': 'warn',
+    })
 
     expect(reporter.getWarnings()).toEqual([])
   })
