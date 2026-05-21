@@ -62,6 +62,7 @@ consistent-type-specifier-style	import
 consistent-vitest-vi	vitest
 const-comparisons	oxc
 constructor-super	eslint
+control-has-associated-label	jsx_a11y
 curly	eslint
 custom-error-definition	unicorn
 default	import
@@ -113,6 +114,7 @@ hoisted-apis-on-top	vitest
 hook-use-state	react
 html-has-lang	jsx_a11y
 id-length	eslint
+id-match	eslint
 iframe-has-title	jsx_a11y
 iframe-missing-sandbox	react
 img-redundant-alt	jsx_a11y
@@ -165,6 +167,7 @@ named	import
 namespace	import
 new-cap	eslint
 new-for-builtins	unicorn
+newline-after-import	import
 next-script-for-ga	nextjs
 no-absolute-path	import
 no-abusive-eslint-disable	unicorn
@@ -310,6 +313,8 @@ no-identical-title	vitest
 no-img-element	nextjs
 no-immediate-mutation	unicorn
 no-implicit-coercion	eslint
+no-implicit-globals	eslint
+no-implied-eval	eslint
 no-implied-eval	typescript
 no-import-assign	eslint
 no-import-compiler-macros	vue
@@ -321,6 +326,7 @@ no-inline-comments	eslint
 no-inner-declarations	eslint
 no-instanceof-array	unicorn
 no-instanceof-builtins	unicorn
+no-interactive-element-to-noninteractive-role	jsx_a11y
 no-interpolation-in-snapshots	jest
 no-interpolation-in-snapshots	vitest
 no-invalid-fetch-options	unicorn
@@ -384,12 +390,15 @@ no-nodejs-modules	import
 no-non-null-asserted-nullish-coalescing	typescript
 no-non-null-asserted-optional-chain	typescript
 no-non-null-assertion	typescript
+no-noninteractive-element-interactions	jsx_a11y
+no-noninteractive-element-to-interactive-role	jsx_a11y
 no-noninteractive-tabindex	jsx_a11y
 no-nonoctal-decimal-escape	eslint
 no-null	unicorn
 no-obj-calls	eslint
 no-object-as-default-parameter	unicorn
 no-object-constructor	eslint
+no-object-type-as-default-prop	react
 no-optional-chaining	oxc
 no-page-custom-font	nextjs
 no-param-reassign	eslint
@@ -503,6 +512,7 @@ no-unsafe-optional-chaining	eslint
 no-unsafe-return	typescript
 no-unsafe-type-assertion	typescript
 no-unsafe-unary-minus	typescript
+no-unstable-nested-components	react
 no-untyped-mock-factory	jest
 no-unused-expressions	eslint
 no-unused-labels	eslint
@@ -550,6 +560,7 @@ only-throw-error	typescript
 only-used-in-recursion	oxc
 operator-assignment	eslint
 padding-around-after-all-blocks	jest
+padding-around-after-all-blocks	vitest
 padding-around-test-blocks	jest
 param-names	promise
 parameter-properties	typescript
@@ -559,6 +570,7 @@ prefer-array-flat	unicorn
 prefer-array-flat-map	unicorn
 prefer-array-index-of	unicorn
 prefer-array-some	unicorn
+prefer-arrow-callback	eslint
 prefer-as-const	typescript
 prefer-at	unicorn
 prefer-await-to-callbacks	promise
@@ -651,6 +663,7 @@ prefer-readonly	typescript
 prefer-readonly-parameter-types	typescript
 prefer-reduce-type-parameter	typescript
 prefer-reflect-apply	unicorn
+prefer-regex-literals	eslint
 prefer-regexp-exec	typescript
 prefer-regexp-test	unicorn
 prefer-response-static-json	unicorn
@@ -727,6 +740,8 @@ require-returns	jsdoc
 require-returns-description	jsdoc
 require-returns-type	jsdoc
 require-test-timeout	vitest
+require-throws-description	jsdoc
+require-throws-type	jsdoc
 require-to-throw-message	jest
 require-to-throw-message	vitest
 require-top-level-describe	jest
@@ -735,6 +750,7 @@ require-typed-ref	vue
 require-unicode-regexp	eslint
 require-yield	eslint
 require-yields	jsdoc
+require-yields-type	jsdoc
 restrict-plus-operands	typescript
 restrict-template-expressions	typescript
 return-await	typescript

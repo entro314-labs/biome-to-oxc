@@ -83,4 +83,30 @@ describe('generateOxfmtOverrides', () => {
       'Skipping css.formatter override because Oxfmt overrides are file-glob based and these include patterns are not css-specific: src/**/*',
     ])
   })
+
+  it('passes through Svelte formatter options in base overrides', () => {
+    const reporter = new SilentReporter()
+
+    const overrides = generateOxfmtOverrides(
+      [
+        {
+          include: ['src/**/*.svelte'],
+          formatter: {
+            svelte: true,
+          },
+        },
+      ],
+      reporter,
+    )
+
+    expect(overrides).toEqual([
+      {
+        files: ['src/**/*.svelte'],
+        options: {
+          svelte: true,
+        },
+      },
+    ])
+    expect(reporter.getWarnings()).toEqual([])
+  })
 })

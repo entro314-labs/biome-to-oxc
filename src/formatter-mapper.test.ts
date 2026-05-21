@@ -78,4 +78,27 @@ describe('generateOxfmtConfig', () => {
 
     expect(config.objectWrap).toBe(true)
   })
+
+  it('passes through explicitly configured Svelte formatter options', () => {
+    const reporter = new SilentReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        formatter: {
+          svelte: {
+            allowShorthand: false,
+            indentScriptAndStyle: false,
+            sortOrder: 'scripts-markup-styles-options',
+          },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.svelte).toEqual({
+      allowShorthand: false,
+      indentScriptAndStyle: false,
+      sortOrder: 'scripts-markup-styles-options',
+    })
+  })
 })

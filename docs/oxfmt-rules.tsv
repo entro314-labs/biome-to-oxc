@@ -74,6 +74,11 @@ sortTailwindcss.functions	sortTailwindcss
 sortTailwindcss.preserveDuplicates	sortTailwindcss
 sortTailwindcss.preserveWhitespace	sortTailwindcss
 sortTailwindcss.stylesheet	sortTailwindcss
+svelte	override.options
+svelte	top-level
+svelte.allowShorthand	svelte
+svelte.indentScriptAndStyle	svelte
+svelte.sortOrder	svelte
 tabWidth	override.options
 tabWidth	top-level
 trailingComma	override.options

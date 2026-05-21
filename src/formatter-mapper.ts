@@ -16,6 +16,7 @@ const EXPLICIT_OXFMT_OPTION_KEYS = [
   'sortImports',
   'sortPackageJson',
   'sortTailwindcss',
+  'svelte',
 ] as const
 const LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES = {
   experimentalSortImports: 'sortImports',

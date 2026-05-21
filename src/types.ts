@@ -269,6 +269,15 @@ export interface OxfmtConfig {
   // Vue options
   vueIndentScriptAndStyle?: boolean
 
+  // Svelte options
+  svelte?:
+    | boolean
+    | {
+        allowShorthand?: boolean
+        indentScriptAndStyle?: boolean
+        sortOrder?: string
+      }
+
   // Sorting features
   sortImports?: {
     order?: 'asc' | 'desc'
