@@ -35,9 +35,9 @@ describe('rule-mapper parity expansion', () => {
     const reporter = new SilentReporter()
 
     const mappings: Record<string, string> = {
-      noAccessKey: 'jsx_a11y/no-access-key',
+      noAccessKey: 'jsx-a11y/no-access-key',
       noArguments: 'prefer-rest-params',
-      noAriaHiddenOnFocusable: 'jsx_a11y/no-aria-hidden-on-focusable',
+      noAriaHiddenOnFocusable: 'jsx-a11y/no-aria-hidden-on-focusable',
       noBarrelFile: 'oxc/no-barrel-file',
       noConstantBinaryExpressions: 'no-constant-binary-expression',
       noConsole: 'no-console',
@@ -58,23 +58,23 @@ describe('rule-mapper parity expansion', () => {
       noImplicitBoolean: 'no-implicit-coercion',
       noImpliedEval: 'no-implied-eval',
       noInteractiveElementToNoninteractiveRole:
-        'jsx_a11y/no-interactive-element-to-noninteractive-role',
+        'jsx-a11y/no-interactive-element-to-noninteractive-role',
       noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
-      noLabelWithoutControl: 'jsx_a11y/label-has-associated-control',
+      noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
       noInvalidUseBeforeDeclaration: 'no-use-before-define',
       noMisplacedAssertion: 'jest/no-standalone-expect',
       noNestedComponentDefinitions: 'react/no-unstable-nested-components',
       noNodejsModules: 'import/no-nodejs-modules',
-      noNoninteractiveElementInteractions: 'jsx_a11y/no-noninteractive-element-interactions',
+      noNoninteractiveElementInteractions: 'jsx-a11y/no-noninteractive-element-interactions',
       noNoninteractiveElementToInteractiveRole:
-        'jsx_a11y/no-noninteractive-element-to-interactive-role',
+        'jsx-a11y/no-noninteractive-element-to-interactive-role',
       noNonNullAssertion: 'typescript/no-non-null-assertion',
       noParameterAssign: 'no-param-reassign',
       noParameterProperties: 'typescript/parameter-properties',
       noShadow: 'no-shadow',
       noSkippedTests: 'jest/no-disabled-tests',
       noSwitchDeclarations: 'no-case-declarations',
-      noStaticElementInteractions: 'jsx_a11y/no-static-element-interactions',
+      noStaticElementInteractions: 'jsx-a11y/no-static-element-interactions',
       noUnknownProperty: 'react/no-unknown-property',
       noUnusedFunctionParameters: 'no-unused-vars',
       noUnusedImports: 'no-unused-vars',
@@ -82,7 +82,9 @@ describe('rule-mapper parity expansion', () => {
       noUselessThisAlias: 'typescript/no-this-alias',
       noUselessTernary: 'no-unneeded-ternary',
       noVueDataObjectDeclaration: 'vue/no-deprecated-data-object-declaration',
-      useAltText: 'jsx_a11y/alt-text',
+      noVueReservedKeys: 'vue/no-reserved-keys',
+      noVueReservedProps: 'vue/no-reserved-props',
+      useAltText: 'jsx-a11y/alt-text',
       useArrowFunction: 'prefer-arrow-callback',
       useAsConstAssertion: 'typescript/prefer-as-const',
       useAwait: 'require-await',
@@ -95,24 +97,25 @@ describe('rule-mapper parity expansion', () => {
       useExportType: 'typescript/consistent-type-exports',
       useExhaustiveSwitchCases: 'typescript/switch-exhaustiveness-check',
       useFilenamingConvention: 'unicorn/filename-case',
-      useFocusableInteractive: 'jsx_a11y/interactive-supports-focus',
-      useHtmlLang: 'jsx_a11y/html-has-lang',
+      useFocusableInteractive: 'jsx-a11y/interactive-supports-focus',
+      useHtmlLang: 'jsx-a11y/html-has-lang',
       useImportType: 'typescript/consistent-type-imports',
       useJsxKeyInIterable: 'react/jsx-key',
-      useKeyWithClickEvents: 'jsx_a11y/click-events-have-key-events',
+      useKeyWithClickEvents: 'jsx-a11y/click-events-have-key-events',
       useLiteralKeys: 'typescript/dot-notation',
       useNamedCaptureGroup: 'prefer-named-capture-group',
       useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
       useOptionalChain: 'typescript/prefer-optional-chain',
       useReactFunctionComponents: 'react/prefer-function-component',
       useRegexLiterals: 'prefer-regex-literals',
-      useSemanticElements: 'jsx_a11y/prefer-tag-over-role',
+      useSemanticElements: 'jsx-a11y/prefer-tag-over-role',
       useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
       useTemplate: 'prefer-template',
       useTestHooksOnTop: 'jest/prefer-hooks-on-top',
       useUnicodeRegex: 'require-unicode-regexp',
-      useValidAriaRole: 'jsx_a11y/aria-role',
-      useValidLang: 'jsx_a11y/lang',
+      useValidAriaRole: 'jsx-a11y/aria-role',
+      useValidLang: 'jsx-a11y/lang',
+      useVueNextTickPromise: 'vue/next-tick-style',
     }
 
     for (const [biomeRule, oxlintRule] of Object.entries(mappings)) {
@@ -145,11 +148,29 @@ describe('rule-mapper parity expansion', () => {
     expect(reporter.getWarnings()).toEqual([])
   })
 
+  it('maps Vue nextTick promise parity with the matching Oxlint style option', () => {
+    const reporter = new SilentReporter()
+
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        useVueNextTickPromise: 'error',
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'vue/next-tick-style': ['error', 'promise'],
+    })
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
   it('maps active Biome rules with native Oxlint parity', () => {
     const reporter = new SilentReporter()
 
     const mappings: Record<string, string> = {
-      noAutofocus: 'jsx_a11y/no-autofocus',
+      noAutofocus: 'jsx-a11y/no-autofocus',
       noAwaitInLoops: 'no-await-in-loop',
       noBaseToString: 'typescript/no-base-to-string',
       noBitwiseOperators: 'no-bitwise',

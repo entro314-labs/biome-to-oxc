@@ -20,10 +20,10 @@ const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
 type OxlintRuleMapping = string | readonly string[]
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
-  noAccessKey: 'jsx_a11y/no-access-key',
+  noAccessKey: 'jsx-a11y/no-access-key',
   noArguments: 'prefer-rest-params',
-  noAriaHiddenOnFocusable: 'jsx_a11y/no-aria-hidden-on-focusable',
-  noAriaUnsupportedElements: 'jsx_a11y/aria-unsupported-elements',
+  noAriaHiddenOnFocusable: 'jsx-a11y/no-aria-hidden-on-focusable',
+  noAriaUnsupportedElements: 'jsx-a11y/aria-unsupported-elements',
   noAccumulatingSpread: 'oxc/no-accumulating-spread',
   noAlert: 'no-alert',
   noConstantBinaryExpressions: 'no-constant-binary-expression',
@@ -32,7 +32,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noArrayIndexKey: 'react/no-array-index-key',
   noAssignInExpressions: 'no-cond-assign',
   noAsyncPromiseExecutor: 'no-async-promise-executor',
-  noAutofocus: 'jsx_a11y/no-autofocus',
+  noAutofocus: 'jsx-a11y/no-autofocus',
   noAwaitInLoops: 'no-await-in-loop',
   noBaseToString: 'typescript/no-base-to-string',
   noBeforeInteractiveScriptOutsideDocument: 'nextjs/no-before-interactive-script-outside-document',
@@ -57,7 +57,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noDangerouslySetInnerHtmlWithChildren: 'react/no-danger-with-children',
   noDebugger: 'no-debugger',
   noDefaultExport: 'import/no-default-export',
-  noDistractingElements: 'jsx_a11y/no-distracting-elements',
+  noDistractingElements: 'jsx-a11y/no-distracting-elements',
   noDoubleEquals: 'eqeqeq',
   noDuplicateCase: 'no-duplicate-case',
   noDuplicateElseIf: 'no-dupe-else-if',
@@ -86,7 +86,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noGlobalAssign: 'no-global-assign',
   noGlobalEval: 'no-eval',
   noGlobalObjectCalls: 'no-obj-calls',
-  noHeaderScope: 'jsx_a11y/scope',
+  noHeaderScope: 'jsx-a11y/scope',
   noHeadElement: 'nextjs/no-head-element',
   noHeadImportInDocument: 'nextjs/no-head-import-in-document',
   noImportAssign: 'no-import-assign',
@@ -101,10 +101,10 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noInvalidConstructorSuper: 'no-this-before-super',
   noIrregularWhitespace: 'no-irregular-whitespace',
   noInteractiveElementToNoninteractiveRole:
-    'jsx_a11y/no-interactive-element-to-noninteractive-role',
+    'jsx-a11y/no-interactive-element-to-noninteractive-role',
   noInvalidNewBuiltin: 'no-new-native-nonconstructor',
   noJsxNamespace: 'react/no-namespace',
-  noLabelWithoutControl: 'jsx_a11y/label-has-associated-control',
+  noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
   noLabelVar: 'no-label-var',
   noLoopFunc: 'no-loop-func',
   noMagicNumbers: 'no-magic-numbers',
@@ -120,10 +120,10 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noNamespaceImport: 'import/no-namespace',
   noNestedComponentDefinitions: 'react/no-unstable-nested-components',
   noNestedTernary: 'no-nested-ternary',
-  noNoninteractiveElementInteractions: 'jsx_a11y/no-noninteractive-element-interactions',
+  noNoninteractiveElementInteractions: 'jsx-a11y/no-noninteractive-element-interactions',
   noNoninteractiveElementToInteractiveRole:
-    'jsx_a11y/no-noninteractive-element-to-interactive-role',
-  noNoninteractiveTabindex: 'jsx_a11y/no-noninteractive-tabindex',
+    'jsx-a11y/no-noninteractive-element-to-interactive-role',
+  noNoninteractiveTabindex: 'jsx-a11y/no-noninteractive-tabindex',
   noNonNullAssertedOptionalChain: 'typescript/no-non-null-asserted-optional-chain',
   noNonNullAssertion: 'typescript/no-non-null-assertion',
   noNonoctalDecimalEscape: 'no-nonoctal-decimal-escape',
@@ -135,8 +135,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noProto: 'no-proto',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
-  noRedundantAlt: 'jsx_a11y/img-redundant-alt',
-  noRedundantRoles: 'jsx_a11y/no-redundant-roles',
+  noRedundantAlt: 'jsx-a11y/img-redundant-alt',
+  noRedundantRoles: 'jsx-a11y/no-redundant-roles',
   noDuplicateTestHooks: ['jest/no-duplicate-hooks', 'vitest/no-duplicate-hooks'],
   noConditionalExpect: ['jest/no-conditional-expect', 'vitest/no-conditional-expect'],
   noExcessiveNestedTestSuites: ['jest/max-nested-describe', 'vitest/max-nested-describe'],
@@ -158,7 +158,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noStaticOnlyClass: 'unicorn/no-static-only-class',
   noSyncScripts: 'nextjs/no-sync-scripts',
   noSwitchDeclarations: 'no-case-declarations',
-  noStaticElementInteractions: 'jsx_a11y/no-static-element-interactions',
+  noStaticElementInteractions: 'jsx-a11y/no-static-element-interactions',
   noTemplateCurlyInString: 'no-template-curly-in-string',
   noTernary: 'no-ternary',
   noUndeclaredVariables: 'no-undef',
@@ -199,19 +199,21 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
     'vue/no-deprecated-data-object-declaration',
     'vue/no-shared-component-data',
   ],
+  noVueReservedKeys: 'vue/no-reserved-keys',
+  noVueReservedProps: 'vue/no-reserved-props',
   noWith: 'no-with',
   noYodaExpression: 'yoda',
-  useAltText: 'jsx_a11y/alt-text',
-  useAnchorContent: 'jsx_a11y/anchor-has-content',
+  useAltText: 'jsx-a11y/alt-text',
+  useAnchorContent: 'jsx-a11y/anchor-has-content',
   useArrowFunction: 'prefer-arrow-callback',
   useArraySome: 'unicorn/prefer-array-some',
   useArraySortCompare: 'typescript/require-array-sort-compare',
-  useAriaActivedescendantWithTabindex: 'jsx_a11y/aria-activedescendant-has-tabindex',
+  useAriaActivedescendantWithTabindex: 'jsx-a11y/aria-activedescendant-has-tabindex',
   useAwaitThenable: 'typescript/await-thenable',
   useButtonType: 'react/button-has-type',
-  useAriaPropTypes: 'jsx_a11y/aria-proptypes',
-  useAriaPropsForRole: 'jsx_a11y/role-has-required-aria-props',
-  useAriaPropsSupportedByRole: 'jsx_a11y/role-supports-aria-props',
+  useAriaPropTypes: 'jsx-a11y/aria-proptypes',
+  useAriaPropsForRole: 'jsx-a11y/role-has-required-aria-props',
+  useAriaPropsSupportedByRole: 'jsx-a11y/role-supports-aria-props',
   useAsConstAssertion: 'typescript/prefer-as-const',
   useAtIndex: 'unicorn/prefer-at',
   useAwait: 'require-await',
@@ -241,17 +243,17 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useFilenamingConvention: 'unicorn/filename-case',
   useFind: 'typescript/prefer-find',
   useFlatMap: 'unicorn/prefer-array-flat-map',
-  useFocusableInteractive: 'jsx_a11y/interactive-supports-focus',
+  useFocusableInteractive: 'jsx-a11y/interactive-supports-focus',
   useForOf: 'typescript/prefer-for-of',
   useGetterReturn: 'getter-return',
   useGlobalThis: 'unicorn/prefer-global-this',
   useGoogleFontDisplay: 'nextjs/google-font-display',
   useGoogleFontPreconnect: 'nextjs/google-font-preconnect',
   useGuardForIn: 'guard-for-in',
-  useHeadingContent: 'jsx_a11y/heading-has-content',
-  useHtmlLang: 'jsx_a11y/html-has-lang',
+  useHeadingContent: 'jsx-a11y/heading-has-content',
+  useHtmlLang: 'jsx-a11y/html-has-lang',
   useHookAtTopLevel: 'react/rules-of-hooks',
-  useIframeTitle: 'jsx_a11y/iframe-has-title',
+  useIframeTitle: 'jsx-a11y/iframe-has-title',
   useImportsFirst: 'import/first',
   useImportType: 'typescript/consistent-type-imports',
   useIndexOf: 'unicorn/prefer-array-index-of',
@@ -259,12 +261,12 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useIterableCallbackReturn: 'array-callback-return',
   useIsNan: 'use-isnan',
   useJsxKeyInIterable: 'react/jsx-key',
-  useKeyWithClickEvents: 'jsx_a11y/click-events-have-key-events',
-  useKeyWithMouseEvents: 'jsx_a11y/mouse-events-have-key-events',
+  useKeyWithClickEvents: 'jsx-a11y/click-events-have-key-events',
+  useKeyWithMouseEvents: 'jsx-a11y/mouse-events-have-key-events',
   useLiteralEnumMembers: 'typescript/prefer-literal-enum-member',
   useLiteralKeys: 'typescript/dot-notation',
   useMathMinMax: 'unicorn/prefer-math-min-max',
-  useMediaCaption: 'jsx_a11y/media-has-caption',
+  useMediaCaption: 'jsx-a11y/media-has-caption',
   useNamedCaptureGroup: 'prefer-named-capture-group',
   useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
   useNullishCoalescing: 'typescript/prefer-nullish-coalescing',
@@ -278,7 +280,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useRegexLiterals: 'prefer-regex-literals',
   useRegexpExec: 'typescript/prefer-regexp-exec',
   useRegexpTest: 'unicorn/prefer-regexp-test',
-  useSemanticElements: 'jsx_a11y/prefer-tag-over-role',
+  useSemanticElements: 'jsx-a11y/prefer-tag-over-role',
   useShorthandFunctionType: 'typescript/prefer-function-type',
   useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
   useSpread: 'prefer-spread',
@@ -292,16 +294,17 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useTrimStartEnd: 'unicorn/prefer-string-trim-start-end',
   useUnicodeRegex: 'require-unicode-regexp',
   useUnifiedTypeSignatures: 'typescript/unified-signatures',
-  useValidAriaRole: 'jsx_a11y/aria-role',
-  useValidAnchor: 'jsx_a11y/anchor-is-valid',
-  useValidAriaProps: 'jsx_a11y/aria-props',
-  useValidAriaValues: 'jsx_a11y/aria-proptypes',
-  useValidAutocomplete: 'jsx_a11y/autocomplete-valid',
+  useValidAriaRole: 'jsx-a11y/aria-role',
+  useValidAnchor: 'jsx-a11y/anchor-is-valid',
+  useValidAriaProps: 'jsx-a11y/aria-props',
+  useValidAriaValues: 'jsx-a11y/aria-proptypes',
+  useValidAutocomplete: 'jsx-a11y/autocomplete-valid',
   useValidForDirection: 'for-direction',
-  useValidLang: 'jsx_a11y/lang',
+  useValidLang: 'jsx-a11y/lang',
   useValidTypeof: 'valid-typeof',
   useVarsOnTop: 'vars-on-top',
   useVueConsistentDefinePropsDeclaration: 'vue/define-props-declaration',
+  useVueNextTickPromise: 'vue/next-tick-style',
   useYield: 'require-yield',
 }
 
@@ -323,11 +326,11 @@ function normalizeOxlintRuleName(ruleName: string): string {
   if (ruleName.startsWith('react-hooks/')) {
     return ruleName.replace('react-hooks/', 'react/')
   }
-  if (ruleName.startsWith('jsx-a11y/')) {
-    return ruleName.replace('jsx-a11y/', 'jsx_a11y/')
+  if (ruleName.startsWith('jsx_a11y/')) {
+    return ruleName.replace('jsx_a11y/', 'jsx-a11y/')
   }
-  if (ruleName.startsWith('react-perf/')) {
-    return ruleName.replace('react-perf/', 'react_perf/')
+  if (ruleName.startsWith('react_perf/')) {
+    return ruleName.replace('react_perf/', 'react-perf/')
   }
   return ruleName
 }
@@ -337,6 +340,10 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   severity: OxlintRuleSeverity,
   biomeSeverity: BiomeRuleSeverity,
 ): OxlintRuleSeverity {
+  if (biomeName === 'useVueNextTickPromise') {
+    return typeof severity === 'string' ? [severity, 'promise'] : severity
+  }
+
   if (biomeName !== 'useConsistentMethodSignatures') {
     return severity
   }
