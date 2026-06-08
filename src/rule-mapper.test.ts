@@ -81,12 +81,14 @@ describe('rule-mapper parity expansion', () => {
       noUnnecessaryConditions: 'typescript/no-unnecessary-condition',
       noUselessThisAlias: 'typescript/no-this-alias',
       noUselessTernary: 'no-unneeded-ternary',
+      noVueDataObjectDeclaration: 'vue/no-deprecated-data-object-declaration',
       useAltText: 'jsx_a11y/alt-text',
       useArrowFunction: 'prefer-arrow-callback',
       useAsConstAssertion: 'typescript/prefer-as-const',
       useAwait: 'require-await',
       useAwaitThenable: 'typescript/await-thenable',
       useButtonType: 'react/button-has-type',
+      useConsistentMethodSignatures: 'typescript/method-signature-style',
       useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
       useConsistentTestIt: 'jest/consistent-test-it',
       useExpect: 'jest/expect-expect',
@@ -99,6 +101,7 @@ describe('rule-mapper parity expansion', () => {
       useJsxKeyInIterable: 'react/jsx-key',
       useKeyWithClickEvents: 'jsx_a11y/click-events-have-key-events',
       useLiteralKeys: 'typescript/dot-notation',
+      useNamedCaptureGroup: 'prefer-named-capture-group',
       useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
       useOptionalChain: 'typescript/prefer-optional-chain',
       useReactFunctionComponents: 'react/prefer-function-component',
@@ -110,6 +113,63 @@ describe('rule-mapper parity expansion', () => {
       useUnicodeRegex: 'require-unicode-regexp',
       useValidAriaRole: 'jsx_a11y/aria-role',
       useValidLang: 'jsx_a11y/lang',
+    }
+
+    for (const [biomeRule, oxlintRule] of Object.entries(mappings)) {
+      expect(mapBiomeRuleToOxlint(biomeRule, reporter)).toBe(oxlintRule)
+    }
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('preserves supported options for method signature style parity', () => {
+    const reporter = new SilentReporter()
+
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        useConsistentMethodSignatures: {
+          level: 'error',
+          options: {
+            style: 'method',
+          },
+        },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'typescript/method-signature-style': ['error', 'method'],
+    })
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('maps active Biome rules with native Oxlint parity', () => {
+    const reporter = new SilentReporter()
+
+    const mappings: Record<string, string> = {
+      noAutofocus: 'jsx_a11y/no-autofocus',
+      noAwaitInLoops: 'no-await-in-loop',
+      noBaseToString: 'typescript/no-base-to-string',
+      noBitwiseOperators: 'no-bitwise',
+      noDocumentCookie: 'unicorn/no-document-cookie',
+      noDuplicateEnumValues: 'typescript/no-duplicate-enum-values',
+      noImportCycles: 'import/no-cycle',
+      noMisusedPromises: 'typescript/no-misused-promises',
+      noParametersOnlyUsedInRecursion: 'oxc/only-used-in-recursion',
+      noRestrictedTypes: 'typescript/no-restricted-types',
+      noStaticOnlyClass: 'unicorn/no-static-only-class',
+      noYodaExpression: 'yoda',
+      useArraySortCompare: 'typescript/require-array-sort-compare',
+      useAtIndex: 'unicorn/prefer-at',
+      useConsistentArrayType: 'typescript/array-type',
+      useDefaultSwitchClauseLast: 'default-case-last',
+      useGoogleFontDisplay: 'nextjs/google-font-display',
+      useIterableCallbackReturn: 'array-callback-return',
+      useNullishCoalescing: 'typescript/prefer-nullish-coalescing',
+      useTestHooksInOrder: 'jest/prefer-hooks-in-order',
+      useVueConsistentDefinePropsDeclaration: 'vue/define-props-declaration',
     }
 
     for (const [biomeRule, oxlintRule] of Object.entries(mappings)) {
@@ -131,6 +191,7 @@ describe('rule-mapper parity expansion', () => {
         noIdenticalTestTitle: 'warn',
         useConsistentTestIt: 'warn',
         useExpect: 'error',
+        useTestHooksInOrder: 'error',
         useTestHooksOnTop: 'warn',
       },
       suspicious: {
@@ -154,6 +215,7 @@ describe('rule-mapper parity expansion', () => {
       'jest/no-identical-title': 'warn',
       'jest/no-standalone-expect': 'warn',
       'jest/prefer-hooks-on-top': 'warn',
+      'jest/prefer-hooks-in-order': 'error',
       'vitest/consistent-test-it': 'warn',
       'vitest/expect-expect': 'error',
       'vitest/max-nested-describe': 'warn',
@@ -163,6 +225,7 @@ describe('rule-mapper parity expansion', () => {
       'vitest/no-focused-tests': 'error',
       'vitest/no-identical-title': 'warn',
       'vitest/no-standalone-expect': 'warn',
+      'vitest/prefer-hooks-in-order': 'error',
       'vitest/prefer-hooks-on-top': 'warn',
     })
 

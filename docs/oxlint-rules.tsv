@@ -30,6 +30,7 @@ ban-types	typescript
 block-scoped-var	eslint
 branches-sharing-code	oxc
 button-has-type	react
+callback-return	node
 capitalized-comments	eslint
 catch-error-name	unicorn
 catch-or-return	promise
@@ -41,6 +42,7 @@ class-literal-property-style	typescript
 class-methods-use-this	eslint
 click-events-have-key-events	jsx_a11y
 complexity	eslint
+component-definition-name-casing	vue
 consistent-assert	unicorn
 consistent-date-clone	unicorn
 consistent-each-for	vitest
@@ -119,6 +121,7 @@ iframe-has-title	jsx_a11y
 iframe-missing-sandbox	react
 img-redundant-alt	jsx_a11y
 implements-on-classes	jsdoc
+import-style	unicorn
 init-declarations	eslint
 inline-script-id	nextjs
 interactive-supports-focus	jsx_a11y
@@ -160,6 +163,7 @@ max-params	eslint
 max-props	vue
 max-statements	eslint
 media-has-caption	jsx_a11y
+method-signature-style	typescript
 misrefactored-assign-op	oxc
 missing-throw	oxc
 mouse-events-have-key-events	jsx_a11y
@@ -214,6 +218,7 @@ no-commented-out-tests	jest
 no-commented-out-tests	vitest
 no-commonjs	import
 no-compare-neg-zero	eslint
+no-computed-properties-in-data	vue
 no-cond-assign	eslint
 no-conditional-expect	jest
 no-conditional-expect	vitest
@@ -247,6 +252,7 @@ no-deprecated-destroyed-lifecycle	vue
 no-deprecated-events-api	vue
 no-deprecated-functions	jest
 no-deprecated-model-definition	vue
+no-deprecated-props-default-this	vue
 no-deprecated-vue-config-keycodes	vue
 no-did-mount-set-state	react
 no-did-update-set-state	react
@@ -288,6 +294,7 @@ no-explicit-any	typescript
 no-export	jest
 no-export-in-script-setup	vue
 no-exports-assign	node
+no-expose-after-await	vue
 no-extend-native	eslint
 no-extra-bind	eslint
 no-extra-boolean-cast	eslint
@@ -420,6 +427,7 @@ no-relative-parent-imports	import
 no-render-return-value	react
 no-require-imports	typescript
 no-required-prop-with-default	vue
+no-reserved-component-names	vue
 no-rest-spread-properties	oxc
 no-restricted-exports	eslint
 no-restricted-globals	eslint
@@ -443,6 +451,7 @@ no-set-state	react
 no-setter-return	eslint
 no-shadow	eslint
 no-shadow-restricted-names	eslint
+no-shared-component-data	vue
 no-single-promise-in-promise-methods	unicorn
 no-sparse-arrays	eslint
 no-standalone-expect	jest
@@ -545,6 +554,7 @@ no-var	eslint
 no-var-requires	typescript
 no-void	eslint
 no-warning-comments	eslint
+no-watch-after-await	vue
 no-webpack-loader-syntax	import
 no-will-update-set-state	react
 no-with	eslint
@@ -643,6 +653,7 @@ prefer-mock-return-shorthand	vitest
 prefer-modern-dom-apis	unicorn
 prefer-modern-math-apis	unicorn
 prefer-module	unicorn
+prefer-named-capture-group	eslint
 prefer-namespace-keyword	typescript
 prefer-native-coercion-functions	unicorn
 prefer-negative-index	unicorn
@@ -731,14 +742,17 @@ require-param-description	jsdoc
 require-param-name	jsdoc
 require-param-type	jsdoc
 require-post-message-target-origin	unicorn
+require-prop-type-constructor	vue
 require-property	jsdoc
 require-property-description	jsdoc
 require-property-name	jsdoc
 require-property-type	jsdoc
 require-render-return	react
+require-render-return	vue
 require-returns	jsdoc
 require-returns-description	jsdoc
 require-returns-type	jsdoc
+require-slots-as-functions	vue
 require-test-timeout	vitest
 require-throws-description	jsdoc
 require-throws-type	jsdoc
@@ -750,11 +764,13 @@ require-typed-ref	vue
 require-unicode-regexp	eslint
 require-yield	eslint
 require-yields	jsdoc
+require-yields-description	jsdoc
 require-yields-type	jsdoc
 restrict-plus-operands	typescript
 restrict-template-expressions	typescript
 return-await	typescript
 return-in-computed-property	vue
+return-in-emits-validator	vue
 role-has-required-aria-props	jsx_a11y
 role-supports-aria-props	jsx_a11y
 rules-of-hooks	react
@@ -784,6 +800,7 @@ uninvoked-array-callback	oxc
 use-isnan	eslint
 use-unknown-in-catch-callback-variable	typescript
 valid-define-emits	vue
+valid-define-options	vue
 valid-define-props	vue
 valid-describe-callback	jest
 valid-describe-callback	vitest
@@ -791,6 +808,7 @@ valid-expect	jest
 valid-expect	vitest
 valid-expect-in-promise	jest
 valid-expect-in-promise	vitest
+valid-next-tick	vue
 valid-params	promise
 valid-title	jest
 valid-title	vitest
