@@ -136,6 +136,7 @@ jsx-no-comment-textnodes	react
 jsx-no-constructed-context-values	react
 jsx-no-duplicate-props	react
 jsx-no-jsx-as-prop	react-perf
+jsx-no-literals	react
 jsx-no-new-array-as-prop	react-perf
 jsx-no-new-function-as-prop	react-perf
 jsx-no-new-object-as-prop	react-perf
@@ -189,6 +190,7 @@ no-aria-hidden-on-focusable	jsx-a11y
 no-array-callback-reference	unicorn
 no-array-constructor	eslint
 no-array-delete	typescript
+no-array-fill-with-reference-type	unicorn
 no-array-for-each	unicorn
 no-array-index-key	react
 no-array-method-this-argument	unicorn
@@ -268,6 +270,7 @@ no-done-callback	jest
 no-dupe-class-members	eslint
 no-dupe-else-if	eslint
 no-dupe-keys	eslint
+no-dupe-keys	vue
 no-duplicate-case	eslint
 no-duplicate-enum-values	typescript
 no-duplicate-head	nextjs
@@ -455,6 +458,7 @@ no-setter-return	eslint
 no-shadow	eslint
 no-shadow-restricted-names	eslint
 no-shared-component-data	vue
+no-side-effects-in-computed-properties	vue
 no-single-promise-in-promise-methods	unicorn
 no-sparse-arrays	eslint
 no-standalone-expect	jest
@@ -625,6 +629,7 @@ prefer-expect-resolves	jest
 prefer-expect-resolves	vitest
 prefer-expect-type-of	vitest
 prefer-exponentiation-operator	eslint
+prefer-export-from	unicorn
 prefer-find	typescript
 prefer-for-of	typescript
 prefer-function-component	react
@@ -685,6 +690,7 @@ prefer-rest-params	eslint
 prefer-return-this-type	typescript
 prefer-set-has	unicorn
 prefer-set-size	unicorn
+prefer-single-call	unicorn
 prefer-snapshot-hint	jest
 prefer-snapshot-hint	vitest
 prefer-spread	eslint
@@ -725,6 +731,7 @@ preserve-caught-error	eslint
 prop-name-casing	vue
 promise-function-async	typescript
 radix	eslint
+react-compiler	react
 react-in-jsx-scope	react
 related-getter-setter-pairs	typescript
 relative-url-style	unicorn
@@ -734,6 +741,7 @@ require-await	eslint
 require-await	typescript
 require-awaited-expect-poll	vitest
 require-default-export	vue
+require-default-prop	vue
 require-direct-export	vue
 require-hook	jest
 require-hook	vitest

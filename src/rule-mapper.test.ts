@@ -60,6 +60,7 @@ describe('rule-mapper parity expansion', () => {
       noInteractiveElementToNoninteractiveRole:
         'jsx-a11y/no-interactive-element-to-noninteractive-role',
       noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
+      noJsxLiterals: 'react/jsx-no-literals',
       noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
       noInvalidUseBeforeDeclaration: 'no-use-before-define',
       noMisplacedAssertion: 'jest/no-standalone-expect',
@@ -82,6 +83,7 @@ describe('rule-mapper parity expansion', () => {
       noUselessThisAlias: 'typescript/no-this-alias',
       noUselessTernary: 'no-unneeded-ternary',
       noVueDataObjectDeclaration: 'vue/no-deprecated-data-object-declaration',
+      noVueDuplicateKeys: 'vue/no-dupe-keys',
       noVueReservedKeys: 'vue/no-reserved-keys',
       noVueReservedProps: 'vue/no-reserved-props',
       useAltText: 'jsx-a11y/alt-text',
@@ -143,6 +145,39 @@ describe('rule-mapper parity expansion', () => {
 
     expect(rules).toMatchObject({
       'typescript/method-signature-style': ['error', 'method'],
+    })
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('preserves supported JSX literal options', () => {
+    const reporter = new SilentReporter()
+
+    const linterRules: BiomeLinterRules = {
+      style: {
+        noJsxLiterals: {
+          level: 'warn',
+          options: {
+            allowedStrings: ['OK'],
+            ignoreProps: true,
+            noStrings: true,
+          },
+        },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'react/jsx-no-literals': [
+        'warn',
+        {
+          allowedStrings: ['OK'],
+          ignoreProps: true,
+          noAttributeStrings: true,
+          noStrings: true,
+        },
+      ],
     })
 
     expect(reporter.getWarnings()).toEqual([])

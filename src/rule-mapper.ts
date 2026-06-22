@@ -103,6 +103,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noInteractiveElementToNoninteractiveRole:
     'jsx-a11y/no-interactive-element-to-noninteractive-role',
   noInvalidNewBuiltin: 'no-new-native-nonconstructor',
+  noJsxLiterals: 'react/jsx-no-literals',
   noJsxNamespace: 'react/no-namespace',
   noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
   noLabelVar: 'no-label-var',
@@ -199,6 +200,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
     'vue/no-deprecated-data-object-declaration',
     'vue/no-shared-component-data',
   ],
+  noVueDuplicateKeys: 'vue/no-dupe-keys',
   noVueReservedKeys: 'vue/no-reserved-keys',
   noVueReservedProps: 'vue/no-reserved-props',
   noWith: 'no-with',
@@ -344,7 +346,7 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return typeof severity === 'string' ? [severity, 'promise'] : severity
   }
 
-  if (biomeName !== 'useConsistentMethodSignatures') {
+  if (typeof severity !== 'string') {
     return severity
   }
 
@@ -357,12 +359,37 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return severity
   }
 
-  const { style } = options as { style?: unknown }
-  if (style !== 'method' && style !== 'property') {
+  if (biomeName === 'noJsxLiterals') {
+    const { allowedStrings, ignoreProps, noStrings } = options as {
+      allowedStrings?: unknown
+      ignoreProps?: unknown
+      noStrings?: unknown
+    }
+    const oxlintOptions: Record<string, unknown> = {}
+
+    if (
+      Array.isArray(allowedStrings) &&
+      allowedStrings.every((value) => typeof value === 'string')
+    ) {
+      oxlintOptions.allowedStrings = allowedStrings
+    }
+    if (typeof ignoreProps === 'boolean') {
+      oxlintOptions.ignoreProps = ignoreProps
+    }
+    if (typeof noStrings === 'boolean') {
+      oxlintOptions.noStrings = noStrings
+      oxlintOptions.noAttributeStrings = noStrings
+    }
+
+    return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
+  }
+
+  if (biomeName !== 'useConsistentMethodSignatures') {
     return severity
   }
 
-  if (typeof severity !== 'string') {
+  const { style } = options as { style?: unknown }
+  if (style !== 'method' && style !== 'property') {
     return severity
   }
 
