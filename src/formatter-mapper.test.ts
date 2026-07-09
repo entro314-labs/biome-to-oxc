@@ -35,6 +35,7 @@ describe('generateOxfmtConfig', () => {
     expect(config.sortPackageJson).toBeUndefined()
     expect(config.sortImports).toBeUndefined()
     expect(config.sortTailwindcss).toBeUndefined()
+    expect(config.jsdoc).toBeUndefined()
   })
 
   it('passes through explicitly configured experimental formatter options', () => {
@@ -99,6 +100,29 @@ describe('generateOxfmtConfig', () => {
       allowShorthand: false,
       indentScriptAndStyle: false,
       sortOrder: 'scripts-markup-styles-options',
+    })
+  })
+
+  it('passes through explicitly configured JSDoc formatter options', () => {
+    const reporter = new SilentReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        formatter: {
+          jsdoc: {
+            bracketSpacing: true,
+            commentLineStrategy: 'multiline',
+            lineWrappingStyle: 'balance',
+          },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.jsdoc).toEqual({
+      bracketSpacing: true,
+      commentLineStrategy: 'multiline',
+      lineWrappingStyle: 'balance',
     })
   })
 })

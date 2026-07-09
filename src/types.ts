@@ -269,6 +269,23 @@ export interface OxfmtConfig {
   // Vue options
   vueIndentScriptAndStyle?: boolean
 
+  // JSDoc formatting
+  jsdoc?:
+    | boolean
+    | {
+        addDefaultToDescription?: boolean
+        bracketSpacing?: boolean
+        capitalizeDescriptions?: boolean
+        commentLineStrategy?: 'singleLine' | 'multiline' | 'keep'
+        descriptionTag?: boolean
+        descriptionWithDot?: boolean
+        keepUnparsableExampleIndent?: boolean
+        lineWrappingStyle?: 'greedy' | 'balance'
+        preferCodeFences?: boolean
+        separateReturnsFromParam?: boolean
+        separateTagGroups?: boolean
+      }
+
   // Svelte options
   svelte?:
     | boolean

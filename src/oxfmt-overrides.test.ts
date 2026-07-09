@@ -109,4 +109,36 @@ describe('generateOxfmtOverrides', () => {
     ])
     expect(reporter.getWarnings()).toEqual([])
   })
+
+  it('passes through JSDoc formatter options in base overrides', () => {
+    const reporter = new SilentReporter()
+
+    const overrides = generateOxfmtOverrides(
+      [
+        {
+          include: ['src/**/*.ts'],
+          formatter: {
+            jsdoc: {
+              addDefaultToDescription: false,
+              preferCodeFences: true,
+            },
+          },
+        },
+      ],
+      reporter,
+    )
+
+    expect(overrides).toEqual([
+      {
+        files: ['src/**/*.ts'],
+        options: {
+          jsdoc: {
+            addDefaultToDescription: false,
+            preferCodeFences: true,
+          },
+        },
+      },
+    ])
+    expect(reporter.getWarnings()).toEqual([])
+  })
 })

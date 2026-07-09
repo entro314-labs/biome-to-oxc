@@ -15,6 +15,7 @@ const EXPLICIT_OXFMT_OPTION_KEYS = [
   'htmlWhitespaceSensitivity',
   'proseWrap',
   'vueIndentScriptAndStyle',
+  'jsdoc',
   'sortImports',
   'sortPackageJson',
   'sortTailwindcss',
