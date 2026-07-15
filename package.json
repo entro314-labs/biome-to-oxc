@@ -1,0 +1,73 @@
+{
+  "name": "biome-to-oxc",
+  "version": "1.3.8",
+  "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint)",
+  "keywords": [
+    "biome",
+    "formatter",
+    "linter",
+    "migration",
+    "oxc",
+    "oxfmt",
+    "oxlint",
+    "oxlint-tsgolint",
+    "prettier",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Dominikos Pritis",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/entro314-labs/biome-to-oxc.git"
+  },
+  "bin": {
+    "biome-to-oxc": "dist/bin/biome-to-oxc.mjs"
+  },
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    "types": "./dist/src/index.d.mts",
+    "import": "./dist/src/index.mjs"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "lint:fix-unsafe": "oxlint --import-plugin --node-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .",
+    "check:fix-suggestions": "oxlint --import-plugin --node-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "prepublishOnly": "pnpm check && pnpm build"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "jsonc-parser": "next",
+    "picocolors": "^1.1.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@typescript/native-preview": "latest",
+    "@vitest/coverage-v8": "^4.1.10",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
+    "oxlint-tsgolint": "^0.24.0",
+    "tsdown": "^0.22.7",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.22.3",
+    "pnpm": ">=11.13.0"
+  },
+  "packageManager": "pnpm@11.13.0"
+}

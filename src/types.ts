@@ -1,0 +1,430 @@
+export interface BiomeConfig {
+  $schema?: string
+  extends?: string | string[]
+  root?: boolean
+  files?: BiomeFilesConfig
+  vcs?: BiomeVcsConfig
+  linter?: BiomeLinterConfig
+  formatter?: BiomeFormatterConfig
+  javascript?: BiomeJavaScriptConfig
+  json?: BiomeJsonConfig
+  css?: BiomeCssConfig
+  html?: Record<string, unknown>
+  overrides?: BiomeOverride[]
+}
+
+export interface BiomeFilesConfig {
+  include?: string[]
+  includes?: string[]
+  ignore?: string[]
+  ignoreUnknown?: boolean
+  maxSize?: number
+}
+
+export interface BiomeVcsConfig {
+  enabled?: boolean
+  clientKind?: 'git'
+  useIgnoreFile?: boolean
+  root?: string
+  defaultBranch?: string
+}
+
+export interface BiomeLinterConfig {
+  enabled?: boolean
+  include?: string[]
+  includes?: string[]
+  ignore?: string[]
+  rules?: BiomeLinterRules
+}
+
+export interface BiomeLinterRules {
+  recommended?: boolean
+  all?: boolean
+  [category: string]: boolean | BiomeRuleGroup | undefined
+}
+
+export interface BiomeRuleGroup {
+  recommended?: boolean
+  all?: boolean
+  [rule: string]: BiomeRuleSeverity | boolean | undefined
+}
+
+export type BiomeRuleSeverity =
+  | 'off'
+  | 'warn'
+  | 'error'
+  | { level: 'off' | 'warn' | 'error'; options?: unknown }
+
+export interface BiomeFormatterConfig {
+  enabled?: boolean
+  include?: string[]
+  includes?: string[]
+  ignore?: string[]
+  formatWithErrors?: boolean
+  indentStyle?: 'tab' | 'space'
+  indentWidth?: number
+  lineEnding?: 'lf' | 'crlf' | 'cr'
+  lineWidth?: number
+  attributePosition?: 'auto' | 'multiline'
+  bracketSpacing?: boolean
+  // Additional options that might exist
+  [key: string]: unknown
+}
+
+export interface BiomeJavaScriptConfig {
+  parser?: {
+    unsafeParameterDecoratorsEnabled?: boolean
+    jsxEverywhere?: boolean
+  }
+  formatter?: {
+    enabled?: boolean
+    quoteStyle?: 'single' | 'double'
+    jsxQuoteStyle?: 'single' | 'double'
+    quoteProperties?: 'asNeeded' | 'preserve'
+    trailingCommas?: 'all' | 'es5' | 'none'
+    semicolons?: 'always' | 'asNeeded'
+    arrowParentheses?: 'always' | 'asNeeded'
+    bracketSameLine?: boolean
+    bracketSpacing?: boolean
+    indentStyle?: 'tab' | 'space'
+    indentWidth?: number
+    lineEnding?: 'lf' | 'crlf' | 'cr'
+    lineWidth?: number
+    // Capture any additional options
+    [key: string]: unknown
+  }
+  linter?: {
+    enabled?: boolean
+  }
+  globals?: string[]
+  // Capture any additional JS config
+  [key: string]: unknown
+}
+
+export interface BiomeJsonConfig {
+  parser?: {
+    allowComments?: boolean
+    allowTrailingCommas?: boolean
+  }
+  formatter?: {
+    enabled?: boolean
+    indentStyle?: 'tab' | 'space'
+    indentWidth?: number
+    lineEnding?: 'lf' | 'crlf' | 'cr'
+    lineWidth?: number
+    trailingCommas?: 'none' | 'all'
+  }
+  linter?: {
+    enabled?: boolean
+  }
+}
+
+export interface BiomeCssConfig {
+  parser?: {
+    cssModules?: boolean
+  }
+  formatter?: {
+    enabled?: boolean
+    indentStyle?: 'tab' | 'space'
+    indentWidth?: number
+    lineEnding?: 'lf' | 'crlf' | 'cr'
+    lineWidth?: number
+    quoteStyle?: 'single' | 'double'
+  }
+  linter?: {
+    enabled?: boolean
+  }
+}
+
+export interface BiomeOverride {
+  include?: string[]
+  includes?: string[]
+  ignore?: string[]
+  linter?: BiomeLinterConfig
+  formatter?: BiomeFormatterConfig
+  javascript?: BiomeJavaScriptConfig
+  json?: BiomeJsonConfig
+  css?: BiomeCssConfig
+}
+
+export type FixStrategy = 'safe' | 'suggestions' | 'dangerous'
+export type TypeAwareProfile = 'standard' | 'strict'
+
+export type OxlintBuiltinPlugin =
+  | 'eslint'
+  | 'react'
+  | 'unicorn'
+  | 'typescript'
+  | 'oxc'
+  | 'import'
+  | 'jsdoc'
+  | 'jest'
+  | 'vitest'
+  | 'jsx-a11y'
+  | 'nextjs'
+  | 'react-perf'
+  | 'promise'
+  | 'node'
+  | 'vue'
+
+export type OxlintJsPlugin =
+  | string
+  | {
+      name: string
+      specifier: string
+    }
+
+export interface OxlintSettings {
+  jsdoc?: {
+    augmentsExtendsReplacesDocs?: boolean
+    exemptDestructuredRootsFromChecks?: boolean
+    ignoreInternal?: boolean
+    ignorePrivate?: boolean
+    ignoreReplacesDocs?: boolean
+    implementsReplacesDocs?: boolean
+    overrideReplacesDocs?: boolean
+    tagNamePreference?: Record<string, string>
+  }
+  'jsx-a11y'?: {
+    attributes?: Record<string, string[]>
+    components?: Record<string, string>
+    polymorphicPropName?: string | null
+  }
+  next?: {
+    rootDir?: string | string[]
+  }
+  react?: {
+    componentWrapperFunctions?: string[]
+    formComponents?: string[] | Array<string | { name: string; formAttribute?: string | string[] }>
+    linkComponents?: string[] | Array<string | { name: string; linkAttribute?: string | string[] }>
+    version?: string | null
+  }
+  vitest?: {
+    typecheck?: boolean
+  }
+  [key: string]: unknown
+}
+
+export interface OxlintConfig {
+  $schema?: string
+  env?: Record<string, boolean>
+  globals?: Record<string, boolean | 'readonly' | 'writable' | 'off'>
+  plugins?: OxlintBuiltinPlugin[]
+  jsPlugins?: OxlintJsPlugin[]
+  categories?: Record<string, 'off' | 'warn' | 'error'>
+  rules?: Record<string, OxlintRuleSeverity>
+  overrides?: OxlintOverride[]
+  ignorePatterns?: string[]
+  settings?: OxlintSettings
+}
+
+export interface OxlintOverride {
+  files: string[]
+  env?: Record<string, boolean>
+  globals?: Record<string, boolean | 'readonly' | 'writable' | 'off'>
+  plugins?: OxlintBuiltinPlugin[]
+  jsPlugins?: OxlintJsPlugin[]
+  categories?: Record<string, 'off' | 'warn' | 'error'>
+  rules?: Record<string, OxlintRuleSeverity>
+}
+
+export type OxlintRuleSeverity = 'off' | 'warn' | 'error' | ['off' | 'warn' | 'error', ...unknown[]]
+
+export interface OxfmtOverride {
+  files: string[]
+  excludeFiles?: string[]
+  options?: Partial<Omit<OxfmtConfig, '$schema' | 'ignorePatterns' | 'overrides'>>
+}
+
+export interface OxfmtConfig {
+  $schema?: string
+  // Core Prettier-compatible options
+  printWidth?: number
+  tabWidth?: number
+  useTabs?: boolean
+  semi?: boolean
+  singleQuote?: boolean
+  quoteProps?: 'as-needed' | 'consistent' | 'preserve'
+  jsxSingleQuote?: boolean
+  trailingComma?: 'none' | 'es5' | 'all'
+  bracketSpacing?: boolean
+  bracketSameLine?: boolean
+  arrowParens?: 'always' | 'avoid'
+  endOfLine?: 'lf' | 'crlf' | 'cr'
+  singleAttributePerLine?: boolean
+
+  // Object formatting
+  objectWrap?: boolean | 'preserve' | 'collapse'
+
+  // Line endings
+  insertFinalNewline?: boolean
+
+  // Embedded language formatting
+  embeddedLanguageFormatting?: 'auto' | 'off'
+
+  // HTML/Prose options
+  htmlWhitespaceSensitivity?: 'css' | 'strict' | 'ignore'
+  proseWrap?: 'always' | 'never' | 'preserve'
+
+  // Vue options
+  vueIndentScriptAndStyle?: boolean
+
+  // JSDoc formatting
+  jsdoc?:
+    | boolean
+    | {
+        addDefaultToDescription?: boolean
+        bracketSpacing?: boolean
+        capitalizeDescriptions?: boolean
+        commentLineStrategy?: 'singleLine' | 'multiline' | 'keep'
+        descriptionTag?: boolean
+        descriptionWithDot?: boolean
+        keepUnparsableExampleIndent?: boolean
+        lineWrappingStyle?: 'greedy' | 'balance'
+        preferCodeFences?: boolean
+        separateReturnsFromParam?: boolean
+        separateTagGroups?: boolean
+      }
+
+  // Svelte options
+  svelte?:
+    | boolean
+    | {
+        allowShorthand?: boolean
+        indentScriptAndStyle?: boolean
+        sortOrder?: string
+      }
+
+  // Sorting features
+  sortImports?: {
+    order?: 'asc' | 'desc'
+    newlinesBetween?: boolean
+    ignoreCase?: boolean
+    internalPattern?: string[]
+    partitionByComment?: boolean
+    partitionByNewline?: boolean
+    sortSideEffects?: boolean
+  }
+  sortPackageJson?:
+    | boolean
+    | {
+        sortScripts?: boolean
+      }
+  sortTailwindcss?: {
+    attributes?: string[]
+    functions?: string[]
+    preserveDuplicates?: boolean
+    preserveWhitespace?: boolean
+    config?: string
+    stylesheet?: string
+  }
+
+  // Backward-compatible aliases (legacy field names)
+  experimentalSortImports?: {
+    order?: 'asc' | 'desc'
+    newlinesBetween?: boolean
+    ignoreCase?: boolean
+    internalPattern?: string[]
+    partitionByComment?: boolean
+    partitionByNewline?: boolean
+    sortSideEffects?: boolean
+  }
+  experimentalSortPackageJson?: {
+    sortScripts?: boolean
+  }
+  experimentalTailwindcss?: {
+    attributes?: string[]
+    functions?: string[]
+    preserveDuplicates?: boolean
+    preserveWhitespace?: boolean
+    config?: string
+    stylesheet?: string
+  }
+
+  ignorePatterns?: string[]
+  overrides?: OxfmtOverride[]
+}
+
+export interface MigrationOptions {
+  configPath?: string
+  outputDir?: string
+  dryRun?: boolean
+  delete?: boolean
+  noBackup?: boolean
+  updateScripts?: boolean
+  dom?: boolean
+  verbose?: boolean
+  typeAware?: boolean
+  typeCheck?: boolean
+  typeAwareProfile?: TypeAwareProfile
+  fixStrategy?: FixStrategy
+  jsPlugins?: boolean
+  jsPlugin?: string[]
+  importGraph?: boolean
+  importCycleMaxDepth?: number
+  turborepo?: boolean
+  eslintBridge?: boolean
+  prettier?: boolean
+  report?: string
+  signal?: AbortSignal
+}
+
+export interface PackageScriptUpdate {
+  name: string
+  before: string
+  after: string
+}
+
+export interface PackageDependencyRemoval {
+  name: string
+  dependencyType: 'dependencies' | 'devDependencies'
+  version?: string
+}
+
+export interface PackageDevDependencyChange {
+  name: string
+  action: 'added' | 'already-present' | 'updated'
+  from?: string
+  to: string
+}
+
+export interface PackageUpdateSummary {
+  packageJsonPath: string
+  found: boolean
+  dryRun: boolean
+  scriptsUpdated: PackageScriptUpdate[]
+  dependenciesRemoved: PackageDependencyRemoval[]
+  devDependencies: PackageDevDependencyChange[]
+  changed: boolean
+}
+
+export interface MigrationReport {
+  success: boolean
+  warnings: string[]
+  errors: string[]
+  suggestions: string[]
+  packageJson?: PackageUpdateSummary
+  summary: {
+    biomeConfigPath: string
+    oxlintConfigPath: string
+    oxfmtConfigPath: string
+    rulesConverted: number
+    rulesSkipped: number
+    overridesConverted: number
+    formatterOverridesConverted: number
+  }
+  detectedIntegrations?: {
+    turborepo?: boolean
+    eslint?: boolean
+    prettier?: boolean
+    typescript?: boolean
+  }
+}
+
+export interface Reporter {
+  warn(message: string): void
+  error(message: string): void
+  info(message: string): void
+  getWarnings(): string[]
+  getErrors(): string[]
+}
