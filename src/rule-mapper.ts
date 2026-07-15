@@ -21,6 +21,8 @@ type OxlintRuleMapping = string | readonly string[]
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noAccessKey: 'jsx-a11y/no-access-key',
+  noAdjacentSpacesInRegex: 'no-regex-spaces',
+  noAmbiguousAnchorText: 'jsx-a11y/anchor-ambiguous-text',
   noArguments: 'prefer-rest-params',
   noAriaHiddenOnFocusable: 'jsx-a11y/no-aria-hidden-on-focusable',
   noAriaUnsupportedElements: 'jsx-a11y/aria-unsupported-elements',
@@ -34,6 +36,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noAsyncPromiseExecutor: 'no-async-promise-executor',
   noAutofocus: 'jsx-a11y/no-autofocus',
   noAwaitInLoops: 'no-await-in-loop',
+  noBannedTypes: 'typescript/ban-types',
   noBaseToString: 'typescript/no-base-to-string',
   noBeforeInteractiveScriptOutsideDocument: 'nextjs/no-before-interactive-script-outside-document',
   noBitwiseOperators: 'no-bitwise',
@@ -42,6 +45,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noClassAssign: 'no-class-assign',
   noCommaOperator: 'no-sequences',
   noCommentText: 'react/jsx-no-comment-textnodes',
+  noCommonJs: ['import/no-commonjs', 'typescript/no-require-imports', 'typescript/no-var-requires'],
   noCompareNegZero: 'no-compare-neg-zero',
   noConfusingLabels: 'no-labels',
   noConfusingVoidType: 'typescript/no-invalid-void-type',
@@ -66,16 +70,20 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noDuplicateEnumValues: 'typescript/no-duplicate-enum-values',
   noDuplicateJsxProps: 'react/jsx-no-duplicate-props',
   noDuplicateObjectKeys: 'no-dupe-keys',
+  noDuplicatedSpreadProps: 'react/jsx-props-no-spread-multi',
   noDocumentCookie: 'unicorn/no-document-cookie',
   noDocumentImportInPage: 'nextjs/no-document-import-in-page',
   noDoneCallback: 'jest/no-done-callback',
   noDivRegex: 'no-div-regex',
-  noEmptyBlock: 'no-empty',
   noEmptyBlockStatements: 'no-empty',
   noEmptyCharacterClassInRegex: 'no-empty-character-class',
   noEmptyInterface: 'typescript/no-empty-interface',
   noEmptyPattern: 'no-empty-pattern',
+  noEmptySource: 'unicorn/no-empty-file',
+  noEqualsToNull: 'no-eq-null',
+  noExcessiveClassesPerFile: 'max-classes-per-file',
   noExcessiveCognitiveComplexity: 'complexity',
+  noExcessiveNestedCallbacks: 'max-nested-callbacks',
   noExplicitAny: 'typescript/no-explicit-any',
   noExtraBooleanCast: 'no-extra-boolean-cast',
   noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
@@ -97,6 +105,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noInnerDeclarations: 'no-inner-declarations',
   noImplicitBoolean: 'no-implicit-coercion',
   noImpliedEval: 'no-implied-eval',
+  noIncrementDecrement: 'no-plusplus',
   noInferrableTypes: 'typescript/no-inferrable-types',
   noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
   noInvalidUseBeforeDeclaration: 'no-use-before-define',
@@ -116,13 +125,17 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noMisrefactoredShorthandAssign: 'oxc/misrefactored-assign-op',
   noMisusedPromises: 'typescript/no-misused-promises',
   noMultiAssign: 'no-multi-assign',
+  noMultilineString: 'no-multi-str',
   noMultiStr: 'no-multi-str',
+  noNegationElse: 'no-negated-condition',
   noNewSymbol: 'no-new-native-nonconstructor',
   noNodejsModules: 'import/no-nodejs-modules',
   noNamespace: 'typescript/no-namespace',
   noNamespaceImport: 'import/no-namespace',
   noNestedComponentDefinitions: 'react/no-unstable-nested-components',
+  noNestedPromises: 'promise/no-nesting',
   noNestedTernary: 'no-nested-ternary',
+  noNextAsyncClientComponent: 'nextjs/no-async-client-component',
   noNoninteractiveElementInteractions: 'jsx-a11y/no-noninteractive-element-interactions',
   noNoninteractiveElementToInteractiveRole:
     'jsx-a11y/no-noninteractive-element-to-interactive-role',
@@ -134,12 +147,14 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noParameterAssign: 'no-param-reassign',
   noParameterProperties: 'typescript/parameter-properties',
   noPrecisionLoss: 'no-loss-of-precision',
+  noPositiveTabindex: 'jsx-a11y/tabindex-no-positive',
   noProcessEnv: 'node/no-process-env',
   noProto: 'no-proto',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
   noRedundantAlt: 'jsx-a11y/img-redundant-alt',
   noRedundantRoles: 'jsx-a11y/no-redundant-roles',
+  noReactStringRefs: 'react/no-string-refs',
   noDuplicateTestHooks: ['jest/no-duplicate-hooks', 'vitest/no-duplicate-hooks'],
   noConditionalExpect: ['jest/no-conditional-expect', 'vitest/no-conditional-expect'],
   noExcessiveNestedTestSuites: ['jest/max-nested-describe', 'vitest/max-nested-describe'],
@@ -147,6 +162,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noMisplacedAssertion: ['jest/no-standalone-expect', 'vitest/no-standalone-expect'],
   noRenderReturnValue: 'react/no-render-return-value',
   noRestrictedGlobals: 'no-restricted-globals',
+  noRestrictedElements: 'react/forbid-elements',
   noRestrictedImports: 'no-restricted-imports',
   noRestrictedTypes: 'typescript/no-restricted-types',
   noReturnAssign: 'no-return-assign',
@@ -162,10 +178,12 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noSyncScripts: 'nextjs/no-sync-scripts',
   noSwitchDeclarations: 'no-case-declarations',
   noStaticElementInteractions: 'jsx-a11y/no-static-element-interactions',
+  noSubstr: 'unicorn/prefer-string-slice',
   noTemplateCurlyInString: 'no-template-curly-in-string',
   noTernary: 'no-ternary',
+  noThenProperty: 'unicorn/no-thenable',
   noUndeclaredVariables: 'no-undef',
-  noUnknownProperty: 'react/no-unknown-property',
+  noUnknownAttribute: 'react/no-unknown-property',
   noUnassignedVariables: 'no-unassigned-vars',
   noUselessThisAlias: 'typescript/no-this-alias',
   noUnusedExpressions: 'no-unused-expressions',
@@ -180,6 +198,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnsafeFinally: 'no-unsafe-finally',
   noUnsafeNegation: 'no-unsafe-negation',
   noUnsafeOptionalChaining: 'no-unsafe-optional-chaining',
+  noUnsafePlusOperands: 'typescript/restrict-plus-operands',
+  noUnusedInstantiation: 'no-new',
   noUnusedLabels: 'no-unused-labels',
   noUnusedPrivateClassMembers: 'no-unused-private-class-members',
   noUnusedVariables: 'no-unused-vars',
@@ -187,14 +207,19 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUselessCatch: 'no-useless-catch',
   noUselessConstructor: 'no-useless-constructor',
   noUselessEmptyExport: 'typescript/no-useless-empty-export',
+  noUselessEscapeInRegex: 'no-useless-escape',
   noUselessEscapeInString: 'no-useless-escape',
   noUselessFragments: 'react/jsx-no-useless-fragment',
   noUselessLabel: 'no-extra-label',
+  noUselessLoneBlockStatements: 'no-lone-blocks',
+  noUselessRegexBackrefs: 'no-useless-backreference',
   noUselessRename: 'no-useless-rename',
   noUselessReturn: 'no-useless-return',
+  noUselessStringConcat: 'no-useless-concat',
   noUselessTernary: 'no-unneeded-ternary',
   noUselessSwitchCase: 'unicorn/no-useless-switch-case',
   noUselessTypeConstraint: 'typescript/no-unnecessary-type-constraint',
+  noUselessTypeConversion: 'typescript/no-unnecessary-type-conversion',
   noUselessUndefined: 'unicorn/no-useless-undefined',
   noVoid: 'no-void',
   noVar: 'no-var',
@@ -204,14 +229,19 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
     'vue/no-deprecated-data-object-declaration',
     'vue/no-shared-component-data',
   ],
+  noVueArrowFuncInWatch: 'vue/no-arrow-functions-in-watch',
   noVueDuplicateKeys: 'vue/no-dupe-keys',
+  noVueImportCompilerMacros: 'vue/no-import-compiler-macros',
   noVueReservedKeys: 'vue/no-reserved-keys',
   noVueReservedProps: 'vue/no-reserved-props',
   noWith: 'no-with',
   noYodaExpression: 'yoda',
   useAltText: 'jsx-a11y/alt-text',
+  useAdjacentOverloadSignatures: 'typescript/adjacent-overload-signatures',
   useAnchorContent: 'jsx-a11y/anchor-has-content',
   useArrowFunction: 'prefer-arrow-callback',
+  useArrayFind: 'typescript/prefer-find',
+  useArrayLiterals: 'no-array-constructor',
   useArraySome: 'unicorn/prefer-array-some',
   useArraySortCompare: 'typescript/require-array-sort-compare',
   useAriaActivedescendantWithTabindex: 'jsx-a11y/aria-activedescendant-has-tabindex',
@@ -223,10 +253,17 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useAsConstAssertion: 'typescript/prefer-as-const',
   useAtIndex: 'unicorn/prefer-at',
   useAwait: 'require-await',
+  useBlockStatements: 'curly',
   useComponentExportOnlyModules: 'react/only-export-components',
+  useCollapsedElseIf: 'no-lonely-if',
+  useCollapsedIf: 'unicorn/no-lonely-if',
   useConsistentArrayType: 'typescript/array-type',
+  useConsistentArrowReturn: 'arrow-body-style',
+  useConsistentBuiltinInstantiation: 'no-new-wrappers',
   useConsistentCurlyBraces: 'curly',
+  useConsistentEnumValueType: 'typescript/no-mixed-enums',
   useConsistentMethodSignatures: 'typescript/method-signature-style',
+  useConsistentTypeDefinitions: 'typescript/consistent-type-definitions',
   useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
   useConsistentTestIt: ['jest/consistent-test-it', 'vitest/consistent-test-it'],
   useConst: 'prefer-const',
@@ -238,6 +275,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useDomNodeTextContent: 'unicorn/prefer-dom-node-text-content',
   useDomQuerySelector: 'unicorn/prefer-query-selector',
   useEnumInitializers: 'typescript/prefer-enum-initializers',
+  useErrorCause: 'preserve-caught-error',
   useErrorMessage: 'unicorn/error-message',
   useExpect: ['jest/expect-expect', 'vitest/expect-expect'],
   useExplicitLengthCheck: 'unicorn/explicit-length-check',
@@ -249,6 +287,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useFilenamingConvention: 'unicorn/filename-case',
   useFind: 'typescript/prefer-find',
   useFlatMap: 'unicorn/prefer-array-flat-map',
+  useFragmentSyntax: 'react/jsx-fragments',
   useFocusableInteractive: 'jsx-a11y/interactive-supports-focus',
   useForOf: 'typescript/prefer-for-of',
   useGetterReturn: 'getter-return',
@@ -256,27 +295,36 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useGoogleFontDisplay: 'nextjs/google-font-display',
   useGoogleFontPreconnect: 'nextjs/google-font-preconnect',
   useGuardForIn: 'guard-for-in',
+  useGroupedAccessorPairs: 'grouped-accessor-pairs',
   useHeadingContent: 'jsx-a11y/heading-has-content',
   useHtmlLang: 'jsx-a11y/html-has-lang',
   useHookAtTopLevel: 'react/rules-of-hooks',
+  useIframeSandbox: 'react/iframe-missing-sandbox',
   useIframeTitle: 'jsx-a11y/iframe-has-title',
   useImportsFirst: 'import/first',
   useImportType: 'typescript/consistent-type-imports',
+  useIncludes: 'typescript/prefer-includes',
   useIndexOf: 'unicorn/prefer-array-index-of',
   useInlineScriptId: 'nextjs/inline-script-id',
   useIterableCallbackReturn: 'array-callback-return',
   useIsNan: 'use-isnan',
+  useIsArray: 'unicorn/no-instanceof-array',
   useJsxKeyInIterable: 'react/jsx-key',
   useKeyWithClickEvents: 'jsx-a11y/click-events-have-key-events',
   useKeyWithMouseEvents: 'jsx-a11y/mouse-events-have-key-events',
   useLiteralEnumMembers: 'typescript/prefer-literal-enum-member',
   useLiteralKeys: 'typescript/dot-notation',
   useMathMinMax: 'unicorn/prefer-math-min-max',
+  useMaxParams: 'max-params',
   useMediaCaption: 'jsx-a11y/media-has-caption',
   useNamedCaptureGroup: 'prefer-named-capture-group',
+  useNamespaceKeyword: 'typescript/prefer-namespace-keyword',
   useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
   useNullishCoalescing: 'typescript/prefer-nullish-coalescing',
+  useNumberNamespace: 'unicorn/prefer-number-properties',
+  useNumberToFixedDigitsArgument: 'unicorn/require-number-to-fixed-digits-argument',
   useNumericLiterals: 'prefer-numeric-literals',
+  useNumericSeparators: 'unicorn/numeric-separators-style',
   useObjectSpread: 'prefer-object-spread',
   useOptionalChain: 'typescript/prefer-optional-chain',
   useParseIntRadix: 'radix',
@@ -287,14 +335,18 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useRegexpExec: 'typescript/prefer-regexp-exec',
   useRegexpTest: 'unicorn/prefer-regexp-test',
   useSemanticElements: 'jsx-a11y/prefer-tag-over-role',
+  useSelfClosingElements: 'react/self-closing-comp',
+  useShorthandAssign: 'operator-assignment',
   useShorthandFunctionType: 'typescript/prefer-function-type',
   useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
   useSpread: 'prefer-spread',
+  useSpreadOverApply: 'prefer-spread',
   useStringStartsEndsWith: 'typescript/prefer-string-starts-ends-with',
   useSymbolDescription: 'symbol-description',
   useTemplate: 'prefer-template',
   useTestHooksInOrder: ['jest/prefer-hooks-in-order', 'vitest/prefer-hooks-in-order'],
   useTestHooksOnTop: ['jest/prefer-hooks-on-top', 'vitest/prefer-hooks-on-top'],
+  useThisInClassMethods: 'class-methods-use-this',
   useThrowNewError: 'unicorn/throw-new-error',
   useThrowOnlyError: 'typescript/only-throw-error',
   useTrimStartEnd: 'unicorn/prefer-string-trim-start-end',
@@ -345,30 +397,96 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   biomeName: string,
   severity: OxlintRuleSeverity,
   biomeSeverity: BiomeRuleSeverity,
+  reporter: Reporter,
 ): OxlintRuleSeverity {
-  if (biomeName === 'useVueNextTickPromise') {
-    return typeof severity === 'string' ? [severity, 'promise'] : severity
-  }
-
   if (typeof severity !== 'string') {
     return severity
   }
 
-  if (typeof biomeSeverity !== 'object' || biomeSeverity === null) {
+  if (biomeName === 'useVueNextTickPromise') {
+    return [severity, 'promise']
+  }
+
+  const options = getBiomeRuleOptions(biomeSeverity)
+
+  if (biomeName === 'noExcessiveNestedCallbacks') {
+    const max = options && isNonNegativeInteger(options.max) ? options.max : 5
+    return [severity, { max }]
+  }
+
+  if (biomeName === 'useErrorCause') {
+    const requireCatchParameter =
+      options && typeof options.requireCatchParameter === 'boolean'
+        ? options.requireCatchParameter
+        : true
+    return [severity, { requireCatchParameter }]
+  }
+
+  if (biomeName === 'useMaxParams') {
+    const max = options && isNonNegativeInteger(options.max) ? options.max : 4
+    return [severity, { max }]
+  }
+
+  if (!options) {
     return severity
   }
 
-  const { options } = biomeSeverity
-  if (typeof options !== 'object' || options === null || Array.isArray(options)) {
+  if (biomeName === 'noAmbiguousAnchorText') {
+    const { words } = options
+    return Array.isArray(words) && words.every((value) => typeof value === 'string')
+      ? [severity, { words }]
+      : severity
+  }
+
+  if (biomeName === 'noEmptySource') {
+    if (options.allowComments === true) {
+      reporter.warn(
+        'Biome rule noEmptySource option "allowComments" is not supported by Oxlint unicorn/no-empty-file and was not migrated.',
+      )
+    }
     return severity
+  }
+
+  if (biomeName === 'noExcessiveClassesPerFile') {
+    return isNonNegativeInteger(options.maxClasses)
+      ? [severity, { max: options.maxClasses }]
+      : severity
+  }
+
+  if (biomeName === 'noIncrementDecrement') {
+    return typeof options.allowForLoopAfterthoughts === 'boolean'
+      ? [severity, { allowForLoopAfterthoughts: options.allowForLoopAfterthoughts }]
+      : severity
+  }
+
+  if (biomeName === 'noRestrictedElements') {
+    const { elements } = options
+    if (!isRecord(elements)) {
+      return severity
+    }
+
+    const entries = Object.entries(elements)
+    if (entries.length === 0 || !entries.every(([, message]) => typeof message === 'string')) {
+      return severity
+    }
+
+    return [
+      severity,
+      {
+        forbid: entries.map(([element, message]) => ({ element, message })),
+      },
+    ]
+  }
+
+  if (biomeName === 'noUnknownAttribute') {
+    const { ignore } = options
+    return Array.isArray(ignore) && ignore.every((value) => typeof value === 'string')
+      ? [severity, { ignore }]
+      : severity
   }
 
   if (biomeName === 'noJsxLiterals') {
-    const { allowedStrings, ignoreProps, noStrings } = options as {
-      allowedStrings?: unknown
-      ignoreProps?: unknown
-      noStrings?: unknown
-    }
+    const { allowedStrings, ignoreProps, noStrings } = options
     const oxlintOptions: Record<string, unknown> = {}
 
     if (
@@ -388,16 +506,112 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
   }
 
-  if (biomeName !== 'useConsistentMethodSignatures') {
-    return severity
+  if (biomeName === 'useConsistentArrowReturn') {
+    const mode =
+      options.style === 'always' || options.style === 'never'
+        ? options.style
+        : options.style === 'asNeeded' || options.requireForObjectLiteral !== undefined
+          ? 'as-needed'
+          : null
+
+    if (!mode) {
+      return severity
+    }
+
+    return typeof options.requireForObjectLiteral === 'boolean'
+      ? [severity, mode, { requireReturnForObjectLiteral: options.requireForObjectLiteral }]
+      : [severity, mode]
   }
 
-  const { style } = options as { style?: unknown }
-  if (style !== 'method' && style !== 'property') {
-    return severity
+  if (biomeName === 'useConsistentMethodSignatures') {
+    const { style } = options
+    return style === 'method' || style === 'property' ? [severity, style] : severity
   }
 
-  return [severity, style]
+  if (biomeName === 'useConsistentTypeDefinitions') {
+    const { style } = options
+    return style === 'interface' || style === 'type' ? [severity, style] : severity
+  }
+
+  if (biomeName === 'useNumericSeparators') {
+    const oxlintOptions: Record<string, unknown> = {}
+    const optionKeys = [
+      ['binary', 'binary'],
+      ['decimal', 'number'],
+      ['hexadecimal', 'hexadecimal'],
+      ['octal', 'octal'],
+    ] as const
+
+    for (const [biomeKey, oxlintKey] of optionKeys) {
+      const numericOptions = mapNumericSeparatorOptions(options[biomeKey])
+      if (numericOptions) {
+        oxlintOptions[oxlintKey] = numericOptions
+      }
+    }
+
+    return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
+  }
+
+  if (biomeName === 'useThisInClassMethods') {
+    const oxlintOptions: Record<string, unknown> = {}
+
+    if (
+      options.ignoreClassesWithImplements === 'all' ||
+      options.ignoreClassesWithImplements === 'public-fields'
+    ) {
+      oxlintOptions.ignoreClassesWithImplements = options.ignoreClassesWithImplements
+    }
+    if (
+      Array.isArray(options.ignoreMethods) &&
+      options.ignoreMethods.every((value) => typeof value === 'string')
+    ) {
+      oxlintOptions.exceptMethods = options.ignoreMethods
+    }
+    if (typeof options.ignoreOverrideMethods === 'boolean') {
+      oxlintOptions.ignoreOverrideMethods = options.ignoreOverrideMethods
+    }
+
+    return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
+  }
+
+  return severity
+}
+
+function getBiomeRuleOptions(biomeSeverity: BiomeRuleSeverity): Record<string, unknown> | null {
+  if (typeof biomeSeverity !== 'object' || biomeSeverity === null) {
+    return null
+  }
+
+  const { options } = biomeSeverity
+  return isRecord(options) ? options : null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function mapNumericSeparatorOptions(value: unknown): Record<string, number> | null {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  const mapped: Record<string, number> = {}
+  if (isNonNegativeInteger(value.groupLength) && value.groupLength > 0) {
+    mapped.groupLength = value.groupLength
+  }
+  if (isNonNegativeInteger(value.minimumDigits)) {
+    mapped.minimumDigits = value.minimumDigits
+  }
+
+  if (Object.keys(mapped).length === 0) {
+    return null
+  }
+
+  return mapped
 }
 
 export function mapBiomeRuleSeverity(
@@ -533,6 +747,7 @@ export function extractRulesFromBiomeConfig(
             ruleName,
             mapBiomeRuleSeverity(ruleSeverity, reporter, ruleName),
             ruleSeverity,
+            reporter,
           )
           for (const oxlintRuleName of oxlintRuleNames) {
             rules[oxlintRuleName] = oxlintSeverity

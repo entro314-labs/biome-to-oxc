@@ -76,7 +76,6 @@ describe('rule-mapper parity expansion', () => {
       noSkippedTests: 'jest/no-disabled-tests',
       noSwitchDeclarations: 'no-case-declarations',
       noStaticElementInteractions: 'jsx-a11y/no-static-element-interactions',
-      noUnknownProperty: 'react/no-unknown-property',
       noUnusedFunctionParameters: 'no-unused-vars',
       noUnusedImports: 'no-unused-vars',
       noUnnecessaryConditions: 'typescript/no-unnecessary-condition',
@@ -125,6 +124,228 @@ describe('rule-mapper parity expansion', () => {
     }
 
     expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('maps current Biome source-equivalent rules to Oxlint equivalents', () => {
+    const reporter = new SilentReporter()
+
+    const mappings: Record<string, string> = {
+      noAdjacentSpacesInRegex: 'no-regex-spaces',
+      noAmbiguousAnchorText: 'jsx-a11y/anchor-ambiguous-text',
+      noBannedTypes: 'typescript/ban-types',
+      noCommonJs: 'import/no-commonjs',
+      noDuplicatedSpreadProps: 'react/jsx-props-no-spread-multi',
+      noEmptySource: 'unicorn/no-empty-file',
+      noEqualsToNull: 'no-eq-null',
+      noExcessiveClassesPerFile: 'max-classes-per-file',
+      noExcessiveNestedCallbacks: 'max-nested-callbacks',
+      noIncrementDecrement: 'no-plusplus',
+      noMultilineString: 'no-multi-str',
+      noNegationElse: 'no-negated-condition',
+      noNestedPromises: 'promise/no-nesting',
+      noNextAsyncClientComponent: 'nextjs/no-async-client-component',
+      noPositiveTabindex: 'jsx-a11y/tabindex-no-positive',
+      noReactStringRefs: 'react/no-string-refs',
+      noRestrictedElements: 'react/forbid-elements',
+      noSubstr: 'unicorn/prefer-string-slice',
+      noThenProperty: 'unicorn/no-thenable',
+      noUnknownAttribute: 'react/no-unknown-property',
+      noUnsafePlusOperands: 'typescript/restrict-plus-operands',
+      noUnusedInstantiation: 'no-new',
+      noUselessEscapeInRegex: 'no-useless-escape',
+      noUselessLoneBlockStatements: 'no-lone-blocks',
+      noUselessRegexBackrefs: 'no-useless-backreference',
+      noUselessStringConcat: 'no-useless-concat',
+      noUselessTypeConversion: 'typescript/no-unnecessary-type-conversion',
+      noVueArrowFuncInWatch: 'vue/no-arrow-functions-in-watch',
+      noVueImportCompilerMacros: 'vue/no-import-compiler-macros',
+      useAdjacentOverloadSignatures: 'typescript/adjacent-overload-signatures',
+      useArrayFind: 'typescript/prefer-find',
+      useArrayLiterals: 'no-array-constructor',
+      useBlockStatements: 'curly',
+      useCollapsedElseIf: 'no-lonely-if',
+      useCollapsedIf: 'unicorn/no-lonely-if',
+      useConsistentArrowReturn: 'arrow-body-style',
+      useConsistentBuiltinInstantiation: 'no-new-wrappers',
+      useConsistentEnumValueType: 'typescript/no-mixed-enums',
+      useConsistentTypeDefinitions: 'typescript/consistent-type-definitions',
+      useErrorCause: 'preserve-caught-error',
+      useFragmentSyntax: 'react/jsx-fragments',
+      useGroupedAccessorPairs: 'grouped-accessor-pairs',
+      useIframeSandbox: 'react/iframe-missing-sandbox',
+      useIncludes: 'typescript/prefer-includes',
+      useIsArray: 'unicorn/no-instanceof-array',
+      useMaxParams: 'max-params',
+      useNamespaceKeyword: 'typescript/prefer-namespace-keyword',
+      useNumberNamespace: 'unicorn/prefer-number-properties',
+      useNumberToFixedDigitsArgument: 'unicorn/require-number-to-fixed-digits-argument',
+      useNumericSeparators: 'unicorn/numeric-separators-style',
+      useSelfClosingElements: 'react/self-closing-comp',
+      useShorthandAssign: 'operator-assignment',
+      useSpreadOverApply: 'prefer-spread',
+      useThisInClassMethods: 'class-methods-use-this',
+    }
+
+    for (const [biomeRule, oxlintRule] of Object.entries(mappings)) {
+      expect(mapBiomeRuleToOxlint(biomeRule, reporter)).toBe(oxlintRule)
+    }
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('emits every Oxlint rule needed to replace Biome noCommonJs', () => {
+    const reporter = new SilentReporter()
+    const linterRules: BiomeLinterRules = {
+      style: {
+        noCommonJs: 'error',
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'import/no-commonjs': 'error',
+      'typescript/no-require-imports': 'error',
+      'typescript/no-var-requires': 'error',
+    })
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('preserves supported options for current source-equivalent rules', () => {
+    const reporter = new SilentReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        noAmbiguousAnchorText: {
+          level: 'warn',
+          options: { words: ['read this', 'more'] },
+        },
+        noExcessiveClassesPerFile: {
+          level: 'error',
+          options: { maxClasses: 3 },
+        },
+        noIncrementDecrement: {
+          level: 'warn',
+          options: { allowForLoopAfterthoughts: true },
+        },
+        noRestrictedElements: {
+          level: 'error',
+          options: { elements: { button: 'Use Button instead.' } },
+        },
+        noUnknownAttribute: {
+          level: 'warn',
+          options: { ignore: ['css'] },
+        },
+        useConsistentArrowReturn: {
+          level: 'error',
+          options: { requireForObjectLiteral: true, style: 'asNeeded' },
+        },
+        useConsistentTypeDefinitions: {
+          level: 'warn',
+          options: { style: 'type' },
+        },
+        useErrorCause: {
+          level: 'error',
+          options: { requireCatchParameter: false },
+        },
+        useMaxParams: {
+          level: 'warn',
+          options: { max: 8 },
+        },
+        useNumericSeparators: {
+          level: 'error',
+          options: {
+            binary: { groupLength: 4 },
+            decimal: { groupLength: 3, minimumDigits: 5 },
+            hexadecimal: { groupLength: 2 },
+            octal: { groupLength: 4 },
+          },
+        },
+        useThisInClassMethods: {
+          level: 'warn',
+          options: {
+            ignoreClassesWithImplements: 'public-fields',
+            ignoreMethods: ['render'],
+            ignoreOverrideMethods: true,
+          },
+        },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'arrow-body-style': ['error', 'as-needed', { requireReturnForObjectLiteral: true }],
+      'class-methods-use-this': [
+        'warn',
+        {
+          exceptMethods: ['render'],
+          ignoreClassesWithImplements: 'public-fields',
+          ignoreOverrideMethods: true,
+        },
+      ],
+      'jsx-a11y/anchor-ambiguous-text': ['warn', { words: ['read this', 'more'] }],
+      'max-classes-per-file': ['error', { max: 3 }],
+      'max-params': ['warn', { max: 8 }],
+      'no-plusplus': ['warn', { allowForLoopAfterthoughts: true }],
+      'preserve-caught-error': ['error', { requireCatchParameter: false }],
+      'react/forbid-elements': [
+        'error',
+        { forbid: [{ element: 'button', message: 'Use Button instead.' }] },
+      ],
+      'react/no-unknown-property': ['warn', { ignore: ['css'] }],
+      'typescript/consistent-type-definitions': ['warn', 'type'],
+      'unicorn/numeric-separators-style': [
+        'error',
+        {
+          binary: { groupLength: 4 },
+          hexadecimal: { groupLength: 2 },
+          number: { groupLength: 3, minimumDigits: 5 },
+          octal: { groupLength: 4 },
+        },
+      ],
+    })
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('preserves Biome defaults that differ from Oxlint defaults', () => {
+    const reporter = new SilentReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        noExcessiveNestedCallbacks: 'warn',
+        useErrorCause: 'error',
+        useMaxParams: 'warn',
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'max-nested-callbacks': ['warn', { max: 5 }],
+      'max-params': ['warn', { max: 4 }],
+      'preserve-caught-error': ['error', { requireCatchParameter: true }],
+    })
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('warns when a Biome rule option has no Oxlint equivalent', () => {
+    const reporter = new SilentReporter()
+    const linterRules: BiomeLinterRules = {
+      suspicious: {
+        noEmptySource: {
+          level: 'error',
+          options: { allowComments: true },
+        },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'unicorn/no-empty-file': 'error',
+    })
+    expect(reporter.getWarnings()).toEqual([
+      'Biome rule noEmptySource option "allowComments" is not supported by Oxlint unicorn/no-empty-file and was not migrated.',
+    ])
   })
 
   it('preserves supported options for method signature style parity', () => {
