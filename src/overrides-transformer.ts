@@ -17,14 +17,16 @@ export function transformOverridesToOxlint(
       continue
     }
 
-    if (override.ignore && override.ignore.length > 0) {
-      reporter.warn(
-        `Biome override ignore patterns cannot be represented in Oxlint overrides and require manual review: ${override.include.join(', ')}`,
-      )
+    if (override.linter?.enabled === false) {
+      continue
     }
 
     const oxlintOverride: OxlintOverride = {
       files: override.include,
+    }
+
+    if (override.ignore && override.ignore.length > 0) {
+      oxlintOverride.excludeFiles = override.ignore
     }
 
     if (override.linter?.rules) {
@@ -35,7 +37,9 @@ export function transformOverridesToOxlint(
       }
 
       if (Object.keys(categories).length > 0) {
-        oxlintOverride.categories = categories
+        reporter.warn(
+          `Biome category presets in the override for ${override.include.join(', ')} cannot be represented by Oxlint overrides and require manual review.`,
+        )
       }
     }
 
@@ -55,4 +59,12 @@ export function transformOverridesToOxlint(
   }
 
   return oxlintOverrides
+}
+
+export function collectDisabledOxlintOverridePatterns(
+  biomeOverrides: BiomeOverride[] | undefined,
+): string[] {
+  return (biomeOverrides ?? []).flatMap((override) =>
+    override.linter?.enabled === false ? (override.include ?? []) : [],
+  )
 }

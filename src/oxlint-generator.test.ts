@@ -56,4 +56,46 @@ describe('generateOxlintConfig ignore pattern mapping', () => {
 
     expect(config.ignorePatterns).toBeUndefined()
   })
+
+  it('disables every Oxlint category when the Biome linter is disabled', () => {
+    const reporter = new SilentReporter()
+    const config = generateOxlintConfig(
+      { linter: { enabled: false }, javascript: { linter: { enabled: false } } },
+      reporter,
+      { enableImportGraph: true },
+    )
+
+    expect(config.categories).toEqual({
+      correctness: 'off',
+      nursery: 'off',
+      pedantic: 'off',
+      perf: 'off',
+      restriction: 'off',
+      style: 'off',
+      suspicious: 'off',
+    })
+    expect(config.rules).toBeUndefined()
+  })
+
+  it('makes Biome default recommended behavior explicit and visible', () => {
+    const reporter = new SilentReporter()
+    const config = generateOxlintConfig({}, reporter)
+
+    expect(config.categories).toMatchObject({ correctness: 'warn', suspicious: 'warn' })
+    expect(reporter.getWarnings().some((message) => message.includes('was approximated'))).toBe(
+      true,
+    )
+  })
+
+  it('emits stable root configuration for type-aware linting and type checking', () => {
+    const reporter = new SilentReporter()
+
+    expect(generateOxlintConfig({}, reporter, { typeAware: true }).options).toEqual({
+      typeAware: true,
+    })
+    expect(generateOxlintConfig({}, reporter, { typeCheck: true }).options).toEqual({
+      typeAware: true,
+      typeCheck: true,
+    })
+  })
 })

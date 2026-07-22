@@ -135,24 +135,21 @@ function applyTaskDefaults(
 
   if (
     recommendedTask.dependsOn &&
-    !sameStringArray(existingTask.dependsOn, recommendedTask.dependsOn)
+    !recommendedTask.dependsOn.every((dependency) => existingTask.dependsOn?.includes(dependency))
   ) {
-    existingTask.dependsOn = [...recommendedTask.dependsOn]
+    existingTask.dependsOn = [
+      ...(existingTask.dependsOn ?? []),
+      ...recommendedTask.dependsOn.filter(
+        (dependency) => !existingTask.dependsOn?.includes(dependency),
+      ),
+    ]
     modified = true
   }
 
-  if (recommendedTask.outputs && !sameStringArray(existingTask.outputs, recommendedTask.outputs)) {
+  if (recommendedTask.outputs && existingTask.outputs === undefined) {
     existingTask.outputs = [...recommendedTask.outputs]
     modified = true
   }
 
   return modified
-}
-
-function sameStringArray(left: string[] | undefined, right: string[]): boolean {
-  if (!left || left.length !== right.length) {
-    return false
-  }
-
-  return left.every((value, index) => value === right[index])
 }

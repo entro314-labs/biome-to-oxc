@@ -12,6 +12,7 @@ Current capabilities:
 - Conservative script rewrite safeguards with manual-review warnings for complex shell scripts
 - Monorepo-aware guidance, ignore migration, and typed linting guidance
 - Optional JSON report output to stdout or a report file
+- Transactional file updates with rollback when a required migration step fails or is cancelled
 
 ## Features
 
@@ -24,15 +25,20 @@ Current capabilities:
 - Transforms Biome formatter options to Oxfmt (Prettier-compatible)
 - Normalizes `include`/`includes` field variations automatically
 
-✅ **Preserves Your Setup**
+✅ **Preserves Representable Setup**
 
-- File patterns and ignore patterns
+- Ignore patterns, override file globs, and override exclusions
 - `.biomeignore` patterns migrated into Oxlint `ignorePatterns` (compatibility alias)
 - Linter configuration overrides
 - Formatter configuration overrides when they can be represented as Oxfmt file-glob overrides
 - JavaScript globals
-- Rule severities (error/warn/off)
+- Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
+- Custom output-directory glob rebasing so generated configs keep source-relative paths
+
+Positive-only Biome `files`/`linter`/`formatter` include selection has no direct Oxc config
+equivalent. The migration reports this explicitly; pass equivalent paths to the Oxc CLI or review
+the generated ignore configuration before removing Biome.
 
 ### Advanced Features
 
@@ -46,13 +52,14 @@ Current capabilities:
 
 - Detects TypeScript usage
 - Provides `oxlint-tsgolint` installation guidance
+- Writes root `options.typeAware` / `options.typeCheck` settings into the generated Oxlint config
 - Supports explicit typed lint flags:
   - `--type-aware`: `oxlint --type-aware`
   - `--type-check` (implies `--type-aware`): `oxlint --type-aware --type-check`
 - Supports profile-based compatibility guidance:
   - `--type-aware-profile standard`: `oxlint --type-aware`
   - `--type-aware-profile strict`: `oxlint --type-aware --type-check`
-- Surfaces alpha stability + TS compatibility caveats
+- Surfaces the TypeScript 7 compatibility requirement and incomplete rule coverage
 
 ✅ **Turborepo Integration** (`--turborepo`)
 
@@ -159,7 +166,7 @@ npx biome-to-oxc --dry-run --verbose
 ```
 Options:
   -c, --config <path>      Path to biome.json or biome.jsonc
-  -o, --output-dir <path>  Output directory for generated configs
+  -o, --output-dir <path>  Output directory for generated configs (project mutations stay beside the Biome config)
   --dry-run                Show what would be done without making changes
   --delete                 Delete legacy Biome files after migration (biome.json/biome.jsonc and .biomeignore)
   --no-backup              Skip backup of existing config files
@@ -203,6 +210,9 @@ npx biome-to-oxc --json
 # Migrate with custom output directory
 npx biome-to-oxc --output-dir ./config
 
+# Rewritten scripts explicitly load configs placed outside the package root
+npx biome-to-oxc --output-dir ./config --update-scripts
+
 # Migrate without creating backups
 npx biome-to-oxc --no-backup
 
@@ -241,6 +251,9 @@ npx biome-to-oxc --import-graph --import-cycle-max-depth 5
 
 ### Linter Categories
 
+Biome and Oxlint category membership is not identical. The tool uses the following category-level
+approximation and reports it for review; explicitly configured rules are mapped individually.
+
 | Biome Category | Oxlint Category |
 | -------------- | --------------- |
 | correctness    | correctness     |
@@ -248,7 +261,11 @@ npx biome-to-oxc --import-graph --import-cycle-max-depth 5
 | style          | style           |
 | complexity     | pedantic        |
 | performance    | perf            |
+| a11y           | restriction     |
 | security       | restriction     |
+
+Accessibility and security presets need particular care because both are approximated through
+Oxlint's broader `restriction` category.
 
 ### Formatter Options
 
@@ -310,7 +327,7 @@ npx biome-to-oxc --import-graph --import-cycle-max-depth 5
 
    ```bash
    # Install type-aware support (use @latest tag)
-   pnpm add -D oxlint-tsgolint@latest
+   pnpm add -D oxlint oxlint-tsgolint@7
 
    # Run with type-aware rules
    npx oxlint --type-aware
@@ -326,8 +343,14 @@ npx oxlint --type-aware --type-check
 
 - Not all Biome rules have direct Oxlint equivalents (warnings will be shown)
 - Some advanced Biome features may not be supported
-- Oxfmt is in alpha - test thoroughly before production use
-- Type-aware linting requires `oxlint-tsgolint` package (alpha)
+- Biome recommended/all presets and group-level severities are approximated with Oxlint categories;
+  preset membership is not identical between the tools
+- Positive-only Biome include selection cannot be encoded directly in Oxlint/Oxfmt config files
+- Oxlint overrides cannot carry category presets; explicit override rules are migrated and category
+  presets are reported for manual review
+- Oxfmt is in beta; review formatting changes before replacing the existing formatter
+- Type-aware linting requires TypeScript 7 and `oxlint-tsgolint`; 59 of the 61 targeted
+  typescript-eslint rules are currently implemented
 - CSS and JSON formatter overrides are mapped but may need manual review
 - Prettier plugin support is not available in Oxfmt
 - Some Biome rules still require JS plugin fallback until native rule parity is available

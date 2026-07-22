@@ -128,6 +128,8 @@ export async function runCli(
 
     if (parsedCliOptions.json) {
       stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+    } else if (report.success) {
+      writeHumanSuccessSummary(report, validationResult.data.dryRun, stdout)
     }
 
     return report.success ? 0 : 1
@@ -140,6 +142,21 @@ export async function runCli(
     stderr.write(`${pc.red('✖')} ${formatUnexpectedError(err)}\n`)
     return 1
   }
+}
+
+function writeHumanSuccessSummary(
+  report: Awaited<ReturnType<typeof migrate>>,
+  dryRun: boolean,
+  stdout: CliWriteStream,
+): void {
+  stdout.write(
+    `${pc.green('✓')} ${dryRun ? 'Migration preview completed.' : 'Migration completed.'}\n`,
+  )
+  stdout.write(`Oxlint config: ${report.summary.oxlintConfigPath}\n`)
+  stdout.write(`Oxfmt config: ${report.summary.oxfmtConfigPath}\n`)
+  stdout.write(
+    `Rules converted: ${report.summary.rulesConverted}; skipped: ${report.summary.rulesSkipped}; warnings: ${report.warnings.length}\n`,
+  )
 }
 
 export function createTerminationHandler(

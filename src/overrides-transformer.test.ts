@@ -27,7 +27,7 @@ class SilentReporter implements Reporter {
 }
 
 describe('transformOverridesToOxlint', () => {
-  it('warns when biome override ignore patterns cannot be represented', () => {
+  it('maps biome override ignore patterns to Oxlint excludeFiles', () => {
     const reporter = new SilentReporter()
 
     const overrides = transformOverridesToOxlint(
@@ -50,13 +50,31 @@ describe('transformOverridesToOxlint', () => {
     expect(overrides).toEqual([
       {
         files: ['src/**/*.ts'],
+        excludeFiles: ['src/generated/**'],
         rules: {
           'no-var': 'error',
         },
       },
     ])
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('does not emit schema-invalid categories in Oxlint overrides', () => {
+    const reporter = new SilentReporter()
+
+    const overrides = transformOverridesToOxlint(
+      [
+        {
+          include: ['tests/**'],
+          linter: { rules: { suspicious: { recommended: false, noDebugger: 'off' } } },
+        },
+      ],
+      reporter,
+    )
+
+    expect(overrides).toEqual([{ files: ['tests/**'], rules: { 'no-debugger': 'off' } }])
     expect(reporter.getWarnings()).toContain(
-      'Biome override ignore patterns cannot be represented in Oxlint overrides and require manual review: src/**/*.ts',
+      'Biome category presets in the override for tests/** cannot be represented by Oxlint overrides and require manual review.',
     )
   })
 })

@@ -85,7 +85,7 @@ jobs:
       - uses: pnpm/action-setup@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.22.0'
+          node-version: '22.22.3'
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm exec oxlint .

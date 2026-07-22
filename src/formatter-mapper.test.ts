@@ -65,7 +65,7 @@ describe('generateOxfmtConfig', () => {
     })
   })
 
-  it('passes through boolean objectWrap values for newer oxfmt configs', () => {
+  it('rejects objectWrap values that are invalid in the current Oxfmt schema', () => {
     const reporter = new SilentReporter()
 
     const config = generateOxfmtConfig(
@@ -77,7 +77,46 @@ describe('generateOxfmtConfig', () => {
       reporter,
     )
 
-    expect(config.objectWrap).toBe(true)
+    expect(config.objectWrap).toBeUndefined()
+    expect(reporter.getWarnings()).toContain(
+      'Ignoring invalid Oxfmt objectWrap value true; expected "preserve" or "collapse".',
+    )
+  })
+
+  it('disables Oxfmt when Biome formatting is globally disabled', () => {
+    const reporter = new SilentReporter()
+    const config = generateOxfmtConfig({ formatter: { enabled: false } }, reporter)
+
+    expect(config.ignorePatterns).toEqual(['**/*'])
+  })
+
+  it('keeps language-specific shared options scoped to language overrides', () => {
+    const reporter = new SilentReporter()
+    const config = generateOxfmtConfig(
+      {
+        formatter: { lineWidth: 80 },
+        javascript: { formatter: { lineWidth: 120, indentWidth: 4 } },
+        json: { formatter: { lineWidth: 90, trailingCommas: 'none' } },
+        css: { formatter: { quoteStyle: 'single' } },
+      },
+      reporter,
+    )
+
+    expect(config.printWidth).toBe(80)
+    expect(config.overrides).toEqual([
+      {
+        files: ['**/*.{js,jsx,ts,tsx,mjs,mts,cjs,cts}'],
+        options: { printWidth: 120, tabWidth: 4 },
+      },
+      {
+        files: ['**/*.{json,jsonc,json5}'],
+        options: { printWidth: 90, trailingComma: 'none' },
+      },
+      {
+        files: ['**/*.{css,scss,sass,less}'],
+        options: { singleQuote: true },
+      },
+    ])
   })
 
   it('passes through explicitly configured Svelte formatter options', () => {

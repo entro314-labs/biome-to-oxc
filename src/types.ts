@@ -40,20 +40,29 @@ export interface BiomeLinterConfig {
 export interface BiomeLinterRules {
   recommended?: boolean
   all?: boolean
-  [category: string]: boolean | BiomeRuleGroup | undefined
+  preset?: 'recommended' | 'all' | 'none'
+  [category: string]:
+    | boolean
+    | BiomeRuleGroup
+    | BiomeRuleSeverityValue
+    | 'recommended'
+    | 'all'
+    | 'none'
+    | undefined
 }
 
 export interface BiomeRuleGroup {
   recommended?: boolean
   all?: boolean
-  [rule: string]: BiomeRuleSeverity | boolean | undefined
+  preset?: 'recommended' | 'all' | 'none'
+  [rule: string]: BiomeRuleSeverity | boolean | 'recommended' | 'all' | 'none' | undefined
 }
 
+export type BiomeRuleSeverityValue = 'off' | 'on' | 'info' | 'warn' | 'error'
+
 export type BiomeRuleSeverity =
-  | 'off'
-  | 'warn'
-  | 'error'
-  | { level: 'off' | 'warn' | 'error'; options?: unknown }
+  | BiomeRuleSeverityValue
+  | { level: BiomeRuleSeverityValue; options?: unknown }
 
 export interface BiomeFormatterConfig {
   enabled?: boolean
@@ -207,6 +216,10 @@ export interface OxlintSettings {
 
 export interface OxlintConfig {
   $schema?: string
+  options?: {
+    typeAware?: boolean
+    typeCheck?: boolean
+  }
   env?: Record<string, boolean>
   globals?: Record<string, boolean | 'readonly' | 'writable' | 'off'>
   plugins?: OxlintBuiltinPlugin[]
@@ -220,11 +233,11 @@ export interface OxlintConfig {
 
 export interface OxlintOverride {
   files: string[]
+  excludeFiles?: string[]
   env?: Record<string, boolean>
   globals?: Record<string, boolean | 'readonly' | 'writable' | 'off'>
   plugins?: OxlintBuiltinPlugin[]
   jsPlugins?: OxlintJsPlugin[]
-  categories?: Record<string, 'off' | 'warn' | 'error'>
   rules?: Record<string, OxlintRuleSeverity>
 }
 
@@ -254,7 +267,7 @@ export interface OxfmtConfig {
   singleAttributePerLine?: boolean
 
   // Object formatting
-  objectWrap?: boolean | 'preserve' | 'collapse'
+  objectWrap?: 'preserve' | 'collapse'
 
   // Line endings
   insertFinalNewline?: boolean

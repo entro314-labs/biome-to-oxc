@@ -46,8 +46,8 @@ describe('biome-ignore-loader', () => {
       'dist/**',
       'coverage/**',
       '!coverage/keep.js',
-      '#literal-hash',
-      '!literal-bang',
+      '\\#literal-hash',
+      '\\!literal-bang',
     ])
   })
 

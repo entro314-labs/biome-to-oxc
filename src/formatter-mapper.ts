@@ -1,10 +1,5 @@
-import type {
-  BiomeConfig,
-  BiomeFormatterConfig,
-  BiomeJavaScriptConfig,
-  OxfmtConfig,
-  Reporter,
-} from './types.js'
+import { generateOxfmtOverrides } from './oxfmt-overrides.js'
+import type { BiomeConfig, BiomeFormatterConfig, OxfmtConfig, Reporter } from './types.js'
 
 const EXPLICIT_OXFMT_OPTION_KEYS = [
   'objectWrap',
@@ -24,6 +19,38 @@ const LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES = {
   experimentalSortPackageJson: 'sortPackageJson',
   experimentalTailwindcss: 'sortTailwindcss',
 } as const
+const GLOBAL_FORMATTER_KEYS = new Set([
+  'enabled',
+  'include',
+  'includes',
+  'ignore',
+  'formatWithErrors',
+  'indentStyle',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  'attributePosition',
+  'bracketSpacing',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
+const JAVASCRIPT_FORMATTER_KEYS = new Set([
+  'enabled',
+  'quoteStyle',
+  'jsxQuoteStyle',
+  'quoteProperties',
+  'trailingCommas',
+  'semicolons',
+  'arrowParentheses',
+  'bracketSameLine',
+  'bracketSpacing',
+  'indentStyle',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
 
 export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter): OxfmtConfig {
   const oxfmtConfig: OxfmtConfig = {
@@ -32,91 +59,131 @@ export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter
 
   const { formatter } = biomeConfig
   const jsFormatter = biomeConfig.javascript?.formatter
+  warnAboutUnsupportedFormatterKeys(formatter, GLOBAL_FORMATTER_KEYS, 'formatter', reporter)
+  warnAboutUnsupportedFormatterKeys(
+    jsFormatter,
+    JAVASCRIPT_FORMATTER_KEYS,
+    'javascript.formatter',
+    reporter,
+  )
 
-  if (formatter?.enabled === false && jsFormatter?.enabled === false) {
+  if (formatter?.enabled === false) {
+    const languageFormatterEnabled =
+      jsFormatter?.enabled === true ||
+      biomeConfig.json?.formatter?.enabled === true ||
+      biomeConfig.css?.formatter?.enabled === true
+
+    if (!languageFormatterEnabled) {
+      oxfmtConfig.ignorePatterns = ['**/*']
+    } else {
+      reporter.warn(
+        'Biome global formatting is disabled with a language formatter re-enabled; Oxfmt cannot represent that enable-only selection exactly.',
+      )
+    }
+  }
+
+  if ((biomeConfig.files?.include?.length ?? 0) > 0 || (formatter?.include?.length ?? 0) > 0) {
     reporter.warn(
-      'Biome formatter is disabled. Oxfmt config will be created but may need manual review.',
+      'Biome files/formatter include selection cannot be represented in an Oxfmt config; pass equivalent paths to the Oxfmt CLI or review ignorePatterns before replacing Biome.',
     )
   }
 
-  mapFormatterOptions(formatter, jsFormatter, oxfmtConfig, reporter)
+  mapFormatterOptions(formatter, oxfmtConfig, reporter)
   mapIgnorePatterns(biomeConfig, oxfmtConfig)
-  applyExplicitFormatterOptionPassThrough([formatter, jsFormatter], oxfmtConfig)
+  mapDisabledLanguageFormatters(biomeConfig, oxfmtConfig)
+  applyExplicitFormatterOptionPassThrough([formatter], oxfmtConfig, reporter)
+
+  const languageOverrides = generateOxfmtOverrides(
+    [
+      {
+        include: ['**/*.{js,jsx,ts,tsx,mjs,mts,cjs,cts}'],
+        javascript: biomeConfig.javascript,
+      },
+      { include: ['**/*.{json,jsonc,json5}'], json: biomeConfig.json },
+      { include: ['**/*.{css,scss,sass,less}'], css: biomeConfig.css },
+    ],
+    reporter,
+  )
+
+  if (languageOverrides.length > 0) {
+    oxfmtConfig.overrides = languageOverrides
+  }
 
   return oxfmtConfig
 }
 
+function mapDisabledLanguageFormatters(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): void {
+  const disabledPatterns: string[] = []
+
+  if (biomeConfig.javascript?.formatter?.enabled === false) {
+    disabledPatterns.push('**/*.{js,jsx,ts,tsx,mjs,mts,cjs,cts}')
+  }
+  if (biomeConfig.json?.formatter?.enabled === false) {
+    disabledPatterns.push('**/*.{json,jsonc,json5}')
+  }
+  if (biomeConfig.css?.formatter?.enabled === false) {
+    disabledPatterns.push('**/*.{css,scss,sass,less}')
+  }
+
+  if (disabledPatterns.length > 0) {
+    oxfmtConfig.ignorePatterns = [
+      ...new Set([...(oxfmtConfig.ignorePatterns ?? []), ...disabledPatterns]),
+    ]
+  }
+}
+
+function warnAboutUnsupportedFormatterKeys(
+  formatter: Record<string, unknown> | undefined,
+  supportedKeys: Set<string>,
+  label: string,
+  reporter: Reporter,
+): void {
+  for (const key of Object.keys(formatter ?? {})) {
+    if (!supportedKeys.has(key)) {
+      reporter.warn(`Unsupported Biome ${label} option "${key}" was not migrated.`)
+    }
+  }
+}
+
 function mapFormatterOptions(
   formatter: BiomeFormatterConfig | undefined,
-  jsFormatter: BiomeJavaScriptConfig['formatter'] | undefined,
   oxfmtConfig: OxfmtConfig,
   reporter: Reporter,
 ): void {
-  const jsLineWidth = jsFormatter?.lineWidth
   const globalLineWidth = formatter?.lineWidth
   // Biome default is 80, Oxfmt default is 100
   // Always set explicitly to avoid confusion
-  const lineWidth = jsLineWidth ?? globalLineWidth ?? 80
+  const lineWidth = globalLineWidth ?? 80
 
   oxfmtConfig.printWidth = lineWidth
 
-  const jsIndentStyle = jsFormatter?.indentStyle
   const globalIndentStyle = formatter?.indentStyle
-  const indentStyle = jsIndentStyle ?? globalIndentStyle ?? 'tab'
+  const indentStyle = globalIndentStyle ?? 'tab'
   oxfmtConfig.useTabs = indentStyle === 'tab'
 
-  const jsIndentWidth = jsFormatter?.indentWidth
   const globalIndentWidth = formatter?.indentWidth
-  const indentWidth = jsIndentWidth ?? globalIndentWidth
+  const indentWidth = globalIndentWidth
   if (indentWidth !== undefined && indentWidth !== 2) {
     oxfmtConfig.tabWidth = indentWidth
   }
 
-  const jsLineEnding = jsFormatter?.lineEnding
   const globalLineEnding = formatter?.lineEnding
-  const lineEnding = jsLineEnding ?? globalLineEnding ?? 'lf'
+  const lineEnding = globalLineEnding ?? 'lf'
   if (lineEnding !== 'lf') {
     oxfmtConfig.endOfLine = lineEnding
   }
 
-  const quoteStyle = jsFormatter?.quoteStyle ?? 'double'
-  oxfmtConfig.singleQuote = quoteStyle === 'single'
+  oxfmtConfig.singleQuote = false
+  oxfmtConfig.jsxSingleQuote = false
+  oxfmtConfig.quoteProps = 'as-needed'
+  oxfmtConfig.trailingComma = 'all'
+  oxfmtConfig.semi = true
+  oxfmtConfig.arrowParens = 'always'
 
-  const jsxQuoteStyle = jsFormatter?.jsxQuoteStyle ?? 'double'
-  oxfmtConfig.jsxSingleQuote = jsxQuoteStyle === 'single'
-
-  const quoteProperties = jsFormatter?.quoteProperties ?? 'asNeeded'
-  if (quoteProperties === 'preserve') {
-    oxfmtConfig.quoteProps = 'preserve'
-  } else {
-    oxfmtConfig.quoteProps = 'as-needed'
-  }
-
-  const trailingCommas = jsFormatter?.trailingCommas ?? 'all'
-  if (trailingCommas === 'none') {
-    oxfmtConfig.trailingComma = 'none'
-  } else if (trailingCommas === 'es5') {
-    oxfmtConfig.trailingComma = 'es5'
-  } else {
-    oxfmtConfig.trailingComma = 'all'
-  }
-
-  const semicolons = jsFormatter?.semicolons ?? 'always'
-  oxfmtConfig.semi = semicolons === 'always'
-
-  const arrowParentheses = jsFormatter?.arrowParentheses ?? 'always'
-  oxfmtConfig.arrowParens = arrowParentheses === 'always' ? 'always' : 'avoid'
-
-  const jsBracketSpacing = jsFormatter?.bracketSpacing
   const globalBracketSpacing = formatter?.bracketSpacing
-  const bracketSpacing = jsBracketSpacing ?? globalBracketSpacing
+  const bracketSpacing = globalBracketSpacing
   if (bracketSpacing !== undefined) {
     oxfmtConfig.bracketSpacing = bracketSpacing
-  }
-
-  const bracketSameLine = jsFormatter?.bracketSameLine
-  if (bracketSameLine !== undefined) {
-    oxfmtConfig.bracketSameLine = bracketSameLine
   }
 
   const attributePosition = formatter?.attributePosition
@@ -132,7 +199,7 @@ function mapFormatterOptions(
 }
 
 function mapIgnorePatterns(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): void {
-  const ignorePatterns: string[] = []
+  const ignorePatterns: string[] = [...(oxfmtConfig.ignorePatterns ?? [])]
 
   if (biomeConfig.files?.ignore) {
     ignorePatterns.push(...biomeConfig.files.ignore)
@@ -150,6 +217,7 @@ function mapIgnorePatterns(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): 
 function applyExplicitFormatterOptionPassThrough(
   sources: Array<Record<string, unknown> | undefined>,
   oxfmtConfig: OxfmtConfig,
+  reporter: Reporter,
 ): void {
   const target = oxfmtConfig as Record<string, unknown>
 
@@ -162,6 +230,12 @@ function applyExplicitFormatterOptionPassThrough(
       const value = source[key]
 
       if (value !== undefined) {
+        if (key === 'objectWrap' && value !== 'preserve' && value !== 'collapse') {
+          reporter.warn(
+            `Ignoring invalid Oxfmt objectWrap value ${JSON.stringify(value)}; expected "preserve" or "collapse".`,
+          )
+          continue
+        }
         target[key] = value
       }
     }

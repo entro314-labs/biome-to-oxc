@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { resolve, dirname, join } from 'node:path'
 
 import { parse as parseJsonc, printParseErrorCode } from 'jsonc-parser'
@@ -21,6 +22,20 @@ import type {
 } from './types.js'
 
 const BIOME_CONFIG_NAMES = ['biome.json', 'biome.jsonc']
+const SUPPORTED_TOP_LEVEL_FIELDS = new Set([
+  '$schema',
+  'extends',
+  'root',
+  'files',
+  'vcs',
+  'linter',
+  'formatter',
+  'javascript',
+  'json',
+  'css',
+  'html',
+  'overrides',
+])
 const IncludeFieldsSchema = z
   .object({
     include: z.array(z.string()).optional(),
@@ -28,10 +43,10 @@ const IncludeFieldsSchema = z
   })
   .passthrough()
 const BiomeRuleSeveritySchema = z.union([
-  z.enum(['off', 'warn', 'error']),
+  z.enum(['off', 'on', 'info', 'warn', 'error']),
   z
     .object({
-      level: z.enum(['off', 'warn', 'error']),
+      level: z.enum(['off', 'on', 'info', 'warn', 'error']),
       options: z.unknown().optional(),
     })
     .passthrough(),
@@ -40,14 +55,18 @@ const BiomeRuleGroupSchema: z.ZodType<BiomeRuleGroup> = z
   .object({
     recommended: z.boolean().optional(),
     all: z.boolean().optional(),
+    preset: z.enum(['recommended', 'all', 'none']).optional(),
   })
   .catchall(z.union([BiomeRuleSeveritySchema, z.boolean()]))
 const BiomeLinterRulesSchema: z.ZodType<BiomeLinterRules> = z
   .object({
     recommended: z.boolean().optional(),
     all: z.boolean().optional(),
+    preset: z.enum(['recommended', 'all', 'none']).optional(),
   })
-  .catchall(z.union([z.boolean(), BiomeRuleGroupSchema]))
+  .catchall(
+    z.union([z.boolean(), z.enum(['off', 'on', 'info', 'warn', 'error']), BiomeRuleGroupSchema]),
+  )
 const BiomeFormatterConfigSchema: z.ZodType<BiomeFormatterConfig> = IncludeFieldsSchema.extend({
   ignore: z.array(z.string()).optional(),
   formatWithErrors: z.boolean().optional(),
@@ -276,6 +295,7 @@ export async function loadBiomeConfig(
     }
 
     const normalized = normalizeBiomeConfig(validationResult.data, reporter)
+    warnAboutUnsupportedTopLevelFields(normalized, reporter)
     return normalized
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -284,10 +304,19 @@ export async function loadBiomeConfig(
   }
 }
 
+function warnAboutUnsupportedTopLevelFields(config: BiomeConfig, reporter: Reporter): void {
+  for (const field of Object.keys(config)) {
+    if (!SUPPORTED_TOP_LEVEL_FIELDS.has(field)) {
+      reporter.warn(`Unsupported Biome top-level field "${field}" was not migrated.`)
+    }
+  }
+}
+
 export async function resolveBiomeExtends(
   config: BiomeConfig,
   configDir: string,
   reporter: Reporter,
+  resolvingPaths = new Set<string>(),
 ): Promise<BiomeConfig> {
   if (!config.extends) {
     return config
@@ -302,25 +331,41 @@ export async function resolveBiomeExtends(
     if (extendPath === '//') {
       const monorepoRoot = await findMonorepoRoot(configDir)
       if (!monorepoRoot) {
-        reporter.warn('Monorepo root ("//" extends) not found. Skipping this extends.')
-        continue
+        const message = 'Monorepo root ("//" extends) not found.'
+        reporter.error(message)
+        throw new Error(message)
       }
       const rootConfigPath = await findBiomeConfig(monorepoRoot)
       if (!rootConfigPath) {
-        reporter.warn(`No Biome config found at monorepo root: ${monorepoRoot}`)
-        continue
+        const message = `No Biome config found at monorepo root: ${monorepoRoot}`
+        reporter.error(message)
+        throw new Error(message)
       }
       resolvedPath = rootConfigPath
     } else {
-      resolvedPath = resolve(configDir, extendPath)
+      try {
+        resolvedPath = resolveExtendsPath(extendPath, configDir)
+      } catch (err) {
+        const message = `Unable to resolve Biome extends entry "${extendPath}" from ${configDir}: ${err instanceof Error ? err.message : String(err)}`
+        reporter.error(message)
+        throw new Error(message, { cause: err })
+      }
     }
 
     if (!(await pathExists(resolvedPath))) {
-      reporter.warn(`Extended config not found: ${extendPath}`)
-      continue
+      const message = `Extended config not found: ${extendPath}`
+      reporter.error(message)
+      throw new Error(message)
+    }
+
+    if (resolvingPaths.has(resolvedPath)) {
+      const message = `Circular Biome extends detected at: ${resolvedPath}`
+      reporter.error(message)
+      throw new Error(message)
     }
 
     try {
+      resolvingPaths.add(resolvedPath)
       const extendedConfig = await loadBiomeConfig(resolvedPath, reporter)
       const extendedDir = dirname(resolvedPath)
       // Recursively resolve extends
@@ -328,6 +373,7 @@ export async function resolveBiomeExtends(
         extendedConfig,
         extendedDir,
         reporter,
+        resolvingPaths,
       )
 
       mergedConfig = deepMerge(mergedConfig, resolvedExtendedConfig)
@@ -337,11 +383,22 @@ export async function resolveBiomeExtends(
         `Failed to resolve extends entry "${extendPath}" at ${resolvedPath}: ${message}`,
       )
       throw new Error(`Unable to resolve extends entry "${extendPath}"`, { cause: err })
+    } finally {
+      resolvingPaths.delete(resolvedPath)
     }
   }
 
   const { extends: _, ...configWithoutExtends } = config
   return deepMerge(mergedConfig, configWithoutExtends)
+}
+
+function resolveExtendsPath(extendPath: string, configDir: string): string {
+  if (extendPath.startsWith('.') || extendPath.endsWith('.json') || extendPath.endsWith('.jsonc')) {
+    return resolve(configDir, extendPath)
+  }
+
+  const requireFromConfig = createRequire(join(configDir, 'package.json'))
+  return requireFromConfig.resolve(extendPath)
 }
 
 function deepMerge<T>(target: T, source: T): T {

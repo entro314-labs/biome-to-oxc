@@ -17,6 +17,16 @@ const BIOME_TO_OXLINT_CATEGORY_MAP: Record<string, string> = {
   nursery: 'nursery',
 }
 
+const OXLINT_CATEGORIES = [
+  'correctness',
+  'nursery',
+  'pedantic',
+  'perf',
+  'restriction',
+  'style',
+  'suspicious',
+] as const
+
 type OxlintRuleMapping = string | readonly string[]
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
@@ -224,7 +234,6 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noVoid: 'no-void',
   noVar: 'no-var',
   noVoidElementsWithChildren: 'react/void-dom-elements-no-children',
-  noVoidTypeReturn: 'typescript/no-invalid-void-type',
   noVueDataObjectDeclaration: [
     'vue/no-deprecated-data-object-declaration',
     'vue/no-shared-component-data',
@@ -329,6 +338,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useOptionalChain: 'typescript/prefer-optional-chain',
   useParseIntRadix: 'radix',
   useReadonlyClassProperties: 'typescript/prefer-readonly',
+  useReactFunctionComponentDefinition: 'react/function-component-definition',
   useReactFunctionComponents: 'react/prefer-function-component',
   useReduceTypeParameter: 'typescript/prefer-reduce-type-parameter',
   useRegexLiterals: 'prefer-regex-literals',
@@ -552,6 +562,19 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
   }
 
+  if (biomeName === 'useReactFunctionComponentDefinition') {
+    const namedComponents =
+      options.namedComponents === 'functionDeclaration'
+        ? 'function-declaration'
+        : options.namedComponents === 'functionExpression'
+          ? 'function-expression'
+          : options.namedComponents === 'arrowFunction'
+            ? 'arrow-function'
+            : null
+
+    return namedComponents ? [severity, { namedComponents }] : severity
+  }
+
   if (biomeName === 'useThisInClassMethods') {
     const oxlintOptions: Record<string, unknown> = {}
 
@@ -574,6 +597,9 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
   }
 
+  reporter.warn(
+    `Biome rule ${biomeName} options do not have a verified Oxlint mapping and were not migrated.`,
+  )
   return severity
 }
 
@@ -628,6 +654,9 @@ export function mapBiomeRuleSeverity(
 
   const normalized = OXLINT_SEVERITY_NORMALIZATION[rawSeverity.trim().toLowerCase()]
   if (normalized) {
+    if (rawSeverity === 'info' || rawSeverity === 'on') {
+      warnUnsupportedSeverityOnce(rawSeverity, reporter, biomeRuleName)
+    }
     return normalized
   }
 
@@ -709,6 +738,7 @@ export function mapBiomeCategoryToOxlint(biomeCategory: string): string | null {
 export function extractRulesFromBiomeConfig(
   linterRules: BiomeLinterRules | undefined,
   reporter: Reporter,
+  applyImplicitRecommended = false,
 ): {
   rules: Record<string, OxlintRuleSeverity>
   categories: Record<string, 'off' | 'warn' | 'error'>
@@ -720,8 +750,10 @@ export function extractRulesFromBiomeConfig(
     return { rules, categories }
   }
 
+  applyTopLevelPreset(linterRules, categories, reporter, applyImplicitRecommended)
+
   for (const [key, value] of Object.entries(linterRules)) {
-    if (key === 'recommended' || key === 'all') {
+    if (key === 'recommended' || key === 'all' || key === 'preset') {
       continue
     }
 
@@ -729,15 +761,31 @@ export function extractRulesFromBiomeConfig(
       continue
     }
 
+    if (typeof value === 'string') {
+      if (!isBiomeRuleSeverity(value)) {
+        continue
+      }
+      const oxlintCategory = mapBiomeCategoryToOxlint(key)
+      if (oxlintCategory) {
+        const severity = mapBiomeRuleSeverity(value, reporter, `${key} group`)
+        categories[oxlintCategory] = typeof severity === 'string' ? severity : severity[0]
+      }
+      continue
+    }
+
     if (isRuleGroup(value)) {
       const oxlintCategory = mapBiomeCategoryToOxlint(key)
 
       for (const [ruleName, ruleSeverity] of Object.entries(value)) {
-        if (ruleName === 'recommended' || ruleName === 'all') {
+        if (ruleName === 'recommended' || ruleName === 'all' || ruleName === 'preset') {
           continue
         }
 
         if (typeof ruleSeverity === 'boolean' || ruleSeverity === undefined) {
+          continue
+        }
+
+        if (!isBiomeRuleSeverity(ruleSeverity)) {
           continue
         }
 
@@ -755,20 +803,79 @@ export function extractRulesFromBiomeConfig(
         }
       }
 
-      if (oxlintCategory && value.recommended !== undefined) {
-        categories[oxlintCategory] = value.recommended ? 'warn' : 'off'
+      const groupPreset = value.preset
+      const groupEnabled =
+        groupPreset === 'none'
+          ? false
+          : groupPreset === 'all' || groupPreset === 'recommended'
+            ? true
+            : (value.all ?? value.recommended)
+
+      if (oxlintCategory && groupEnabled !== undefined) {
+        categories[oxlintCategory] = groupEnabled ? 'warn' : 'off'
       }
     }
-  }
-
-  if (linterRules.recommended) {
-    categories.correctness = 'warn'
-    categories.suspicious = 'warn'
   }
 
   return { rules, categories }
 }
 
+function applyTopLevelPreset(
+  linterRules: BiomeLinterRules,
+  categories: Record<string, 'off' | 'warn' | 'error'>,
+  reporter: Reporter,
+  applyImplicitRecommended: boolean,
+): void {
+  const preset =
+    linterRules.preset ??
+    (linterRules.all === true
+      ? 'all'
+      : linterRules.all === false || linterRules.recommended === false
+        ? 'none'
+        : linterRules.recommended === true
+          ? 'recommended'
+          : applyImplicitRecommended
+            ? 'recommended'
+            : undefined)
+
+  if (!preset) {
+    return
+  }
+
+  for (const category of OXLINT_CATEGORIES) {
+    categories[category] = 'off'
+  }
+
+  if (preset === 'all') {
+    for (const category of OXLINT_CATEGORIES) {
+      if (category !== 'nursery') {
+        categories[category] = 'warn'
+      }
+    }
+  } else if (preset === 'recommended') {
+    categories.correctness = 'warn'
+    categories.suspicious = 'warn'
+  }
+
+  reporter.warn(
+    `Biome linter preset "${preset}" was approximated with Oxlint categories; review the generated rule set because the tools' preset membership is not identical.`,
+  )
+}
+
 function isRuleGroup(value: unknown): value is BiomeRuleGroup {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isBiomeRuleSeverity(value: unknown): value is BiomeRuleSeverity {
+  if (typeof value === 'string') {
+    return ['off', 'on', 'info', 'warn', 'error'].includes(value)
+  }
+
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'level' in value &&
+    typeof value.level === 'string' &&
+    ['off', 'on', 'info', 'warn', 'error'].includes(value.level)
+  )
 }

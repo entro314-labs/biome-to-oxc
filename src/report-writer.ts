@@ -15,6 +15,10 @@ export async function writeReportToFile(
     })
     reporter.info(`Migration report written to: ${outputPath}`)
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw err
+    }
+
     const message = err instanceof Error ? err.message : String(err)
     reporter.error(`Failed to write migration report: ${message}`)
   }
