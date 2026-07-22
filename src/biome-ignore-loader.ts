@@ -30,7 +30,7 @@ export function parseBiomeIgnoreContent(content: string): string[] {
     }
 
     if (line.startsWith('\\#') || line.startsWith('\\!')) {
-      patterns.push(line.slice(1))
+      patterns.push(line)
       continue
     }
 

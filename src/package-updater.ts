@@ -1,4 +1,4 @@
-import { dirname, resolve } from 'node:path'
+import { dirname, posix, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { z } from 'zod'
@@ -32,19 +32,6 @@ interface RecommendedToolVersions {
   'oxlint-tsgolint': string
 }
 
-const DOM_SCRIPT_PRESET: Record<string, string> = {
-  check: 'oxlint . && oxfmt --check .',
-  'check:fix': 'oxlint --fix . && oxfmt --write .',
-  format: 'oxfmt --write .',
-  'format:check': 'oxfmt --check .',
-  lint: 'oxlint -f github . > lint.md 2>&1',
-  'lint:fix': 'oxlint -f stylish --fix .',
-  'lint:fix-unsafe':
-    'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .',
-  'check:fix-suggestions':
-    'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .',
-  'type-check': 'tsgo --noEmit',
-}
 const PackageJsonSchema: z.ZodType<PackageJson> = z
   .object({
     scripts: z.record(z.string(), z.string()).optional(),
@@ -72,10 +59,13 @@ export async function updatePackageJson(
     typeCheck?: boolean
     typeAwareProfile?: TypeAwareProfile
     fixStrategy?: FixStrategy
+    oxlintConfigPath?: string
+    oxfmtConfigPath?: string
     signal?: AbortSignal
   } = {},
 ): Promise<PackageUpdateSummary> {
-  const packageJsonPath = resolve(projectDir, 'package.json')
+  const packageJsonPath =
+    (await findClosestPackageJson(projectDir)) ?? resolve(projectDir, 'package.json')
   const summary: PackageUpdateSummary = {
     packageJsonPath,
     found: false,
@@ -105,37 +95,61 @@ export async function updatePackageJson(
       options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
     const needsTypeAwareDependency = typeAwareEnabled || typeCheckEnabled || domModeEnabled
     const fixStrategy = options.fixStrategy ?? 'safe'
+    const oxlintCommand = buildConfiguredCommand(
+      'oxlint',
+      packageJsonPath,
+      options.oxlintConfigPath,
+    )
+    const oxfmtCommand = buildConfiguredCommand('oxfmt', packageJsonPath, options.oxfmtConfigPath)
 
     if (domModeEnabled) {
       packageJson.scripts ??= {}
-      modified = applyDomScriptPreset(packageJson.scripts, summary.scriptsUpdated) || modified
+      modified =
+        applyDomScriptPreset(
+          packageJson.scripts,
+          summary.scriptsUpdated,
+          oxlintCommand,
+          oxfmtCommand,
+        ) || modified
     } else if (updateScriptsEnabled && packageJson.scripts) {
       modified =
         updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated, {
           typeAwareEnabled,
           typeCheckEnabled,
           fixStrategy,
+          oxlintCommand,
+          oxfmtCommand,
         }) || modified
     }
 
-    if (packageJson.devDependencies) {
-      modified =
-        removeBiomeDependency(
-          packageJson.devDependencies,
-          'devDependencies',
-          summary.dependenciesRemoved,
-          reporter,
-        ) || modified
-    }
+    const scriptsStillUsingBiome = Object.entries(packageJson.scripts ?? {})
+      .filter(([, script]) => containsBiomeExecutable(script))
+      .map(([name]) => name)
 
-    if (packageJson.dependencies) {
-      modified =
-        removeBiomeDependency(
-          packageJson.dependencies,
-          'dependencies',
-          summary.dependenciesRemoved,
-          reporter,
-        ) || modified
+    if (scriptsStillUsingBiome.length > 0) {
+      reporter.warn(
+        `Keeping @biomejs/biome because these package scripts still invoke Biome: ${scriptsStillUsingBiome.join(', ')}`,
+      )
+    } else {
+      if (packageJson.devDependencies) {
+        modified =
+          removeBiomeDependency(
+            packageJson.devDependencies,
+            'devDependencies',
+            summary.dependenciesRemoved,
+            reporter,
+          ) || modified
+      }
+
+      if (packageJson.dependencies) {
+        modified =
+          removeBiomeDependency(
+            packageJson.dependencies,
+            'dependencies',
+            summary.dependenciesRemoved,
+            reporter,
+          ) || modified
+      }
     }
 
     packageJson.devDependencies ??= {}
@@ -195,10 +209,23 @@ export async function updatePackageJson(
 function applyDomScriptPreset(
   scripts: Record<string, string>,
   updates: PackageScriptUpdate[],
+  oxlintCommand: string,
+  oxfmtCommand: string,
 ): boolean {
   let modified = false
+  const preset: Record<string, string> = {
+    check: `${oxlintCommand} . && ${oxfmtCommand} --check .`,
+    'check:fix': `${oxlintCommand} --fix . && ${oxfmtCommand} --write .`,
+    format: `${oxfmtCommand} --write .`,
+    'format:check': `${oxfmtCommand} --check .`,
+    lint: `${oxlintCommand} -f github . > lint.md 2>&1`,
+    'lint:fix': `${oxlintCommand} -f stylish --fix .`,
+    'lint:fix-unsafe': `${oxlintCommand} -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .`,
+    'check:fix-suggestions': `${oxlintCommand} -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && ${oxfmtCommand} --write .`,
+    'type-check': 'tsgo --noEmit',
+  }
 
-  for (const [scriptName, scriptValue] of Object.entries(DOM_SCRIPT_PRESET)) {
+  for (const [scriptName, scriptValue] of Object.entries(preset)) {
     const before = scripts[scriptName]
 
     if (before === scriptValue) {
@@ -221,10 +248,16 @@ function updateScripts(
     typeAwareEnabled: boolean
     typeCheckEnabled: boolean
     fixStrategy: FixStrategy
+    oxlintCommand: string
+    oxfmtCommand: string
   },
 ): boolean {
   let modified = false
-  const lintBase = buildLintBaseCommand(options.typeAwareEnabled, options.typeCheckEnabled)
+  const lintBase = buildLintBaseCommand(
+    options.oxlintCommand,
+    options.typeAwareEnabled,
+    options.typeCheckEnabled,
+  )
 
   const lintFixByStrategy: Record<FixStrategy, string> = {
     safe: `${lintBase} --fix`,
@@ -237,7 +270,8 @@ function updateScripts(
     let updated = false
 
     if (containsBiomeCommand(newScript)) {
-      const unsafeRewriteReason = findUnsafeRewriteReason(newScript)
+      const unsafeRewriteReason =
+        findUnsafeRewriteReason(newScript) ?? findUnsupportedBiomeOption(newScript)
 
       if (unsafeRewriteReason) {
         reporter.warn(
@@ -250,20 +284,20 @@ function updateScripts(
     const replacements = [
       {
         command: 'check',
-        check: `${lintBase} && oxfmt --check`,
+        check: `${lintBase} && ${options.oxfmtCommand} --check`,
         fixByStrategy: {
-          safe: `${lintFixByStrategy.safe} && oxfmt --write`,
-          suggestions: `${lintFixByStrategy.suggestions} && oxfmt --write`,
-          dangerous: `${lintFixByStrategy.dangerous} && oxfmt --write`,
+          safe: `${lintFixByStrategy.safe} && ${options.oxfmtCommand} --write`,
+          suggestions: `${lintFixByStrategy.suggestions} && ${options.oxfmtCommand} --write`,
+          dangerous: `${lintFixByStrategy.dangerous} && ${options.oxfmtCommand} --write`,
         },
       },
       {
         command: 'ci',
-        check: `${lintBase} && oxfmt --check`,
+        check: `${lintBase} && ${options.oxfmtCommand} --check`,
         fixByStrategy: {
-          safe: `${lintFixByStrategy.safe} && oxfmt --write`,
-          suggestions: `${lintFixByStrategy.suggestions} && oxfmt --write`,
-          dangerous: `${lintFixByStrategy.dangerous} && oxfmt --write`,
+          safe: `${lintFixByStrategy.safe} && ${options.oxfmtCommand} --write`,
+          suggestions: `${lintFixByStrategy.suggestions} && ${options.oxfmtCommand} --write`,
+          dangerous: `${lintFixByStrategy.dangerous} && ${options.oxfmtCommand} --write`,
         },
       },
       {
@@ -277,11 +311,11 @@ function updateScripts(
       },
       {
         command: 'format',
-        check: 'oxfmt --check',
+        check: `${options.oxfmtCommand} --check`,
         fixByStrategy: {
-          safe: 'oxfmt --write',
-          suggestions: 'oxfmt --write',
-          dangerous: 'oxfmt --write',
+          safe: `${options.oxfmtCommand} --write`,
+          suggestions: `${options.oxfmtCommand} --write`,
+          dangerous: `${options.oxfmtCommand} --write`,
         },
       },
     ]
@@ -314,8 +348,32 @@ function updateScripts(
   return modified
 }
 
+function findUnsupportedBiomeOption(script: string): string | undefined {
+  const commandPattern = /\bbiome\s+(?:check|ci|lint|format)\b([^&|;]*)/gu
+
+  for (const match of script.matchAll(commandPattern)) {
+    const argsWithoutSupportedFixFlags = (match[1] ?? '').replace(
+      /\s--(?:write|fix|unsafe)\b/gu,
+      '',
+    )
+    const unsupportedOption = argsWithoutSupportedFixFlags.match(
+      /(?:^|\s)(-{1,2}[a-z][\w-]*)/iu,
+    )?.[1]
+
+    if (unsupportedOption) {
+      return `Biome-specific option ${unsupportedOption}`
+    }
+  }
+
+  return undefined
+}
+
 function containsBiomeCommand(script: string): boolean {
   return /\bbiome\s+(check|ci|lint|format)\b/u.test(script)
+}
+
+function containsBiomeExecutable(script: string): boolean {
+  return /\bbiome\b/u.test(script)
 }
 
 function findUnsafeRewriteReason(script: string): string | undefined {
@@ -378,16 +436,43 @@ function applySuffixToCommands(replacement: string, suffix: string): string {
     .join(' && ')
 }
 
-function buildLintBaseCommand(typeAwareEnabled: boolean, typeCheckEnabled: boolean): string {
+function buildLintBaseCommand(
+  oxlintCommand: string,
+  typeAwareEnabled: boolean,
+  typeCheckEnabled: boolean,
+): string {
   if (!typeAwareEnabled && !typeCheckEnabled) {
-    return 'oxlint'
+    return oxlintCommand
   }
 
   if (typeCheckEnabled) {
-    return 'oxlint --type-aware --type-check'
+    return `${oxlintCommand} --type-aware --type-check`
   }
 
-  return 'oxlint --type-aware'
+  return `${oxlintCommand} --type-aware`
+}
+
+function buildConfiguredCommand(
+  executable: string,
+  packageJsonPath: string,
+  configPath: string | undefined,
+): string {
+  if (!configPath) {
+    return executable
+  }
+
+  const relativeConfigPath = posix.normalize(
+    relative(dirname(packageJsonPath), configPath).replaceAll('\\', '/'),
+  )
+  return `${executable} --config ${quoteShellArgument(relativeConfigPath)}`
+}
+
+function quoteShellArgument(value: string): string {
+  if (/^[\w./-]+$/u.test(value)) {
+    return value
+  }
+
+  return `'${value.replaceAll("'", `'"'"'`)}'`
 }
 
 function escalateFixStrategy(current: FixStrategy, minimum: FixStrategy): FixStrategy {

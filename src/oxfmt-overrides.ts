@@ -29,6 +29,26 @@ const LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES = {
 const JAVASCRIPT_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx', 'mjs', 'mts', 'cjs', 'cts']
 const JSON_EXTENSIONS = ['json', 'jsonc', 'json5']
 const CSS_EXTENSIONS = ['css', 'scss', 'sass', 'less']
+const JSON_FORMATTER_KEYS = new Set([
+  'enabled',
+  'indentStyle',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  'trailingCommas',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
+const CSS_FORMATTER_KEYS = new Set([
+  'enabled',
+  'indentStyle',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  'quoteStyle',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
 
 export function generateOxfmtOverrides(
   biomeOverrides: BiomeOverride[] | undefined,
@@ -50,7 +70,7 @@ export function generateOxfmtOverrides(
     const baseOptions = mapBaseFormatterOptions(override.formatter, reporter)
     pushOverride(oxfmtOverrides, files, excludeFiles, baseOptions)
 
-    const jsOptions = mapJavaScriptFormatterOptions(override.javascript?.formatter)
+    const jsOptions = mapJavaScriptFormatterOptions(override.javascript?.formatter, reporter)
     pushScopedOverride(
       oxfmtOverrides,
       files,
@@ -61,7 +81,7 @@ export function generateOxfmtOverrides(
       JAVASCRIPT_EXTENSIONS,
     )
 
-    const jsonOptions = mapJsonFormatterOptions(override.json?.formatter)
+    const jsonOptions = mapJsonFormatterOptions(override.json?.formatter, reporter)
     pushScopedOverride(
       oxfmtOverrides,
       files,
@@ -72,7 +92,7 @@ export function generateOxfmtOverrides(
       JSON_EXTENSIONS,
     )
 
-    const cssOptions = mapCssFormatterOptions(override.css?.formatter)
+    const cssOptions = mapCssFormatterOptions(override.css?.formatter, reporter)
     pushScopedOverride(
       oxfmtOverrides,
       files,
@@ -85,6 +105,14 @@ export function generateOxfmtOverrides(
   }
 
   return oxfmtOverrides
+}
+
+export function collectDisabledOxfmtOverridePatterns(
+  biomeOverrides: BiomeOverride[] | undefined,
+): string[] {
+  return (biomeOverrides ?? []).flatMap((override) =>
+    override.formatter?.enabled === false ? (override.include ?? []) : [],
+  )
 }
 
 function pushOverride(
@@ -170,13 +198,14 @@ function mapBaseFormatterOptions(
     reporter.warn("Biome's formatWithErrors option is not supported in Oxfmt overrides")
   }
 
-  applyExplicitFormatterOptionPassThrough([formatter], options)
+  applyExplicitFormatterOptionPassThrough([formatter], options, reporter)
 
   return options
 }
 
 function mapJavaScriptFormatterOptions(
   jsFormatter: BiomeJavaScriptConfig['formatter'] | undefined,
+  reporter: Reporter,
 ): Partial<Record<string, unknown>> {
   const options: Record<string, unknown> = {}
 
@@ -237,19 +266,22 @@ function mapJavaScriptFormatterOptions(
     options.bracketSameLine = jsFormatter.bracketSameLine
   }
 
-  applyExplicitFormatterOptionPassThrough([jsFormatter], options)
+  applyExplicitFormatterOptionPassThrough([jsFormatter], options, reporter)
 
   return options
 }
 
 function mapJsonFormatterOptions(
   jsonFormatter: BiomeJsonConfig['formatter'] | undefined,
+  reporter: Reporter,
 ): Partial<Record<string, unknown>> {
   const options: Record<string, unknown> = {}
 
   if (!jsonFormatter) {
     return options
   }
+
+  warnAboutUnsupportedKeys(jsonFormatter, JSON_FORMATTER_KEYS, 'json.formatter', reporter)
 
   if (jsonFormatter.lineWidth !== undefined) {
     options.printWidth = jsonFormatter.lineWidth
@@ -271,19 +303,22 @@ function mapJsonFormatterOptions(
     options.trailingComma = jsonFormatter.trailingCommas === 'none' ? 'none' : 'all'
   }
 
-  applyExplicitFormatterOptionPassThrough([jsonFormatter], options)
+  applyExplicitFormatterOptionPassThrough([jsonFormatter], options, reporter)
 
   return options
 }
 
 function mapCssFormatterOptions(
   cssFormatter: BiomeCssConfig['formatter'] | undefined,
+  reporter: Reporter,
 ): Partial<Record<string, unknown>> {
   const options: Record<string, unknown> = {}
 
   if (!cssFormatter) {
     return options
   }
+
+  warnAboutUnsupportedKeys(cssFormatter, CSS_FORMATTER_KEYS, 'css.formatter', reporter)
 
   if (cssFormatter.lineWidth !== undefined) {
     options.printWidth = cssFormatter.lineWidth
@@ -305,14 +340,28 @@ function mapCssFormatterOptions(
     options.singleQuote = cssFormatter.quoteStyle === 'single'
   }
 
-  applyExplicitFormatterOptionPassThrough([cssFormatter], options)
+  applyExplicitFormatterOptionPassThrough([cssFormatter], options, reporter)
 
   return options
+}
+
+function warnAboutUnsupportedKeys(
+  formatter: Record<string, unknown>,
+  supportedKeys: Set<string>,
+  label: string,
+  reporter: Reporter,
+): void {
+  for (const key of Object.keys(formatter)) {
+    if (!supportedKeys.has(key)) {
+      reporter.warn(`Unsupported Biome ${label} option "${key}" was not migrated.`)
+    }
+  }
 }
 
 function applyExplicitFormatterOptionPassThrough(
   sources: Array<Record<string, unknown> | undefined>,
   options: Record<string, unknown>,
+  reporter: Reporter,
 ): void {
   for (const source of sources) {
     if (!source) {
@@ -323,6 +372,12 @@ function applyExplicitFormatterOptionPassThrough(
       const value = source[key]
 
       if (value !== undefined) {
+        if (key === 'objectWrap' && value !== 'preserve' && value !== 'collapse') {
+          reporter.warn(
+            `Ignoring invalid Oxfmt objectWrap value ${JSON.stringify(value)}; expected "preserve" or "collapse".`,
+          )
+          continue
+        }
         options[key] = value
       }
     }

@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- Accept current Biome rule presets, group severities, and `on`/`info` rule levels.
+- Fail on missing, unresolved, or circular `extends` entries instead of producing incomplete output.
+- Resolve package-exported Biome configs from `node_modules`.
+- Keep project/package/Turbo discovery anchored to the Biome config when `--output-dir` is used, and
+  rebase generated config globs and schema paths.
+- Emit schema-valid Oxlint overrides with `excludeFiles`; disabled linter/formatter overrides become
+  tool-specific ignore patterns.
+- Keep JavaScript, JSON, and CSS formatter settings scoped to Oxfmt language overrides instead of
+  leaking language-specific values into the global formatter configuration.
+- Keep `@biomejs/biome` installed whenever a package script still invokes Biome, including scripts
+  skipped because their shell structure or CLI flags cannot be rewritten safely.
+- Merge Turborepo defaults without replacing existing task dependencies or outputs.
+- Roll back all migration mutations after required-step failure or cancellation.
+- Reject report paths that would overwrite generated configs, package state, backups, or legacy
+  files.
+- Preserve escaped `.biomeignore` literals and reject invalid current-schema `objectWrap` values.
+- Warn when valid Biome severities/options cannot be represented faithfully instead of dropping
+  them silently.
+- Print a concise success summary for normal non-JSON CLI runs.
+- Align Oxlint/Oxfmt/tsgolint inventories and dependencies with Oxlint 1.75.0, Oxfmt 0.60.0,
+  and oxlint-tsgolint 7.0.2001.
+- Emit stable root type-aware options and migrate Biome `useReactFunctionComponentDefinition`,
+  including its `namedComponents` option.
+- Stop mapping Biome `noVoidTypeReturn` to the unrelated `typescript/no-invalid-void-type` rule.
+
 ## [0.6.0] - 2026-02-25
 
 ### Added - New Migration Controls

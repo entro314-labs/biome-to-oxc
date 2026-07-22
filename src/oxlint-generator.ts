@@ -11,11 +11,22 @@ import type {
 interface OxlintGenerationOptions {
   enableImportGraph?: boolean
   importCycleMaxDepth?: number
+  typeAware?: boolean
+  typeCheck?: boolean
   typeAwareProfile?: TypeAwareProfile
   biomeIgnorePatterns?: string[]
 }
 
 const DEFAULT_PLUGINS: OxlintBuiltinPlugin[] = ['oxc', 'typescript', 'unicorn']
+const DISABLED_CATEGORIES = {
+  correctness: 'off',
+  nursery: 'off',
+  pedantic: 'off',
+  perf: 'off',
+  restriction: 'off',
+  style: 'off',
+  suspicious: 'off',
+} as const
 const PLUGIN_SORT_ORDER: OxlintBuiltinPlugin[] = [
   'eslint',
   'oxc',
@@ -43,13 +54,11 @@ export function generateOxlintConfig(
     $schema: './node_modules/oxlint/configuration_schema.json',
   }
 
-  if (biomeConfig.linter?.enabled === false) {
-    reporter.warn(
-      'Biome linter is disabled. Oxlint config will be created but may need manual review.',
-    )
-  }
-
-  const { rules, categories } = extractRulesFromBiomeConfig(biomeConfig.linter?.rules, reporter)
+  const linterDisabled =
+    biomeConfig.linter?.enabled === false || biomeConfig.javascript?.linter?.enabled === false
+  const { rules, categories } = linterDisabled
+    ? { rules: {}, categories: { ...DISABLED_CATEGORIES } }
+    : extractRulesFromBiomeConfig(biomeConfig.linter?.rules ?? {}, reporter, true)
 
   if (Object.keys(categories).length > 0) {
     oxlintConfig.categories = categories
@@ -59,16 +68,45 @@ export function generateOxlintConfig(
     oxlintConfig.rules = rules
   }
 
-  if (options.enableImportGraph) {
+  warnAboutUnrepresentableIncludes(biomeConfig, reporter)
+
+  if (options.enableImportGraph && !linterDisabled) {
     addImportGraphRecipe(oxlintConfig, options.importCycleMaxDepth ?? 3)
   }
 
   determinePlugins(oxlintConfig)
   mapIgnorePatterns(biomeConfig, oxlintConfig, options.biomeIgnorePatterns ?? [])
   mapEnvironment(biomeConfig, oxlintConfig)
+  mapTypeAwareOptions(oxlintConfig, options.typeAware ?? false, options.typeCheck ?? false)
   mapSettings(biomeConfig, oxlintConfig, options.typeAwareProfile ?? 'standard')
 
   return oxlintConfig
+}
+
+function mapTypeAwareOptions(
+  oxlintConfig: OxlintConfig,
+  typeAware: boolean,
+  typeCheck: boolean,
+): void {
+  if (!typeAware && !typeCheck) {
+    return
+  }
+
+  oxlintConfig.options = {
+    typeAware: true,
+    ...(typeCheck ? { typeCheck: true } : {}),
+  }
+}
+
+function warnAboutUnrepresentableIncludes(biomeConfig: BiomeConfig, reporter: Reporter): void {
+  if (
+    (biomeConfig.files?.include?.length ?? 0) > 0 ||
+    (biomeConfig.linter?.include?.length ?? 0) > 0
+  ) {
+    reporter.warn(
+      'Biome files/linter include selection cannot be represented in an Oxlint config; pass equivalent paths to the Oxlint CLI or review ignorePatterns before replacing Biome.',
+    )
+  }
 }
 
 function addImportGraphRecipe(oxlintConfig: OxlintConfig, maxDepth: number): void {

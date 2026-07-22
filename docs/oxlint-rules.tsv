@@ -104,6 +104,7 @@ forward-ref-uses-ref	react
 func-name-matching	eslint
 func-names	eslint
 func-style	eslint
+function-component-definition	react
 getter-return	eslint
 global-require	node
 google-font-display	nextjs
@@ -489,6 +490,7 @@ no-this-in-exported-function	oxc
 no-this-in-sfc	react
 no-throw-literal	eslint
 no-title-in-document-head	nextjs
+no-top-level-await	node
 no-typeof-undefined	unicorn
 no-typos	nextjs
 no-unassigned-import	import
@@ -586,6 +588,7 @@ operator-assignment	eslint
 padding-around-after-all-blocks	jest
 padding-around-after-all-blocks	vitest
 padding-around-test-blocks	jest
+padding-around-test-blocks	vitest
 param-names	promise
 parameter-properties	typescript
 prefer-add-event-listener	unicorn

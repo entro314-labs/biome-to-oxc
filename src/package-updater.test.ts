@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -65,6 +65,72 @@ async function getExpectedToolVersions() {
 }
 
 describe('updatePackageJson', () => {
+  it('keeps Biome installed when scripts are not requested for migration', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: { check: 'biome check .' },
+      devDependencies: { '@biomejs/biome': '^2.0.0' },
+    })
+    const reporter = new SilentReporter()
+
+    const summary = await updatePackageJson(dir, reporter, false)
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts.check).toBe('biome check .')
+    expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.0.0')
+    expect(summary.dependenciesRemoved).toEqual([])
+    expect(reporter.getWarnings()).toContain(
+      'Keeping @biomejs/biome because these package scripts still invoke Biome: check',
+    )
+  })
+
+  it('keeps Biome installed when a complex script cannot be rewritten safely', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: { check: 'biome check . && tsc --noEmit' },
+      devDependencies: { '@biomejs/biome': '^2.0.0' },
+    })
+    const reporter = new SilentReporter()
+
+    await updatePackageJson(dir, reporter, false, { updateScripts: true })
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts.check).toBe('biome check . && tsc --noEmit')
+    expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.0.0')
+  })
+
+  it('does not copy Biome-only CLI flags into incompatible Oxc commands', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: { check: 'biome check --changed .' },
+      devDependencies: { '@biomejs/biome': '^2.0.0' },
+    })
+    const reporter = new SilentReporter()
+
+    await updatePackageJson(dir, reporter, false, { updateScripts: true })
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts.check).toBe('biome check --changed .')
+    expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.0.0')
+    expect(reporter.getWarnings()).toContain(
+      'Skipping script "check" because it contains Biome-specific option --changed that cannot be rewritten safely.',
+    )
+  })
+
+  it('updates the nearest package manifest for a nested Biome config directory', async () => {
+    const { dir, packagePath } = await setupPackageJson({ name: 'fixture' })
+    const nestedDir = join(dir, 'packages', 'app', 'config')
+    await mkdir(nestedDir, { recursive: true })
+    const reporter = new SilentReporter()
+
+    const summary = await updatePackageJson(nestedDir, reporter, false)
+    const pkg = await readPackageJson(packagePath)
+
+    expect(summary.packageJsonPath).toBe(packagePath)
+    expect(pkg.devDependencies.oxlint).toBeDefined()
+    expect(pkg.devDependencies.oxfmt).toBeDefined()
+  })
+
   it('applies DOM script preset without --update-scripts', async () => {
     const { dir, packagePath } = await setupPackageJson({
       name: 'fixture',
@@ -120,6 +186,30 @@ describe('updatePackageJson', () => {
     expect(pkg.scripts.check).toBe(
       'oxlint --fix --fix-suggestions --fix-dangerously . && oxfmt --write .',
     )
+  })
+
+  it('pins rewritten scripts to generated configs outside the package root', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: {
+        check: 'biome check .',
+        format: 'biome format --write .',
+      },
+    })
+    const reporter = new SilentReporter()
+
+    await updatePackageJson(dir, reporter, false, {
+      updateScripts: true,
+      oxlintConfigPath: join(dir, 'generated config', '.oxlintrc.json'),
+      oxfmtConfigPath: join(dir, 'generated config', '.oxfmtrc.jsonc'),
+    })
+
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts.check).toBe(
+      "oxlint --config 'generated config/.oxlintrc.json' . && oxfmt --config 'generated config/.oxfmtrc.jsonc' --check .",
+    )
+    expect(pkg.scripts.format).toBe("oxfmt --config 'generated config/.oxfmtrc.jsonc' --write .")
   })
 
   it('enables typed command and dependency when typeCheck is requested directly', async () => {

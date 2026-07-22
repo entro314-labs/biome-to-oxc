@@ -107,6 +107,7 @@ describe('rule-mapper parity expansion', () => {
       useNamedCaptureGroup: 'prefer-named-capture-group',
       useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
       useOptionalChain: 'typescript/prefer-optional-chain',
+      useReactFunctionComponentDefinition: 'react/function-component-definition',
       useReactFunctionComponents: 'react/prefer-function-component',
       useRegexLiterals: 'prefer-regex-literals',
       useSemanticElements: 'jsx-a11y/prefer-tag-over-role',
@@ -260,6 +261,10 @@ describe('rule-mapper parity expansion', () => {
             octal: { groupLength: 4 },
           },
         },
+        useReactFunctionComponentDefinition: {
+          level: 'error',
+          options: { namedComponents: 'arrowFunction' },
+        },
         useThisInClassMethods: {
           level: 'warn',
           options: {
@@ -292,6 +297,7 @@ describe('rule-mapper parity expansion', () => {
         'error',
         { forbid: [{ element: 'button', message: 'Use Button instead.' }] },
       ],
+      'react/function-component-definition': ['error', { namedComponents: 'arrow-function' }],
       'react/no-unknown-property': ['warn', { ignore: ['css'] }],
       'typescript/consistent-type-definitions': ['warn', 'type'],
       'unicorn/numeric-separators-style': [
@@ -345,6 +351,24 @@ describe('rule-mapper parity expansion', () => {
     })
     expect(reporter.getWarnings()).toEqual([
       'Biome rule noEmptySource option "allowComments" is not supported by Oxlint unicorn/no-empty-file and was not migrated.',
+    ])
+  })
+
+  it('warns instead of silently dropping unverified rule options and lossy severities', () => {
+    const reporter = new SilentReporter()
+    const { rules } = extractRulesFromBiomeConfig(
+      {
+        suspicious: {
+          noConsole: { level: 'info', options: { allow: ['warn'] } },
+        },
+      },
+      reporter,
+    )
+
+    expect(rules['no-console']).toBe('warn')
+    expect(reporter.getWarnings()).toEqual([
+      'Unsupported Biome severity "info" for rule noConsole. Normalized to "warn" for Oxlint compatibility.',
+      'Biome rule noConsole options do not have a verified Oxlint mapping and were not migrated.',
     ])
   })
 
@@ -539,6 +563,15 @@ describe('rule-mapper parity expansion', () => {
     expect(reporter.getWarnings()).toEqual([
       'No Oxlint equivalent found for Biome rule: unknownRule',
       'No Oxlint equivalent found for Biome rule: anotherUnknownRule',
+    ])
+  })
+
+  it('does not map Biome noVoidTypeReturn to an unrelated void-type rule', () => {
+    const reporter = new SilentReporter()
+
+    expect(mapBiomeRuleToOxlint('noVoidTypeReturn', reporter)).toBeNull()
+    expect(reporter.getWarnings()).toEqual([
+      'No Oxlint equivalent found for Biome rule: noVoidTypeReturn',
     ])
   })
 
