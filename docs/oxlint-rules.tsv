@@ -21,6 +21,7 @@ bad-array-method-on-arguments	oxc
 bad-bitwise-operator	oxc
 bad-char-at-comparison	oxc
 bad-comparison-sequence	oxc
+bad-match-all-arg	oxc
 bad-min-max-func	oxc
 bad-object-literal-comparison	oxc
 bad-replace-all-arg	oxc
@@ -93,6 +94,7 @@ explicit-module-boundary-types	typescript
 explicit-timer-delay	unicorn
 export	import
 exports-last	import
+exports-style	node
 extensions	import
 filename-case	unicorn
 first	import
@@ -117,6 +119,7 @@ heading-has-content	jsx-a11y
 hoisted-apis-on-top	vitest
 hook-use-state	react
 html-has-lang	jsx-a11y
+id-denylist	eslint
 id-length	eslint
 id-match	eslint
 iframe-has-title	jsx-a11y
