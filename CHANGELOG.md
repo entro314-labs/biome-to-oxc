@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Parse `biome.json`/`biome.jsonc` configs with trailing commas the same way Biome does instead of
+  failing with `PropertyNameExpected`/`ValueExpected` JSONC errors.
+- Align Oxlint/Oxfmt/tsgolint inventories and dependencies with Oxlint 1.77.0, Oxfmt 0.62.0,
+  and oxlint-tsgolint 7.0.2001 (adds `oxc/bad-match-all-arg`, `node/exports-style`, and
+  `eslint/id-denylist`; no Biome equivalents exist for these rules).
 - Accept current Biome rule presets, group severities, and `on`/`info` rule levels.
 - Fail on missing, unresolved, or circular `extends` entries instead of producing incomplete output.
 - Resolve package-exported Biome configs from `node_modules`.
@@ -25,8 +30,6 @@ All notable changes to this project will be documented in this file.
 - Warn when valid Biome severities/options cannot be represented faithfully instead of dropping
   them silently.
 - Print a concise success summary for normal non-JSON CLI runs.
-- Align Oxlint/Oxfmt/tsgolint inventories and dependencies with Oxlint 1.75.0, Oxfmt 0.60.0,
-  and oxlint-tsgolint 7.0.2001.
 - Emit stable root type-aware options and migrate Biome `useReactFunctionComponentDefinition`,
   including its `namedComponents` option.
 - Stop mapping Biome `noVoidTypeReturn` to the unrelated `typescript/no-invalid-void-type` rule.

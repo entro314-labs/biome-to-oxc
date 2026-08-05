@@ -276,7 +276,12 @@ export async function loadBiomeConfig(
   try {
     const content = await readFile(configPath, 'utf-8')
     const parseErrors: JsoncParseError[] = []
-    const parsedConfig = parseJsonc(content, parseErrors) as unknown
+    // Biome parses its configs leniently: comments and trailing commas are valid.
+    const parsedConfig = parseJsonc(content, parseErrors, {
+      allowTrailingComma: true,
+      disallowComments: false,
+      allowEmptyContent: false,
+    }) as unknown
 
     if (parseErrors.length > 0) {
       const formattedErrors = parseErrors
