@@ -15,6 +15,7 @@ interface ReporterOptions {
 export class CollectingReporter implements Reporter {
   protected readonly warnings: string[] = []
   protected readonly errors: string[] = []
+  protected readonly losses: string[] = []
 
   warn(message: string): void {
     this.warnings.push(message)
@@ -22,6 +23,11 @@ export class CollectingReporter implements Reporter {
 
   error(message: string): void {
     this.errors.push(message)
+  }
+
+  loss(message: string): void {
+    this.losses.push(message)
+    this.warn(message)
   }
 
   info(_message: string): void {}
@@ -32,6 +38,10 @@ export class CollectingReporter implements Reporter {
 
   getErrors(): string[] {
     return [...this.errors]
+  }
+
+  getLosses(): string[] {
+    return [...this.losses]
   }
 }
 
@@ -50,6 +60,12 @@ export class DefaultReporter extends CollectingReporter {
   override warn(message: string): void {
     super.warn(message)
     this.stderr.write(`${pc.yellow('⚠')} ${message}\n`)
+  }
+
+  override loss(message: string): void {
+    this.losses.push(message)
+    super.warn(message)
+    this.stderr.write(`${pc.magenta('⊘')} ${message}\n`)
   }
 
   override error(message: string): void {

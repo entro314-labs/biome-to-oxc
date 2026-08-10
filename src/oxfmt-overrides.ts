@@ -66,7 +66,9 @@ export function generateOxfmtOverrides(
       continue
     }
 
-    const excludeFiles = override.ignore && override.ignore.length > 0 ? override.ignore : undefined
+    // `ignore` and negated `includes` exceptions both exclude files from the override.
+    const excludePatterns = [...new Set([...(override.ignore ?? []), ...(override.exclude ?? [])])]
+    const excludeFiles = excludePatterns.length > 0 ? excludePatterns : undefined
     const baseOptions = mapBaseFormatterOptions(override.formatter, reporter)
     pushOverride(oxfmtOverrides, files, excludeFiles, baseOptions)
 
@@ -151,8 +153,8 @@ function pushScopedOverride(
   }
 
   if (!filesAreScopedToExtensions(files, allowedExtensions)) {
-    reporter.warn(
-      `Skipping ${formatterLabel} override because Oxfmt overrides are file-glob based and these include patterns are not ${formatterLabel.split('.')[0]}-specific: ${files.join(', ')}`,
+    reporter.loss(
+      `Biome ${formatterLabel} settings for ${files.join(', ')} were dropped: Oxfmt overrides select by file glob, and these patterns are not ${formatterLabel.split('.')[0]}-specific, so applying them would also reformat other languages.`,
     )
     return
   }
@@ -351,9 +353,14 @@ function warnAboutUnsupportedKeys(
   label: string,
   reporter: Reporter,
 ): void {
-  for (const key of Object.keys(formatter)) {
+  for (const [key, value] of Object.entries(formatter)) {
+    // Normalization sets absent selection fields to `undefined`; those are not user config.
+    if (value === undefined) {
+      continue
+    }
+
     if (!supportedKeys.has(key)) {
-      reporter.warn(`Unsupported Biome ${label} option "${key}" was not migrated.`)
+      reporter.loss(`Biome ${label} option "${key}" has no Oxfmt equivalent and was not migrated.`)
     }
   }
 }

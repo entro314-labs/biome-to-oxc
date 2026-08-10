@@ -5,30 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { loadBiomeIgnorePatterns, parseBiomeIgnoreContent } from './biome-ignore-loader.js'
-import type { Reporter } from './types.js'
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
+import { CollectingReporter } from './reporter.js'
 
 describe('biome-ignore-loader', () => {
   it('parses .biomeignore content while preserving useful patterns', () => {
@@ -55,7 +32,7 @@ describe('biome-ignore-loader', () => {
     const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-ignore-'))
     await writeFile(join(dir, '.biomeignore'), 'dist/**\n# c\n!dist/keep.js\n', 'utf-8')
 
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const patterns = await loadBiomeIgnorePatterns(dir, reporter)
 
     expect(patterns).toEqual(['dist/**', '!dist/keep.js'])
@@ -66,7 +43,7 @@ describe('biome-ignore-loader', () => {
     const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-ignore-empty-'))
     await writeFile(join(dir, '.biomeignore'), '# only comments\n\n', 'utf-8')
 
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const patterns = await loadBiomeIgnorePatterns(dir, reporter)
 
     expect(patterns).toEqual([])
@@ -79,7 +56,7 @@ describe('biome-ignore-loader', () => {
     const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-ignore-error-'))
     await mkdir(join(dir, '.biomeignore'))
 
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const patterns = await loadBiomeIgnorePatterns(dir, reporter)
 
     expect(patterns).toEqual([])

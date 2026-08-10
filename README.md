@@ -28,17 +28,27 @@ Current capabilities:
 ✅ **Preserves Representable Setup**
 
 - Ignore patterns, override file globs, and override exclusions
-- `.biomeignore` patterns migrated into Oxlint `ignorePatterns` (compatibility alias)
+- Negated `includes` exceptions (`!pattern`), translated into `ignorePatterns` for both tools
+- `.biomeignore` patterns migrated into the Oxlint **and** Oxfmt `ignorePatterns`. Biome 2.x does
+  not read `.biomeignore` itself, so this deliberately narrows scope; the migration says so
 - Linter configuration overrides
 - Formatter configuration overrides when they can be represented as Oxfmt file-glob overrides
 - JavaScript globals
 - Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
-- Custom output-directory glob rebasing so generated configs keep source-relative paths
+- The set of formatted files: Oxfmt-only formats (YAML, TOML, Markdown) are excluded, and
+  `sortPackageJson` is pinned off, so migrating never reformats files Biome left alone
+
+✅ **Refuses to Lose Behaviour Silently**
+
+Anything the generated configs provably do not reproduce is recorded as a **semantic loss** and
+listed under `losses` in the report. Losses make the migration report `success: false` and block
+both `--delete` and removal of the `@biomejs/biome` dependency, so a lossy conversion can never
+leave a project without a working linter or formatter. Resolve the listed losses and re-run.
 
 Positive-only Biome `files`/`linter`/`formatter` include selection has no direct Oxc config
-equivalent. The migration reports this explicitly; pass equivalent paths to the Oxc CLI or review
-the generated ignore configuration before removing Biome.
+equivalent and is reported as a loss; pass equivalent paths to the Oxc CLI or review the generated
+ignore configuration before removing Biome.
 
 ### Advanced Features
 
@@ -207,11 +217,14 @@ npx biome-to-oxc --report migration-report.json
 # Print the migration report to stdout as JSON
 npx biome-to-oxc --json
 
-# Migrate with custom output directory
-npx biome-to-oxc --output-dir ./config
+# Migrate with a custom output directory.
+# Oxlint and Oxfmt resolve config globs inside the config file's own directory and reject `..`,
+# so the output directory must be the Biome project root or an ancestor of it. A directory below
+# the project root is rejected whenever the migration would emit any glob.
+npx biome-to-oxc --output-dir ../shared-config
 
 # Rewritten scripts explicitly load configs placed outside the package root
-npx biome-to-oxc --output-dir ./config --update-scripts
+npx biome-to-oxc --output-dir ../shared-config --update-scripts
 
 # Migrate without creating backups
 npx biome-to-oxc --no-backup
@@ -341,16 +354,24 @@ npx oxlint --type-aware --type-check
 
 ## Known Limitations
 
-- Not all Biome rules have direct Oxlint equivalents (warnings will be shown)
+- Not all Biome rules have direct Oxlint equivalents (reported as semantic losses)
 - Some advanced Biome features may not be supported
 - Biome recommended/all presets and group-level severities are approximated with Oxlint categories;
-  preset membership is not identical between the tools
+  preset membership is not identical between the tools. This approximation is reported as a warning
+  rather than a loss, because it applies to essentially every migration
 - Positive-only Biome include selection cannot be encoded directly in Oxlint/Oxfmt config files
+- Generated config globs are resolved inside the config file's directory, so `--output-dir` must
+  point at the Biome project root or an ancestor of it
+- `formatter.lineEnding: "auto"` has no Oxfmt equivalent (Oxfmt always writes LF)
+- Lockfiles are not regenerated. When dependencies change, the report names the lockfile and the
+  install command needed before any frozen-lockfile install
 - Oxlint overrides cannot carry category presets; explicit override rules are migrated and category
   presets are reported for manual review
 - Oxfmt is in beta; review formatting changes before replacing the existing formatter
-- Type-aware linting requires TypeScript 7 and `oxlint-tsgolint`; 59 of the 61 targeted
-  typescript-eslint rules are currently implemented
+- Overlapping `overrides` are migrated as-is. Biome and Oxfmt both merge matching overrides field
+  by field with later entries winning, so the two agree; a conformance test pins this
+- Type-aware linting is stable as of `oxlint-tsgolint` v7 and requires TypeScript 7; 59 of the 61
+  targeted typescript-eslint rules are currently implemented
 - CSS and JSON formatter overrides are mapped but may need manual review
 - Prettier plugin support is not available in Oxfmt
 - Some Biome rules still require JS plugin fallback until native rule parity is available

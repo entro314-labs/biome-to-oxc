@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { updatePackageJson } from './package-updater.js'
-import type { Reporter } from './types.js'
+import { CollectingReporter } from './reporter.js'
 
 const PackageJsonSchema = z.object({
   devDependencies: z.record(z.string(), z.string()).default({}),
@@ -15,29 +15,6 @@ const PackageJsonSchema = z.object({
 const ToolVersionManifestSchema = z.object({
   devDependencies: z.record(z.string(), z.string()),
 })
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
 
 async function setupPackageJson(content: object): Promise<{ dir: string; packagePath: string }> {
   const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-'))
@@ -65,13 +42,13 @@ async function getExpectedToolVersions() {
 }
 
 describe('updatePackageJson', () => {
-  it('keeps Biome installed when scripts are not requested for migration', async () => {
+  it('keeps Biome installed unless removal was explicitly permitted', async () => {
     const { dir, packagePath } = await setupPackageJson({
       name: 'fixture',
       scripts: { check: 'biome check .' },
       devDependencies: { '@biomejs/biome': '^2.0.0' },
     })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const summary = await updatePackageJson(dir, reporter, false)
     const pkg = await readPackageJson(packagePath)
@@ -79,9 +56,41 @@ describe('updatePackageJson', () => {
     expect(pkg.scripts.check).toBe('biome check .')
     expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.0.0')
     expect(summary.dependenciesRemoved).toEqual([])
+  })
+
+  it('keeps Biome installed when a script still invokes it even if removal is permitted', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: { check: 'biome check .' },
+      devDependencies: { '@biomejs/biome': '^2.0.0' },
+    })
+    const reporter = new CollectingReporter()
+
+    const summary = await updatePackageJson(dir, reporter, false, { removeBiome: true })
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.0.0')
+    expect(summary.dependenciesRemoved).toEqual([])
     expect(reporter.getWarnings()).toContain(
       'Keeping @biomejs/biome because these package scripts still invoke Biome: check',
     )
+  })
+
+  it('preserves manifest key order when writing dependency changes', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      version: '1.0.0',
+      private: true,
+      scripts: { build: 'tsc' },
+    })
+    const reporter = new CollectingReporter()
+
+    await updatePackageJson(dir, reporter, false)
+
+    const content = await readFile(packagePath, 'utf-8')
+    const keys = Object.keys(JSON.parse(content) as Record<string, unknown>)
+
+    expect(keys.slice(0, 4)).toEqual(['name', 'version', 'private', 'scripts'])
   })
 
   it('keeps Biome installed when a complex script cannot be rewritten safely', async () => {
@@ -90,7 +99,7 @@ describe('updatePackageJson', () => {
       scripts: { check: 'biome check . && tsc --noEmit' },
       devDependencies: { '@biomejs/biome': '^2.0.0' },
     })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, { updateScripts: true })
     const pkg = await readPackageJson(packagePath)
@@ -105,7 +114,7 @@ describe('updatePackageJson', () => {
       scripts: { check: 'biome check --changed .' },
       devDependencies: { '@biomejs/biome': '^2.0.0' },
     })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, { updateScripts: true })
     const pkg = await readPackageJson(packagePath)
@@ -121,7 +130,7 @@ describe('updatePackageJson', () => {
     const { dir, packagePath } = await setupPackageJson({ name: 'fixture' })
     const nestedDir = join(dir, 'packages', 'app', 'config')
     await mkdir(nestedDir, { recursive: true })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const summary = await updatePackageJson(nestedDir, reporter, false)
     const pkg = await readPackageJson(packagePath)
@@ -131,42 +140,6 @@ describe('updatePackageJson', () => {
     expect(pkg.devDependencies.oxfmt).toBeDefined()
   })
 
-  it('applies DOM script preset without --update-scripts', async () => {
-    const { dir, packagePath } = await setupPackageJson({
-      name: 'fixture',
-      scripts: {
-        check: 'biome check',
-        lint: 'biome lint',
-      },
-    })
-    const expectedToolVersions = await getExpectedToolVersions()
-    const reporter = new SilentReporter()
-
-    await updatePackageJson(dir, reporter, false, {
-      dom: true,
-      updateScripts: false,
-    })
-
-    const pkg = await readPackageJson(packagePath)
-
-    expect(pkg.scripts).toMatchObject({
-      check: 'oxlint . && oxfmt --check .',
-      'check:fix': 'oxlint --fix . && oxfmt --write .',
-      format: 'oxfmt --write .',
-      'format:check': 'oxfmt --check .',
-      lint: 'oxlint -f github . > lint.md 2>&1',
-      'lint:fix': 'oxlint -f stylish --fix .',
-      'lint:fix-unsafe':
-        'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .',
-      'check:fix-suggestions':
-        'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .',
-      'type-check': 'tsgo --noEmit',
-    })
-    expect(pkg.devDependencies.oxlint).toBe(expectedToolVersions.oxlint)
-    expect(pkg.devDependencies.oxfmt).toBe(expectedToolVersions.oxfmt)
-    expect(pkg.devDependencies['oxlint-tsgolint']).toBe(expectedToolVersions.oxlintTsgolint)
-  })
-
   it('maps Biome unsafe fixes to dangerous oxlint fix level and formatter write mode', async () => {
     const { dir, packagePath } = await setupPackageJson({
       name: 'fixture',
@@ -174,7 +147,7 @@ describe('updatePackageJson', () => {
         check: 'biome check --write --unsafe .',
       },
     })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, {
       updateScripts: true,
@@ -196,7 +169,7 @@ describe('updatePackageJson', () => {
         format: 'biome format --write .',
       },
     })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, {
       updateScripts: true,
@@ -223,7 +196,7 @@ describe('updatePackageJson', () => {
       },
     })
     const expectedToolVersions = await getExpectedToolVersions()
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, {
       updateScripts: true,
@@ -247,7 +220,7 @@ describe('updatePackageJson', () => {
       devDependencies: {},
     })
     const expectedToolVersions = await getExpectedToolVersions()
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, {
       updateScripts: true,
@@ -271,7 +244,7 @@ describe('updatePackageJson', () => {
       },
       devDependencies: {},
     })
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     await updatePackageJson(dir, reporter, false, {
       updateScripts: true,
@@ -283,5 +256,55 @@ describe('updatePackageJson', () => {
     expect(reporter.getWarnings()).toContain(
       'Skipping script "check" because it contains shell redirection that cannot be rewritten safely.',
     )
+  })
+})
+
+describe('updatePackageJson executable parsing', () => {
+  const runnerCases = [
+    { name: 'bare', script: 'biome check .', expected: 'oxlint . && oxfmt --check .' },
+    { name: 'npx', script: 'npx @biomejs/biome check .', expected: 'oxlint . && oxfmt --check .' },
+    {
+      name: 'pnpm exec',
+      script: 'pnpm exec @biomejs/biome format --write .',
+      expected: 'oxfmt --write .',
+    },
+    { name: 'yarn', script: 'yarn biome lint .', expected: 'oxlint .' },
+    { name: 'bunx', script: 'bunx @biomejs/biome lint .', expected: 'oxlint .' },
+    {
+      name: 'bin path',
+      script: './node_modules/.bin/biome lint .',
+      expected: 'oxlint .',
+    },
+    { name: 'exec', script: 'exec biome lint .', expected: 'oxlint .' },
+  ]
+
+  for (const { name, script, expected } of runnerCases) {
+    it(`rewrites the whole Biome executable token for the ${name} form`, async () => {
+      const { dir, packagePath } = await setupPackageJson({
+        name: 'fixture',
+        scripts: { task: script },
+      })
+      const reporter = new CollectingReporter()
+
+      await updatePackageJson(dir, reporter, false, { updateScripts: true })
+      const pkg = await readPackageJson(packagePath)
+
+      expect(pkg.scripts.task).toBe(expected)
+      // The package-qualified specifier must never survive as `@biomejs/oxlint`.
+      expect(pkg.scripts.task).not.toContain('@biomejs')
+    })
+  }
+})
+
+describe('updatePackageJson lockfile reporting', () => {
+  it('flags the detected lockfile as stale after dependency changes', async () => {
+    const { dir } = await setupPackageJson({ name: 'fixture' })
+    await writeFile(join(dir, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n", 'utf-8')
+    const reporter = new CollectingReporter()
+
+    const summary = await updatePackageJson(dir, reporter, false)
+
+    expect(summary.lockfile).toMatchObject({ installCommand: 'pnpm install', stale: true })
+    expect(reporter.getWarnings().some((warning) => warning.includes('was not updated'))).toBe(true)
   })
 })

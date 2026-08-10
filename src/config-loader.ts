@@ -72,7 +72,7 @@ const BiomeFormatterConfigSchema: z.ZodType<BiomeFormatterConfig> = IncludeField
   formatWithErrors: z.boolean().optional(),
   indentStyle: z.enum(['tab', 'space']).optional(),
   indentWidth: z.number().int().optional(),
-  lineEnding: z.enum(['lf', 'crlf', 'cr']).optional(),
+  lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
   lineWidth: z.number().int().optional(),
   attributePosition: z.enum(['auto', 'multiline']).optional(),
   bracketSpacing: z.boolean().optional(),
@@ -90,7 +90,7 @@ const BiomeJavaScriptFormatterSchema: z.ZodType<NonNullable<BiomeJavaScriptConfi
     bracketSpacing: z.boolean().optional(),
     indentStyle: z.enum(['tab', 'space']).optional(),
     indentWidth: z.number().int().optional(),
-    lineEnding: z.enum(['lf', 'crlf', 'cr']).optional(),
+    lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
     lineWidth: z.number().int().optional(),
   })
   .passthrough()
@@ -127,7 +127,7 @@ const BiomeJsonConfigSchema: z.ZodType<BiomeJsonConfig> = z
         enabled: z.boolean().optional(),
         indentStyle: z.enum(['tab', 'space']).optional(),
         indentWidth: z.number().int().optional(),
-        lineEnding: z.enum(['lf', 'crlf', 'cr']).optional(),
+        lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
         lineWidth: z.number().int().optional(),
         trailingCommas: z.enum(['none', 'all']).optional(),
       })
@@ -154,7 +154,7 @@ const BiomeCssConfigSchema: z.ZodType<BiomeCssConfig> = z
         enabled: z.boolean().optional(),
         indentStyle: z.enum(['tab', 'space']).optional(),
         indentWidth: z.number().int().optional(),
-        lineEnding: z.enum(['lf', 'crlf', 'cr']).optional(),
+        lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
         lineWidth: z.number().int().optional(),
         quoteStyle: z.enum(['single', 'double']).optional(),
       })
@@ -293,7 +293,9 @@ export async function loadBiomeConfig(
       throw new Error(`JSONC parsing failed: ${formattedErrors}`)
     }
 
-    const validationResult = BiomeConfigSchema.safeParse(parsedConfig)
+    // Biome's published schema declares every optional section as `anyOf [Section, null]`,
+    // so an explicit `null` means "not configured" rather than an invalid value.
+    const validationResult = BiomeConfigSchema.safeParse(stripNullProperties(parsedConfig))
 
     if (!validationResult.success) {
       throw new Error(`schema validation failed: ${formatZodIssues(validationResult.error)}`)
@@ -309,10 +311,38 @@ export async function loadBiomeConfig(
   }
 }
 
+/**
+ * Removes `null`-valued properties so that Biome's nullable-optional sections
+ * (`"linter": null`) validate as "absent" instead of failing the schema.
+ */
+function stripNullProperties(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripNullProperties(entry))
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return value
+  }
+
+  const result: Record<string, unknown> = {}
+
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry === null) {
+      continue
+    }
+
+    result[key] = stripNullProperties(entry)
+  }
+
+  return result
+}
+
 function warnAboutUnsupportedTopLevelFields(config: BiomeConfig, reporter: Reporter): void {
   for (const field of Object.keys(config)) {
     if (!SUPPORTED_TOP_LEVEL_FIELDS.has(field)) {
-      reporter.warn(`Unsupported Biome top-level field "${field}" was not migrated.`)
+      reporter.loss(
+        `Biome top-level field "${field}" has no Oxc equivalent and was not migrated; its behaviour is lost.`,
+      )
     }
   }
 }

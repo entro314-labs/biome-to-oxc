@@ -1,36 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { transformOverridesToOxlint } from './overrides-transformer.js'
-import type { Reporter } from './types.js'
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
+import { CollectingReporter } from './reporter.js'
 
 describe('transformOverridesToOxlint', () => {
   it('maps biome override ignore patterns to Oxlint excludeFiles', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
-    const overrides = transformOverridesToOxlint(
+    const { overrides } = transformOverridesToOxlint(
       [
         {
           include: ['src/**/*.ts'],
@@ -60,9 +37,9 @@ describe('transformOverridesToOxlint', () => {
   })
 
   it('does not emit schema-invalid categories in Oxlint overrides', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
-    const overrides = transformOverridesToOxlint(
+    const { overrides } = transformOverridesToOxlint(
       [
         {
           include: ['tests/**'],
@@ -74,7 +51,7 @@ describe('transformOverridesToOxlint', () => {
 
     expect(overrides).toEqual([{ files: ['tests/**'], rules: { 'no-debugger': 'off' } }])
     expect(reporter.getWarnings()).toContain(
-      'Biome category presets in the override for tests/** cannot be represented by Oxlint overrides and require manual review.',
+      'Biome category presets in the override for tests/** cannot be represented by Oxlint overrides; those per-glob category severities are lost.',
     )
   })
 })

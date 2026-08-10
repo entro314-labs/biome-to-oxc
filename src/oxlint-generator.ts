@@ -45,19 +45,32 @@ const PLUGIN_SORT_ORDER: OxlintBuiltinPlugin[] = [
   'vue',
 ]
 
+export interface OxlintGenerationResult {
+  config: OxlintConfig
+  /** Distinct Biome rule names that produced at least one Oxlint rule. */
+  sourceRulesConverted: Set<string>
+  /** Distinct Biome rule names with no Oxlint equivalent. */
+  sourceRulesSkipped: Set<string>
+}
+
 export function generateOxlintConfig(
   biomeConfig: BiomeConfig,
   reporter: Reporter,
   options: OxlintGenerationOptions = {},
-): OxlintConfig {
+): OxlintGenerationResult {
   const oxlintConfig: OxlintConfig = {
     $schema: './node_modules/oxlint/configuration_schema.json',
   }
 
   const linterDisabled =
     biomeConfig.linter?.enabled === false || biomeConfig.javascript?.linter?.enabled === false
-  const { rules, categories } = linterDisabled
-    ? { rules: {}, categories: { ...DISABLED_CATEGORIES } }
+  const { rules, categories, sourceRulesConverted, sourceRulesSkipped } = linterDisabled
+    ? {
+        rules: {},
+        categories: { ...DISABLED_CATEGORIES },
+        sourceRulesConverted: new Set<string>(),
+        sourceRulesSkipped: new Set<string>(),
+      }
     : extractRulesFromBiomeConfig(biomeConfig.linter?.rules ?? {}, reporter, true)
 
   if (Object.keys(categories).length > 0) {
@@ -80,7 +93,7 @@ export function generateOxlintConfig(
   mapTypeAwareOptions(oxlintConfig, options.typeAware ?? false, options.typeCheck ?? false)
   mapSettings(biomeConfig, oxlintConfig, options.typeAwareProfile ?? 'standard')
 
-  return oxlintConfig
+  return { config: oxlintConfig, sourceRulesConverted, sourceRulesSkipped }
 }
 
 function mapTypeAwareOptions(
@@ -99,12 +112,14 @@ function mapTypeAwareOptions(
 }
 
 function warnAboutUnrepresentableIncludes(biomeConfig: BiomeConfig, reporter: Reporter): void {
-  if (
-    (biomeConfig.files?.include?.length ?? 0) > 0 ||
-    (biomeConfig.linter?.include?.length ?? 0) > 0
-  ) {
-    reporter.warn(
-      'Biome files/linter include selection cannot be represented in an Oxlint config; pass equivalent paths to the Oxlint CLI or review ignorePatterns before replacing Biome.',
+  const positiveSelectors = [
+    ...(biomeConfig.files?.include ?? []),
+    ...(biomeConfig.linter?.include ?? []),
+  ]
+
+  if (positiveSelectors.length > 0) {
+    reporter.loss(
+      `Biome files/linter positive include selection (${positiveSelectors.join(', ')}) cannot be represented in an Oxlint config; Oxlint will lint every file not covered by ignorePatterns, which is a wider set. Pass equivalent paths to the Oxlint CLI before replacing Biome.`,
     )
   }
 }
@@ -188,22 +203,17 @@ function mapIgnorePatterns(
   oxlintConfig: OxlintConfig,
   additionalIgnorePatterns: string[],
 ): void {
-  const ignorePatterns: string[] = []
-
-  if (additionalIgnorePatterns.length > 0) {
-    ignorePatterns.push(...additionalIgnorePatterns)
-  }
-
-  if (biomeConfig.files?.ignore) {
-    ignorePatterns.push(...biomeConfig.files.ignore)
-  }
-
-  if (biomeConfig.linter?.ignore) {
-    ignorePatterns.push(...biomeConfig.linter.ignore)
-  }
+  const ignorePatterns: string[] = [
+    ...additionalIgnorePatterns,
+    ...(biomeConfig.files?.ignore ?? []),
+    ...(biomeConfig.linter?.ignore ?? []),
+    // Negated `includes` exceptions are exclusions, so they map onto ignorePatterns.
+    ...(biomeConfig.files?.exclude ?? []),
+    ...(biomeConfig.linter?.exclude ?? []),
+  ]
 
   if (ignorePatterns.length > 0) {
-    oxlintConfig.ignorePatterns = ignorePatterns
+    oxlintConfig.ignorePatterns = [...new Set(ignorePatterns)]
   }
 }
 

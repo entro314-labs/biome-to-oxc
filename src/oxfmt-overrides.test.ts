@@ -1,34 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { generateOxfmtOverrides } from './oxfmt-overrides.js'
-import type { Reporter } from './types.js'
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
+import { CollectingReporter } from './reporter.js'
 
 describe('generateOxfmtOverrides', () => {
   it('maps json formatter overrides when include patterns are json-specific', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const overrides = generateOxfmtOverrides(
       [
@@ -62,7 +39,7 @@ describe('generateOxfmtOverrides', () => {
   })
 
   it('warns instead of broadening scope for domain-specific formatter overrides', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const overrides = generateOxfmtOverrides(
       [
@@ -80,12 +57,12 @@ describe('generateOxfmtOverrides', () => {
 
     expect(overrides).toEqual([])
     expect(reporter.getWarnings()).toEqual([
-      'Skipping css.formatter override because Oxfmt overrides are file-glob based and these include patterns are not css-specific: src/**/*',
+      'Biome css.formatter settings for src/**/* were dropped: Oxfmt overrides select by file glob, and these patterns are not css-specific, so applying them would also reformat other languages.',
     ])
   })
 
   it('passes through Svelte formatter options in base overrides', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const overrides = generateOxfmtOverrides(
       [
@@ -111,7 +88,7 @@ describe('generateOxfmtOverrides', () => {
   })
 
   it('passes through JSDoc formatter options in base overrides', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const overrides = generateOxfmtOverrides(
       [

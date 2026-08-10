@@ -52,7 +52,21 @@ const JAVASCRIPT_FORMATTER_KEYS = new Set([
   ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
 ])
 
-export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter): OxfmtConfig {
+/**
+ * File types Oxfmt formats that Biome does not, so a faithful migration must exclude
+ * them rather than silently widen the set of formatted files.
+ */
+const OXFMT_ONLY_IGNORE_PATTERNS = ['**/*.{yaml,yml}', '**/*.toml', '**/*.{md,mdx}'] as const
+
+export interface OxfmtGenerationOptions {
+  biomeIgnorePatterns?: string[]
+}
+
+export function generateOxfmtConfig(
+  biomeConfig: BiomeConfig,
+  reporter: Reporter,
+  options: OxfmtGenerationOptions = {},
+): OxfmtConfig {
   const oxfmtConfig: OxfmtConfig = {
     $schema: './node_modules/oxfmt/configuration_schema.json',
   }
@@ -76,22 +90,25 @@ export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter
     if (!languageFormatterEnabled) {
       oxfmtConfig.ignorePatterns = ['**/*']
     } else {
-      reporter.warn(
-        'Biome global formatting is disabled with a language formatter re-enabled; Oxfmt cannot represent that enable-only selection exactly.',
+      reporter.loss(
+        'Biome global formatting is disabled with a language formatter re-enabled; Oxfmt cannot represent that enable-only selection, so more files will be formatted than Biome formatted.',
       )
     }
   }
 
-  if ((biomeConfig.files?.include?.length ?? 0) > 0 || (formatter?.include?.length ?? 0) > 0) {
-    reporter.warn(
-      'Biome files/formatter include selection cannot be represented in an Oxfmt config; pass equivalent paths to the Oxfmt CLI or review ignorePatterns before replacing Biome.',
+  const positiveSelectors = [...(biomeConfig.files?.include ?? []), ...(formatter?.include ?? [])]
+
+  if (positiveSelectors.length > 0) {
+    reporter.loss(
+      `Biome files/formatter positive include selection (${positiveSelectors.join(', ')}) cannot be represented in an Oxfmt config; Oxfmt will format every file not covered by ignorePatterns, which is a wider set. Pass equivalent paths to the Oxfmt CLI before replacing Biome.`,
     )
   }
 
   mapFormatterOptions(formatter, oxfmtConfig, reporter)
-  mapIgnorePatterns(biomeConfig, oxfmtConfig)
+  mapIgnorePatterns(biomeConfig, oxfmtConfig, options.biomeIgnorePatterns ?? [])
   mapDisabledLanguageFormatters(biomeConfig, oxfmtConfig)
   applyExplicitFormatterOptionPassThrough([formatter], oxfmtConfig, reporter)
+  oxfmtConfig.sortPackageJson ??= false
 
   const languageOverrides = generateOxfmtOverrides(
     [
@@ -110,6 +127,24 @@ export function generateOxfmtConfig(biomeConfig: BiomeConfig, reporter: Reporter
   }
 
   return oxfmtConfig
+}
+
+/**
+ * Excludes the file types Oxfmt formats but Biome does not.
+ *
+ * Applied after glob rebasing: these patterns are relative to the generated config's own
+ * directory rather than to the Biome project root, so they must not take part in the
+ * rebase decision.
+ */
+export function excludeOxfmtOnlyLanguages(oxfmtConfig: OxfmtConfig): void {
+  const existingPatterns = oxfmtConfig.ignorePatterns ?? []
+
+  // Everything is already ignored, so per-language patterns would only add noise.
+  if (existingPatterns.includes('**/*')) {
+    return
+  }
+
+  oxfmtConfig.ignorePatterns = [...new Set([...existingPatterns, ...OXFMT_ONLY_IGNORE_PATTERNS])]
 }
 
 function mapDisabledLanguageFormatters(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): void {
@@ -138,9 +173,14 @@ function warnAboutUnsupportedFormatterKeys(
   label: string,
   reporter: Reporter,
 ): void {
-  for (const key of Object.keys(formatter ?? {})) {
+  for (const [key, value] of Object.entries(formatter ?? {})) {
+    // Normalization sets absent selection fields to `undefined`; those are not user config.
+    if (value === undefined) {
+      continue
+    }
+
     if (!supportedKeys.has(key)) {
-      reporter.warn(`Unsupported Biome ${label} option "${key}" was not migrated.`)
+      reporter.loss(`Biome ${label} option "${key}" has no Oxfmt equivalent and was not migrated.`)
     }
   }
 }
@@ -167,9 +207,14 @@ function mapFormatterOptions(
     oxfmtConfig.tabWidth = indentWidth
   }
 
-  const globalLineEnding = formatter?.lineEnding
-  const lineEnding = globalLineEnding ?? 'lf'
-  if (lineEnding !== 'lf') {
+  const lineEnding = formatter?.lineEnding ?? 'lf'
+  if (lineEnding === 'auto') {
+    // Oxfmt's schema states `"auto"` is not supported; its default `lf` matches Biome's
+    // `auto` on macOS/Linux but diverges on Windows, where Biome would emit CRLF.
+    reporter.loss(
+      'Biome formatter.lineEnding "auto" has no Oxfmt equivalent; Oxfmt will always write LF. On Windows checkouts this changes the emitted line endings.',
+    )
+  } else if (lineEnding !== 'lf') {
     oxfmtConfig.endOfLine = lineEnding
   }
 
@@ -198,19 +243,23 @@ function mapFormatterOptions(
   }
 }
 
-function mapIgnorePatterns(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): void {
-  const ignorePatterns: string[] = [...(oxfmtConfig.ignorePatterns ?? [])]
-
-  if (biomeConfig.files?.ignore) {
-    ignorePatterns.push(...biomeConfig.files.ignore)
-  }
-
-  if (biomeConfig.formatter?.ignore) {
-    ignorePatterns.push(...biomeConfig.formatter.ignore)
-  }
+function mapIgnorePatterns(
+  biomeConfig: BiomeConfig,
+  oxfmtConfig: OxfmtConfig,
+  additionalIgnorePatterns: string[],
+): void {
+  const ignorePatterns: string[] = [
+    ...(oxfmtConfig.ignorePatterns ?? []),
+    ...additionalIgnorePatterns,
+    ...(biomeConfig.files?.ignore ?? []),
+    ...(biomeConfig.formatter?.ignore ?? []),
+    // Negated `includes` exceptions are exclusions, so they map onto ignorePatterns.
+    ...(biomeConfig.files?.exclude ?? []),
+    ...(biomeConfig.formatter?.exclude ?? []),
+  ]
 
   if (ignorePatterns.length > 0) {
-    oxfmtConfig.ignorePatterns = ignorePatterns
+    oxfmtConfig.ignorePatterns = [...new Set(ignorePatterns)]
   }
 }
 

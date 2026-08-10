@@ -16,6 +16,8 @@ export interface BiomeConfig {
 export interface BiomeFilesConfig {
   include?: string[]
   includes?: string[]
+  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  exclude?: string[]
   ignore?: string[]
   ignoreUnknown?: boolean
   maxSize?: number
@@ -33,6 +35,8 @@ export interface BiomeLinterConfig {
   enabled?: boolean
   include?: string[]
   includes?: string[]
+  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  exclude?: string[]
   ignore?: string[]
   rules?: BiomeLinterRules
 }
@@ -68,11 +72,13 @@ export interface BiomeFormatterConfig {
   enabled?: boolean
   include?: string[]
   includes?: string[]
+  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  exclude?: string[]
   ignore?: string[]
   formatWithErrors?: boolean
   indentStyle?: 'tab' | 'space'
   indentWidth?: number
-  lineEnding?: 'lf' | 'crlf' | 'cr'
+  lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
   lineWidth?: number
   attributePosition?: 'auto' | 'multiline'
   bracketSpacing?: boolean
@@ -97,7 +103,7 @@ export interface BiomeJavaScriptConfig {
     bracketSpacing?: boolean
     indentStyle?: 'tab' | 'space'
     indentWidth?: number
-    lineEnding?: 'lf' | 'crlf' | 'cr'
+    lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
     lineWidth?: number
     // Capture any additional options
     [key: string]: unknown
@@ -119,7 +125,7 @@ export interface BiomeJsonConfig {
     enabled?: boolean
     indentStyle?: 'tab' | 'space'
     indentWidth?: number
-    lineEnding?: 'lf' | 'crlf' | 'cr'
+    lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
     lineWidth?: number
     trailingCommas?: 'none' | 'all'
   }
@@ -136,7 +142,7 @@ export interface BiomeCssConfig {
     enabled?: boolean
     indentStyle?: 'tab' | 'space'
     indentWidth?: number
-    lineEnding?: 'lf' | 'crlf' | 'cr'
+    lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
     lineWidth?: number
     quoteStyle?: 'single' | 'double'
   }
@@ -148,6 +154,8 @@ export interface BiomeCssConfig {
 export interface BiomeOverride {
   include?: string[]
   includes?: string[]
+  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  exclude?: string[]
   ignore?: string[]
   linter?: BiomeLinterConfig
   formatter?: BiomeFormatterConfig
@@ -365,7 +373,6 @@ export interface MigrationOptions {
   delete?: boolean
   noBackup?: boolean
   updateScripts?: boolean
-  dom?: boolean
   verbose?: boolean
   typeAware?: boolean
   typeCheck?: boolean
@@ -409,22 +416,47 @@ export interface PackageUpdateSummary {
   dependenciesRemoved: PackageDependencyRemoval[]
   devDependencies: PackageDevDependencyChange[]
   changed: boolean
+  /** Lockfile that dependency changes invalidated, when one was detected. */
+  lockfile?: LockfileStatus
+}
+
+export interface LockfileStatus {
+  path: string
+  /** Command that regenerates the lockfile from the updated manifest. */
+  installCommand: string
+  /** True when this run changed dependencies, so the lockfile no longer matches. */
+  stale: boolean
 }
 
 export interface MigrationReport {
+  /**
+   * True when the migration wrote every requested change without errors AND the
+   * generated configuration is a complete replacement for the Biome setup.
+   * A migration with semantic losses reports `success: false` because the project
+   * still depends on behaviour that Oxc does not reproduce.
+   */
   success: boolean
   warnings: string[]
   errors: string[]
+  /** Source behaviour the generated target configs provably do not reproduce. */
+  losses: string[]
   suggestions: string[]
   packageJson?: PackageUpdateSummary
   summary: {
     biomeConfigPath: string
     oxlintConfigPath: string
     oxfmtConfigPath: string
+    /** Distinct Biome source rules that produced at least one Oxlint rule. */
     rulesConverted: number
+    /** Distinct Biome source rules with no Oxlint equivalent. */
     rulesSkipped: number
+    /** Oxlint rule entries emitted (one source rule can emit several). */
+    oxlintRulesEmitted: number
     overridesConverted: number
+    /** Oxfmt overrides derived from Biome `overrides` entries. */
     formatterOverridesConverted: number
+    /** Oxfmt overrides synthesized to carry per-language Biome formatter settings. */
+    formatterLanguageOverrides: number
   }
   detectedIntegrations?: {
     turborepo?: boolean
@@ -432,12 +464,35 @@ export interface MigrationReport {
     prettier?: boolean
     typescript?: boolean
   }
+  cleanup?: CleanupOutcome
+}
+
+export interface CleanupOutcome {
+  /** Whether `--delete` was requested. */
+  requested: boolean
+  /** Whether legacy Biome files were (or in dry-run, would be) removed. */
+  performed: boolean
+  /** Why cleanup was withheld, when it was requested but not performed. */
+  blockedReason?: string
+  /** Legacy Biome files removed, or that would be removed in dry-run. */
+  files: string[]
 }
 
 export interface Reporter {
   warn(message: string): void
   error(message: string): void
   info(message: string): void
+  /**
+   * Records a semantic-loss diagnostic: source behaviour that the generated target
+   * configuration provably does not reproduce.
+   *
+   * Unlike {@link Reporter.warn}, a loss blocks destructive cleanup (`--delete`) and
+   * removal of the Biome dependency, because the migrated project is not yet a
+   * complete replacement for the Biome setup. Losses are also recorded as warnings so
+   * that existing warning consumers keep seeing them.
+   */
+  loss(message: string): void
   getWarnings(): string[]
   getErrors(): string[]
+  getLosses(): string[]
 }

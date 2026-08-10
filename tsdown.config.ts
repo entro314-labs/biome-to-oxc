@@ -11,4 +11,11 @@ export default defineConfig({
   dts: { tsgo: true },
   sourcemap: false,
   clean: true,
+  // Package-manifest lint. Runs on every build so a broken `exports` map, a missing file,
+  // or a bad bin path fails here rather than after publishing.
+  publint: true,
+  // Type-resolution check. `esm-only` is the correct profile: the package is `type: module`
+  // with a single ESM export and no CJS entry, so Node10/CJS resolution failures are
+  // expected rather than defects.
+  attw: { profile: 'esm-only' },
 })
