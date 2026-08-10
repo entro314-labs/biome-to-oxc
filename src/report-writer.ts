@@ -23,13 +23,3 @@ export async function writeReportToFile(
     reporter.error(`Failed to write migration report: ${message}`)
   }
 }
-
-export function enhanceReportWithSuggestions(
-  report: MigrationReport,
-  suggestions: string[],
-): MigrationReport {
-  return {
-    ...report,
-    suggestions: [...report.suggestions, ...suggestions],
-  }
-}

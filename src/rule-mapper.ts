@@ -29,6 +29,33 @@ const OXLINT_CATEGORIES = [
 
 type OxlintRuleMapping = string | readonly string[]
 
+/** Every Oxlint rule name this mapper can emit, for inventory conformance checks. */
+export function getMappedOxlintRuleNames(): string[] {
+  const names = new Set<string>()
+
+  for (const mapping of Object.values(BIOME_TO_OXLINT_RULE_MAP)) {
+    if (typeof mapping === 'string') {
+      names.add(mapping)
+      continue
+    }
+
+    for (const name of mapping) {
+      names.add(name)
+    }
+  }
+
+  return [...names]
+}
+
+export interface RuleExtractionResult {
+  rules: Record<string, OxlintRuleSeverity>
+  categories: Record<string, 'off' | 'warn' | 'error'>
+  /** Distinct Biome rule names that produced at least one Oxlint rule. */
+  sourceRulesConverted: Set<string>
+  /** Distinct Biome rule names with no Oxlint equivalent. */
+  sourceRulesSkipped: Set<string>
+}
+
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noAccessKey: 'jsx-a11y/no-access-key',
   noAdjacentSpacesInRegex: 'no-regex-spaces',
@@ -95,6 +122,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noExcessiveCognitiveComplexity: 'complexity',
   noExcessiveNestedCallbacks: 'max-nested-callbacks',
   noExplicitAny: 'typescript/no-explicit-any',
+  noExtendNative: 'no-extend-native',
   noExtraBooleanCast: 'no-extra-boolean-cast',
   noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
   noFallthroughSwitchClause: 'no-fallthrough',
@@ -215,6 +243,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnusedVariables: 'no-unused-vars',
   noUnwantedPolyfillio: 'nextjs/no-unwanted-polyfillio',
   noUselessCatch: 'no-useless-catch',
+  noUselessCatchBinding: 'unicorn/prefer-optional-catch-binding',
   noUselessConstructor: 'no-useless-constructor',
   noUselessEmptyExport: 'typescript/no-useless-empty-export',
   noUselessEscapeInRegex: 'no-useless-escape',
@@ -227,6 +256,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUselessReturn: 'no-useless-return',
   noUselessStringConcat: 'no-useless-concat',
   noUselessTernary: 'no-unneeded-ternary',
+  noTsIgnore: 'typescript/ban-ts-comment',
   noUselessSwitchCase: 'unicorn/no-useless-switch-case',
   noUselessTypeConstraint: 'typescript/no-unnecessary-type-constraint',
   noUselessTypeConversion: 'typescript/no-unnecessary-type-conversion',
@@ -437,6 +467,20 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return [severity, { max }]
   }
 
+  if (biomeName === 'noTsIgnore') {
+    // Biome's noTsIgnore forbids `@ts-ignore` only. Oxlint's ban-ts-comment defaults to
+    // banning several directives, so it has to be narrowed to match.
+    return [
+      severity,
+      {
+        'ts-ignore': true,
+        'ts-expect-error': false,
+        'ts-nocheck': false,
+        'ts-check': false,
+      },
+    ]
+  }
+
   if (!options) {
     return severity
   }
@@ -450,7 +494,7 @@ function mapBiomeRuleOptionsToOxlintSeverity(
 
   if (biomeName === 'noEmptySource') {
     if (options.allowComments === true) {
-      reporter.warn(
+      reporter.loss(
         'Biome rule noEmptySource option "allowComments" is not supported by Oxlint unicorn/no-empty-file and was not migrated.',
       )
     }
@@ -597,8 +641,8 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
   }
 
-  reporter.warn(
-    `Biome rule ${biomeName} options do not have a verified Oxlint mapping and were not migrated.`,
+  reporter.loss(
+    `Biome rule ${biomeName} options do not have a verified Oxlint mapping and were not migrated; the rule runs with Oxlint defaults instead.`,
   )
   return severity
 }
@@ -692,7 +736,7 @@ function warnUnmappedRuleOnce(biomeName: string, reporter: Reporter): void {
   }
 
   warnedRules.add(biomeName)
-  reporter.warn(`No Oxlint equivalent found for Biome rule: ${biomeName}`)
+  reporter.loss(`No Oxlint equivalent found for Biome rule: ${biomeName}`)
 }
 
 function warnUnsupportedSeverityOnce(
@@ -739,15 +783,14 @@ export function extractRulesFromBiomeConfig(
   linterRules: BiomeLinterRules | undefined,
   reporter: Reporter,
   applyImplicitRecommended = false,
-): {
-  rules: Record<string, OxlintRuleSeverity>
-  categories: Record<string, 'off' | 'warn' | 'error'>
-} {
+): RuleExtractionResult {
   const rules: Record<string, OxlintRuleSeverity> = {}
   const categories: Record<string, 'off' | 'warn' | 'error'> = {}
+  const sourceRulesConverted = new Set<string>()
+  const sourceRulesSkipped = new Set<string>()
 
   if (!linterRules) {
-    return { rules, categories }
+    return { rules, categories, sourceRulesConverted, sourceRulesSkipped }
   }
 
   applyTopLevelPreset(linterRules, categories, reporter, applyImplicitRecommended)
@@ -791,6 +834,7 @@ export function extractRulesFromBiomeConfig(
 
         const oxlintRuleNames = mapBiomeRuleToOxlintRules(ruleName, reporter)
         if (oxlintRuleNames.length > 0) {
+          sourceRulesConverted.add(ruleName)
           const oxlintSeverity = mapBiomeRuleOptionsToOxlintSeverity(
             ruleName,
             mapBiomeRuleSeverity(ruleSeverity, reporter, ruleName),
@@ -800,6 +844,8 @@ export function extractRulesFromBiomeConfig(
           for (const oxlintRuleName of oxlintRuleNames) {
             rules[oxlintRuleName] = oxlintSeverity
           }
+        } else {
+          sourceRulesSkipped.add(ruleName)
         }
       }
 
@@ -817,7 +863,7 @@ export function extractRulesFromBiomeConfig(
     }
   }
 
-  return { rules, categories }
+  return { rules, categories, sourceRulesConverted, sourceRulesSkipped }
 }
 
 function applyTopLevelPreset(

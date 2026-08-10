@@ -1,19 +1,31 @@
 import { extractRulesFromBiomeConfig } from './rule-mapper.js'
 import type { BiomeOverride, OxlintOverride, Reporter } from './types.js'
 
+export interface OverrideTransformResult {
+  overrides: OxlintOverride[]
+  /** Distinct Biome rule names in overrides that produced at least one Oxlint rule. */
+  sourceRulesConverted: Set<string>
+  /** Distinct Biome rule names in overrides with no Oxlint equivalent. */
+  sourceRulesSkipped: Set<string>
+}
+
 export function transformOverridesToOxlint(
   biomeOverrides: BiomeOverride[] | undefined,
   reporter: Reporter,
-): OxlintOverride[] {
-  if (!biomeOverrides || biomeOverrides.length === 0) {
-    return []
-  }
-
+): OverrideTransformResult {
   const oxlintOverrides: OxlintOverride[] = []
+  const sourceRulesConverted = new Set<string>()
+  const sourceRulesSkipped = new Set<string>()
+
+  if (!biomeOverrides || biomeOverrides.length === 0) {
+    return { overrides: oxlintOverrides, sourceRulesConverted, sourceRulesSkipped }
+  }
 
   for (const override of biomeOverrides) {
     if (!override.include || override.include.length === 0) {
-      reporter.warn('Skipping override without include patterns')
+      reporter.loss(
+        'A Biome override without positive include patterns applies to every file; Oxlint overrides require a file glob, so this override was dropped.',
+      )
       continue
     }
 
@@ -25,20 +37,34 @@ export function transformOverridesToOxlint(
       files: override.include,
     }
 
-    if (override.ignore && override.ignore.length > 0) {
-      oxlintOverride.excludeFiles = override.ignore
+    // `ignore` and negated `includes` exceptions both exclude files from the override.
+    const excludeFiles = [...new Set([...(override.ignore ?? []), ...(override.exclude ?? [])])]
+
+    if (excludeFiles.length > 0) {
+      oxlintOverride.excludeFiles = excludeFiles
     }
 
     if (override.linter?.rules) {
-      const { rules, categories } = extractRulesFromBiomeConfig(override.linter.rules, reporter)
+      const { rules, categories, ...ruleStats } = extractRulesFromBiomeConfig(
+        override.linter.rules,
+        reporter,
+      )
+
+      for (const ruleName of ruleStats.sourceRulesConverted) {
+        sourceRulesConverted.add(ruleName)
+      }
+
+      for (const ruleName of ruleStats.sourceRulesSkipped) {
+        sourceRulesSkipped.add(ruleName)
+      }
 
       if (Object.keys(rules).length > 0) {
         oxlintOverride.rules = rules
       }
 
       if (Object.keys(categories).length > 0) {
-        reporter.warn(
-          `Biome category presets in the override for ${override.include.join(', ')} cannot be represented by Oxlint overrides and require manual review.`,
+        reporter.loss(
+          `Biome category presets in the override for ${override.include.join(', ')} cannot be represented by Oxlint overrides; those per-glob category severities are lost.`,
         )
       }
     }
@@ -58,7 +84,7 @@ export function transformOverridesToOxlint(
     oxlintOverrides.push(oxlintOverride)
   }
 
-  return oxlintOverrides
+  return { overrides: oxlintOverrides, sourceRulesConverted, sourceRulesSkipped }
 }
 
 export function collectDisabledOxlintOverridePatterns(

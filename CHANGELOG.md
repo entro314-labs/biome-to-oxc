@@ -4,7 +4,64 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Semantic-loss diagnostics. Source behaviour the generated configs provably do not reproduce is
+  recorded separately from ordinary warnings, exposed as `losses` in the report, and printed with a
+  distinct `⊘` marker.
+- A project-scoped migration lock (`.biome-to-oxc.lock`) with stale-lock reclamation, so concurrent
+  migrations cannot interleave their writes or roll back one another's work.
+- Structural validation of the generated configs before anything is deleted, rejecting glob patterns
+  that Oxlint and Oxfmt refuse to load.
+- Lockfile detection. When dependencies change, the report names the lockfile and the install
+  command required before a frozen-lockfile install.
+- `--dry-run` now prints the full generated Oxlint and Oxfmt configuration.
+- Rule mappings for `noExtendNative`, `noUselessCatchBinding`, and `noTsIgnore` (the last narrowed to
+  `ts-ignore` only, matching Biome's semantics).
+- A conformance test asserting every mapped Oxlint rule exists in the tracked rule inventory.
+- A source-versus-target conformance suite that runs the real Biome, Oxlint, and Oxfmt binaries over
+  shared fixtures and compares what the tools actually do — formatter file-scope parity for default
+  configs, negated includes, `.biomeignore`, and formatter exclusions; generated-config
+  loadability; and overlapping-override resolution.
+- `publint` and `arethetypeswrong` (`esm-only` profile) now run on every build via tsdown, so a
+  broken `exports` map or type-resolution regression fails the build instead of shipping.
+
+### Changed
+
+- **Breaking:** `--delete` and removal of the `@biomejs/biome` dependency now require a migration
+  with zero semantic losses. A lossy conversion keeps the Biome config and dependency in place and
+  reports `success: false`, so it can no longer delete the project's only working configuration.
+- **Breaking:** `success` means "the migration is a complete replacement for Biome", not merely
+  "files were written".
+- **Breaking:** `--output-dir` must point at the Biome project root or an ancestor. A directory below
+  the project root is rejected when the migration would emit any glob, because both target tools
+  resolve patterns inside the config file's directory and reject `..`.
+- **Breaking:** removed the undocumented `--dom` flag. It was hidden from help and wrote a
+  `tsgo --noEmit` script without providing `tsgo`.
+- Report counters measure what their names say: `rulesConverted`/`rulesSkipped` count distinct Biome
+  source rules, with the emitted Oxlint rule count exposed separately as `oxlintRulesEmitted`, and
+  user-derived formatter overrides separated from synthesized language overrides.
+- Type-aware linting is described as stable (tsgolint v7) rather than alpha.
+
 ### Fixed
+
+- Rewriting package scripts no longer corrupts package-qualified Biome invocations. The whole
+  executable token is matched, so `npx @biomejs/biome check .` becomes `oxlint . && oxfmt --check .`
+  instead of the unresolvable `npx @biomejs/oxlint .`. Covers `npx`, `npm exec`, `pnpm exec`,
+  `pnpm dlx`, `yarn`, `yarn dlx`, `bunx`, `bun x`, `bun run`, `exec`, and bin-directory paths.
+- `package.json` and `turbo.json` keep their original key order. Validation no longer rebuilds the
+  object, which had been moving `name`, `version`, and other keys below `scripts`.
+- Negated `includes` exceptions (`!pattern`) are translated into `ignorePatterns` for both tools
+  instead of being dropped, which had silently widened the linted and formatted file sets.
+  `!!` force-ignore patterns are migrated as plain ignores and reported as a loss.
+- `.biomeignore` patterns now reach the Oxfmt config as well as the Oxlint config.
+- Oxfmt no longer inherits target defaults Biome never had: `sortPackageJson` is pinned off and
+  YAML, TOML, and Markdown are excluded, so migrating does not reformat files Biome left alone.
+- Valid Biome 2.x configs are no longer rejected: `formatter.lineEnding: "auto"` is accepted (and the
+  missing Oxfmt equivalent reported), and explicitly `null` sections are treated as unset, matching
+  Biome's nullable schema.
+- Biome `vcs` settings are reconciled against the Oxc tools' `.gitignore` defaults instead of being
+  parsed and ignored.
 
 - Parse `biome.json`/`biome.jsonc` configs with trailing commas the same way Biome does instead of
   failing with `PropertyNameExpected`/`ValueExpected` JSONC errors.

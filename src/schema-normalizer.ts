@@ -1,62 +1,98 @@
 import type { BiomeConfig, Reporter } from './types.js'
 
-export function normalizeIncludeFields<T extends { include?: string[]; includes?: string[] }>(
-  obj: T,
+export interface NormalizedSelection {
+  /** Positive selectors that narrow which files a tool processes. */
+  include: string[] | undefined
+  /** Negated `includes` exceptions (`!pattern`), which exclude files. */
+  exclude: string[] | undefined
+}
+
+interface SelectionSource {
+  include?: string[]
+  includes?: string[]
+}
+
+/**
+ * Splits a Biome selection into positive selectors and negated exceptions.
+ *
+ * Biome 2.x `includes` mixes both: a bare pattern selects files, `!pattern` excludes
+ * them again, and `!!pattern` force-ignores a path at the scanner level. The legacy
+ * `include` field carries positive selectors only.
+ */
+export function normalizeIncludeFields(
+  obj: SelectionSource,
   fieldName: string,
   reporter: Reporter,
-): string[] | undefined {
+): NormalizedSelection {
   if (obj.include && obj.includes) {
     reporter.warn(
       `Both 'include' and 'includes' found in ${fieldName}. Using 'include' and ignoring 'includes'.`,
     )
-    return obj.include
+    return { include: obj.include, exclude: undefined }
   }
 
   if (obj.includes) {
-    return obj.includes
+    return splitIncludes(obj.includes, fieldName, reporter)
   }
 
-  return obj.include
+  return { include: obj.include, exclude: undefined }
+}
+
+function splitIncludes(
+  includes: string[],
+  fieldName: string,
+  reporter: Reporter,
+): NormalizedSelection {
+  const include: string[] = []
+  const exclude: string[] = []
+
+  for (const pattern of includes) {
+    if (pattern.startsWith('!!')) {
+      // Force-ignore removes a path from Biome's scanner entirely. Oxc has no
+      // scanner-level equivalent, so the closest representation is a plain ignore.
+      exclude.push(pattern.slice(2))
+      reporter.loss(
+        `Biome force-ignore pattern "${pattern}" in ${fieldName} was migrated as a plain ignore; Oxc has no scanner-level force-ignore, so files reachable through other tooling paths may still be processed.`,
+      )
+      continue
+    }
+
+    if (pattern.startsWith('!')) {
+      exclude.push(pattern.slice(1))
+      continue
+    }
+
+    include.push(pattern)
+  }
+
+  return {
+    include: include.length > 0 ? include : undefined,
+    exclude: exclude.length > 0 ? exclude : undefined,
+  }
 }
 
 export function normalizeBiomeConfig(config: BiomeConfig, reporter: Reporter): BiomeConfig {
   const normalized = { ...config }
 
   if (normalized.files) {
-    const include = normalizeIncludeFields(normalized.files, 'files', reporter)
-    normalized.files = {
-      ...normalized.files,
-      include,
-      includes: undefined,
-    }
+    const { include, exclude } = normalizeIncludeFields(normalized.files, 'files', reporter)
+    normalized.files = { ...normalized.files, include, exclude, includes: undefined }
   }
 
   if (normalized.linter) {
-    const include = normalizeIncludeFields(normalized.linter, 'linter', reporter)
-    normalized.linter = {
-      ...normalized.linter,
-      include,
-      includes: undefined,
-    }
+    const { include, exclude } = normalizeIncludeFields(normalized.linter, 'linter', reporter)
+    normalized.linter = { ...normalized.linter, include, exclude, includes: undefined }
   }
 
   if (normalized.formatter) {
-    const include = normalizeIncludeFields(normalized.formatter, 'formatter', reporter)
-    normalized.formatter = {
-      ...normalized.formatter,
-      include,
-      includes: undefined,
-    }
+    const { include, exclude } = normalizeIncludeFields(normalized.formatter, 'formatter', reporter)
+    normalized.formatter = { ...normalized.formatter, include, exclude, includes: undefined }
   }
 
   if (normalized.overrides) {
     normalized.overrides = normalized.overrides.map((override, index) => {
-      const include = normalizeIncludeFields(override, `overrides[${index}]`, reporter)
-      return {
-        ...override,
-        include,
-        includes: undefined,
-      }
+      const { include, exclude } = normalizeIncludeFields(override, `overrides[${index}]`, reporter)
+      return { ...override, include, exclude, includes: undefined }
     })
   }
 

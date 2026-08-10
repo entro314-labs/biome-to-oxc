@@ -112,6 +112,40 @@ export async function readJsonFile<T>(
   return validationResult.data
 }
 
+/**
+ * Validates a JSON file against `schema` but returns the object exactly as parsed.
+ *
+ * Zod rebuilds objects with declared keys first and catchall keys after, which reorders
+ * a user's manifest when the result is written back. Use this for files the migration
+ * mutates in place; use {@link readJsonFile} for read-only access.
+ */
+export async function readJsonFilePreservingKeyOrder<T>(
+  filePath: string,
+  schema: ZodType<T>,
+  label: string,
+): Promise<T> {
+  const content = await readFile(filePath, 'utf-8')
+
+  let parsedJson: unknown
+
+  try {
+    parsedJson = JSON.parse(content)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`${label} contains invalid JSON: ${message}`)
+  }
+
+  const validationResult = schema.safeParse(parsedJson)
+
+  if (!validationResult.success) {
+    throw new Error(`${label} failed validation: ${formatZodIssues(validationResult.error)}`)
+  }
+
+  // The schemas used here are passthrough/catchall, so the validated value differs from
+  // the parsed value only in key order. Returning the parsed object preserves that order.
+  return parsedJson as T
+}
+
 export async function findClosestPackageJson(startDir: string): Promise<string | undefined> {
   let currentDir = resolve(startDir)
 

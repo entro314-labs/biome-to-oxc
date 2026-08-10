@@ -8,3 +8,5 @@ coverage/
 *.tsbuildinfo
 examples/
 .nope
+# Migration lock left behind only if a run is killed mid-flight
+.biome-to-oxc.lock

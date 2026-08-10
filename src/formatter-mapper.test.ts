@@ -1,45 +1,22 @@
 import { describe, expect, it } from 'vitest'
 
 import { generateOxfmtConfig } from './formatter-mapper.js'
-import type { Reporter } from './types.js'
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
+import { CollectingReporter } from './reporter.js'
 
 describe('generateOxfmtConfig', () => {
   it('does not enable package sorting by default for an empty biome config', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const config = generateOxfmtConfig({}, reporter)
 
-    expect(config.sortPackageJson).toBeUndefined()
+    expect(config.sortPackageJson).toBe(false)
     expect(config.sortImports).toBeUndefined()
     expect(config.sortTailwindcss).toBeUndefined()
     expect(config.jsdoc).toBeUndefined()
   })
 
   it('passes through explicitly configured experimental formatter options', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const config = generateOxfmtConfig(
       {
@@ -66,7 +43,7 @@ describe('generateOxfmtConfig', () => {
   })
 
   it('rejects objectWrap values that are invalid in the current Oxfmt schema', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const config = generateOxfmtConfig(
       {
@@ -84,14 +61,14 @@ describe('generateOxfmtConfig', () => {
   })
 
   it('disables Oxfmt when Biome formatting is globally disabled', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const config = generateOxfmtConfig({ formatter: { enabled: false } }, reporter)
 
     expect(config.ignorePatterns).toEqual(['**/*'])
   })
 
   it('keeps language-specific shared options scoped to language overrides', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const config = generateOxfmtConfig(
       {
         formatter: { lineWidth: 80 },
@@ -120,7 +97,7 @@ describe('generateOxfmtConfig', () => {
   })
 
   it('passes through explicitly configured Svelte formatter options', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const config = generateOxfmtConfig(
       {
@@ -143,7 +120,7 @@ describe('generateOxfmtConfig', () => {
   })
 
   it('passes through explicitly configured JSDoc formatter options', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const config = generateOxfmtConfig(
       {

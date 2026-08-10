@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 
 import { z } from 'zod'
 
-import { pathExists, readJsonFile, writeTextFileAtomically } from './fs-utils.js'
+import { pathExists, readJsonFilePreservingKeyOrder, writeTextFileAtomically } from './fs-utils.js'
 import type { Reporter } from './types.js'
 
 interface TurboConfig {
@@ -53,7 +53,7 @@ export async function updateTurboConfig(
   }
 
   try {
-    const turboConfig = await readJsonFile(
+    const turboConfig = await readJsonFilePreservingKeyOrder(
       turboJsonPath,
       TurboConfigSchema,
       `turbo configuration at ${turboJsonPath}`,

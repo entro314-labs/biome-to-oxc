@@ -1,38 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
+import { CollectingReporter } from './reporter.js'
 import {
   extractRulesFromBiomeConfig,
   mapBiomeRuleSeverity,
   mapBiomeRuleToOxlint,
 } from './rule-mapper.js'
-import type { BiomeLinterRules, Reporter } from './types.js'
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
+import type { BiomeLinterRules } from './types.js'
 
 describe('rule-mapper parity expansion', () => {
   it('maps expanded Biome parity rules to Oxlint equivalents', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const mappings: Record<string, string> = {
       noAccessKey: 'jsx-a11y/no-access-key',
@@ -128,7 +106,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('maps current Biome source-equivalent rules to Oxlint equivalents', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const mappings: Record<string, string> = {
       noAdjacentSpacesInRegex: 'no-regex-spaces',
@@ -195,7 +173,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('emits every Oxlint rule needed to replace Biome noCommonJs', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {
       style: {
         noCommonJs: 'error',
@@ -213,7 +191,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('preserves supported options for current source-equivalent rules', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {
       nursery: {
         noAmbiguousAnchorText: {
@@ -314,7 +292,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('preserves Biome defaults that differ from Oxlint defaults', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {
       nursery: {
         noExcessiveNestedCallbacks: 'warn',
@@ -334,7 +312,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('warns when a Biome rule option has no Oxlint equivalent', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {
       suspicious: {
         noEmptySource: {
@@ -355,7 +333,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('warns instead of silently dropping unverified rule options and lossy severities', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
     const { rules } = extractRulesFromBiomeConfig(
       {
         suspicious: {
@@ -368,12 +346,12 @@ describe('rule-mapper parity expansion', () => {
     expect(rules['no-console']).toBe('warn')
     expect(reporter.getWarnings()).toEqual([
       'Unsupported Biome severity "info" for rule noConsole. Normalized to "warn" for Oxlint compatibility.',
-      'Biome rule noConsole options do not have a verified Oxlint mapping and were not migrated.',
+      'Biome rule noConsole options do not have a verified Oxlint mapping and were not migrated; the rule runs with Oxlint defaults instead.',
     ])
   })
 
   it('preserves supported options for method signature style parity', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const linterRules: BiomeLinterRules = {
       nursery: {
@@ -396,7 +374,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('preserves supported JSX literal options', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const linterRules: BiomeLinterRules = {
       style: {
@@ -429,7 +407,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('maps Vue nextTick promise parity with the matching Oxlint style option', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const linterRules: BiomeLinterRules = {
       nursery: {
@@ -447,7 +425,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('maps active Biome rules with native Oxlint parity', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const mappings: Record<string, string> = {
       noAutofocus: 'jsx-a11y/no-autofocus',
@@ -485,7 +463,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('emits both Jest and Vitest equivalents for generic Biome test rules', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const linterRules: BiomeLinterRules = {
       complexity: {
@@ -538,7 +516,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('normalizes non-oxlint severities to supported levels', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     expect(mapBiomeRuleSeverity('info' as never)).toBe('warn')
     expect(mapBiomeRuleSeverity({ level: 'info' } as never)).toBe('warn')
@@ -554,7 +532,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('warns only once per unmapped rule per reporter', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     expect(mapBiomeRuleToOxlint('unknownRule', reporter)).toBeNull()
     expect(mapBiomeRuleToOxlint('unknownRule', reporter)).toBeNull()
@@ -567,7 +545,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('does not map Biome noVoidTypeReturn to an unrelated void-type rule', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     expect(mapBiomeRuleToOxlint('noVoidTypeReturn', reporter)).toBeNull()
     expect(reporter.getWarnings()).toEqual([
@@ -576,7 +554,7 @@ describe('rule-mapper parity expansion', () => {
   })
 
   it('extracts mapped rules from Biome config without false unsupported warnings', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const linterRules: BiomeLinterRules = {
       correctness: {

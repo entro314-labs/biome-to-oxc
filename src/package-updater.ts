@@ -7,10 +7,12 @@ import {
   findClosestPackageJson,
   pathExists,
   readJsonFile,
+  readJsonFilePreservingKeyOrder,
   writeTextFileAtomically,
 } from './fs-utils.js'
 import type {
   FixStrategy,
+  LockfileStatus,
   PackageDependencyRemoval,
   PackageDevDependencyChange,
   PackageScriptUpdate,
@@ -54,7 +56,11 @@ export async function updatePackageJson(
   dryRun: boolean,
   options: {
     updateScripts?: boolean
-    dom?: boolean
+    /**
+     * Whether removing `@biomejs/biome` is permitted. The caller sets this only when
+     * cleanup is semantically safe, so a lossy migration keeps Biome installable.
+     */
+    removeBiome?: boolean
     typeAware?: boolean
     typeCheck?: boolean
     typeAwareProfile?: TypeAwareProfile
@@ -77,7 +83,8 @@ export async function updatePackageJson(
   }
 
   try {
-    const packageJson = await readJsonFile(
+    // Mutated in place and written back, so key order must survive the round trip.
+    const packageJson = await readJsonFilePreservingKeyOrder(
       packageJsonPath,
       PackageJsonSchema,
       `package manifest at ${packageJsonPath}`,
@@ -88,12 +95,12 @@ export async function updatePackageJson(
 
     let modified = false
     const updateScriptsEnabled = options.updateScripts ?? false
-    const domModeEnabled = options.dom ?? false
+    const removeBiomeAllowed = options.removeBiome ?? false
     const typeAwareProfile = options.typeAwareProfile ?? 'standard'
     const typeCheckEnabled = options.typeCheck ?? typeAwareProfile === 'strict'
     const typeAwareEnabled =
       options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
-    const needsTypeAwareDependency = typeAwareEnabled || typeCheckEnabled || domModeEnabled
+    const needsTypeAwareDependency = typeAwareEnabled || typeCheckEnabled
     const fixStrategy = options.fixStrategy ?? 'safe'
     const oxlintCommand = buildConfiguredCommand(
       'oxlint',
@@ -102,16 +109,7 @@ export async function updatePackageJson(
     )
     const oxfmtCommand = buildConfiguredCommand('oxfmt', packageJsonPath, options.oxfmtConfigPath)
 
-    if (domModeEnabled) {
-      packageJson.scripts ??= {}
-      modified =
-        applyDomScriptPreset(
-          packageJson.scripts,
-          summary.scriptsUpdated,
-          oxlintCommand,
-          oxfmtCommand,
-        ) || modified
-    } else if (updateScriptsEnabled && packageJson.scripts) {
+    if (updateScriptsEnabled && packageJson.scripts) {
       modified =
         updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated, {
           typeAwareEnabled,
@@ -126,7 +124,11 @@ export async function updatePackageJson(
       .filter(([, script]) => containsBiomeExecutable(script))
       .map(([name]) => name)
 
-    if (scriptsStillUsingBiome.length > 0) {
+    if (!removeBiomeAllowed) {
+      reporter.info(
+        'Keeping @biomejs/biome: removing it requires --delete and a migration with no semantic losses.',
+      )
+    } else if (scriptsStillUsingBiome.length > 0) {
       reporter.warn(
         `Keeping @biomejs/biome because these package scripts still invoke Biome: ${scriptsStillUsingBiome.join(', ')}`,
       )
@@ -181,6 +183,17 @@ export async function updatePackageJson(
 
     summary.changed = modified
 
+    const dependenciesChanged =
+      summary.dependenciesRemoved.length > 0 ||
+      summary.devDependencies.some((change) => change.action !== 'already-present')
+    summary.lockfile = await detectLockfile(dirname(packageJsonPath), dependenciesChanged)
+
+    if (summary.lockfile?.stale) {
+      reporter.warn(
+        `Dependencies changed but ${summary.lockfile.path} was not updated; run \`${summary.lockfile.installCommand}\` before any frozen-lockfile install.`,
+      )
+    }
+
     if (modified && !dryRun) {
       options.signal?.throwIfAborted()
       await writeTextFileAtomically(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, {
@@ -206,38 +219,31 @@ export async function updatePackageJson(
   }
 }
 
-function applyDomScriptPreset(
-  scripts: Record<string, string>,
-  updates: PackageScriptUpdate[],
-  oxlintCommand: string,
-  oxfmtCommand: string,
-): boolean {
-  let modified = false
-  const preset: Record<string, string> = {
-    check: `${oxlintCommand} . && ${oxfmtCommand} --check .`,
-    'check:fix': `${oxlintCommand} --fix . && ${oxfmtCommand} --write .`,
-    format: `${oxfmtCommand} --write .`,
-    'format:check': `${oxfmtCommand} --check .`,
-    lint: `${oxlintCommand} -f github . > lint.md 2>&1`,
-    'lint:fix': `${oxlintCommand} -f stylish --fix .`,
-    'lint:fix-unsafe': `${oxlintCommand} -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .`,
-    'check:fix-suggestions': `${oxlintCommand} -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && ${oxfmtCommand} --write .`,
-    'type-check': 'tsgo --noEmit',
-  }
+/**
+ * Lockfiles, most specific first. The migration edits the manifest but cannot regenerate
+ * a lockfile without running the package manager, so it reports the required follow-up.
+ */
+const LOCKFILES = [
+  { file: 'pnpm-lock.yaml', installCommand: 'pnpm install' },
+  { file: 'bun.lock', installCommand: 'bun install' },
+  { file: 'bun.lockb', installCommand: 'bun install' },
+  { file: 'yarn.lock', installCommand: 'yarn install' },
+  { file: 'package-lock.json', installCommand: 'npm install' },
+] as const
 
-  for (const [scriptName, scriptValue] of Object.entries(preset)) {
-    const before = scripts[scriptName]
+async function detectLockfile(
+  packageRoot: string,
+  dependenciesChanged: boolean,
+): Promise<LockfileStatus | undefined> {
+  for (const { file, installCommand } of LOCKFILES) {
+    const lockfilePath = resolve(packageRoot, file)
 
-    if (before === scriptValue) {
-      continue
+    if (await pathExists(lockfilePath)) {
+      return { path: lockfilePath, installCommand, stale: dependenciesChanged }
     }
-
-    scripts[scriptName] = scriptValue
-    updates.push({ name: scriptName, before: before ?? '<missing>', after: scriptValue })
-    modified = true
   }
 
-  return modified
+  return undefined
 }
 
 function updateScripts(
@@ -266,7 +272,7 @@ function updateScripts(
   }
 
   for (const [name, script] of Object.entries(scripts)) {
-    let newScript = stripExecBiome(script)
+    let newScript = script
     let updated = false
 
     if (containsBiomeCommand(newScript)) {
@@ -348,11 +354,31 @@ function updateScripts(
   return modified
 }
 
+/**
+ * Package runners that may precede the Biome executable. Rewritten scripts drop the
+ * runner and call the local `oxlint`/`oxfmt` binaries directly, which package managers
+ * put on `PATH` for scripts.
+ */
+const PACKAGE_RUNNER_PREFIX = String.raw`(?:npx|bunx|pnpm\s+exec|pnpm\s+dlx|npm\s+exec|yarn\s+dlx|yarn|bun\s+x|bun\s+run|exec)`
+/**
+ * A whole executable token resolving to Biome: the bare binary, the package-qualified
+ * specifier, or a path into a bin directory. Matching the trailing `biome` alone would
+ * corrupt `@biomejs/biome` into `@biomejs/oxlint`.
+ */
+const BIOME_EXECUTABLE = String.raw`(?:@biomejs\/biome|(?:[\w.@-]+\/)*biome)`
+
+function buildBiomeCommandPattern(subcommand: string, flags: string): RegExp {
+  return new RegExp(
+    String.raw`(^|\s)(?:${PACKAGE_RUNNER_PREFIX}\s+)?${BIOME_EXECUTABLE}\s+${subcommand}\b([^&|]*)`,
+    flags,
+  )
+}
+
 function findUnsupportedBiomeOption(script: string): string | undefined {
-  const commandPattern = /\bbiome\s+(?:check|ci|lint|format)\b([^&|;]*)/gu
+  const commandPattern = buildBiomeCommandPattern('(?:check|ci|lint|format)', 'gu')
 
   for (const match of script.matchAll(commandPattern)) {
-    const argsWithoutSupportedFixFlags = (match[1] ?? '').replace(
+    const argsWithoutSupportedFixFlags = (match[2] ?? '').replace(
       /\s--(?:write|fix|unsafe)\b/gu,
       '',
     )
@@ -369,11 +395,14 @@ function findUnsupportedBiomeOption(script: string): string | undefined {
 }
 
 function containsBiomeCommand(script: string): boolean {
-  return /\bbiome\s+(check|ci|lint|format)\b/u.test(script)
+  return buildBiomeCommandPattern('(?:check|ci|lint|format)', 'u').test(script)
 }
 
 function containsBiomeExecutable(script: string): boolean {
-  return /\bbiome\b/u.test(script)
+  return new RegExp(
+    String.raw`(^|\s)(?:${PACKAGE_RUNNER_PREFIX}\s+)?${BIOME_EXECUTABLE}\b`,
+    'u',
+  ).test(script)
 }
 
 function findUnsafeRewriteReason(script: string): string | undefined {
@@ -403,19 +432,19 @@ function replaceBiomeCommand(
   defaultFixStrategy: FixStrategy,
 ): { updated: string; didReplace: boolean } {
   let didReplace = false
-  const regex = new RegExp(`\\bbiome\\s+${command}\\b([^&|]*)`, 'g')
-  const updated = script.replace(regex, (_match, args: string) => {
+  const regex = buildBiomeCommandPattern(command, 'gu')
+  const updated = script.replace(regex, (_match, leading: string, args: string) => {
     didReplace = true
-    const hasFix = /\s--(write|fix)\b/.test(args)
-    const hasUnsafe = /\s--unsafe\b/.test(args)
-    const cleanedArgs = args.replace(/\s--(write|fix|unsafe)\b/g, '').trim()
+    const hasFix = /\s--(write|fix)\b/u.test(args)
+    const hasUnsafe = /\s--unsafe\b/u.test(args)
+    const cleanedArgs = args.replace(/\s--(write|fix|unsafe)\b/gu, '').trim()
     const suffix = cleanedArgs.length > 0 ? ` ${cleanedArgs}` : ''
     const effectiveFixStrategy = hasUnsafe
       ? escalateFixStrategy(defaultFixStrategy, 'dangerous')
       : defaultFixStrategy
 
     const replacement = hasFix || hasUnsafe ? fixByStrategy[effectiveFixStrategy] : checkReplacement
-    return applySuffixToCommands(replacement, suffix)
+    return `${leading}${applySuffixToCommands(replacement, suffix)}`
   })
 
   return { updated, didReplace }
@@ -483,18 +512,6 @@ function escalateFixStrategy(current: FixStrategy, minimum: FixStrategy): FixStr
   }
 
   return order[current] >= order[minimum] ? current : minimum
-}
-
-function stripExecBiome(script: string): string {
-  const execBiomePattern = /(^|[;&|()]|&&|\|\|)\s*exec\s+biome\b/g
-  return script.replace(execBiomePattern, (_match, prefix: string) => {
-    if (!prefix) {
-      return 'biome'
-    }
-
-    const spacer = prefix.length > 0 ? ' ' : ''
-    return `${prefix}${spacer}biome`
-  })
 }
 
 function removeBiomeDependency(

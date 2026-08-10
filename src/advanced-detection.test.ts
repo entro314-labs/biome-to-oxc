@@ -1,34 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js'
-import type { Reporter } from './types.js'
-
-class SilentReporter implements Reporter {
-  private readonly warnings: string[] = []
-  private readonly errors: string[] = []
-
-  warn(message: string): void {
-    this.warnings.push(message)
-  }
-
-  error(message: string): void {
-    this.errors.push(message)
-  }
-
-  info(_message: string): void {}
-
-  getWarnings(): string[] {
-    return this.warnings
-  }
-
-  getErrors(): string[] {
-    return this.errors
-  }
-}
+import { CollectingReporter } from './reporter.js'
 
 describe('advanced detection', () => {
   it('detects import sorting hints from nested biome rule names', () => {
-    const reporter = new SilentReporter()
+    const reporter = new CollectingReporter()
 
     const features = detectProjectFeatures(
       {

@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -112,7 +112,7 @@ describe('migrate --delete', () => {
     expect(await pathExists(join(dir, '.oxlintrc.json'))).toBe(false)
     expect(await pathExists(join(dir, '.oxfmtrc.jsonc'))).toBe(false)
     expect(report.suggestions).toContain(
-      '--delete skipped because migration did not complete successfully.',
+      '--delete skipped because the migration did not complete successfully.',
     )
   })
 })
@@ -122,14 +122,20 @@ describe('migrate output directory handling', () => {
     const { biomeConfigPath, dir } = await setupMigrationFixture()
     const outputDir = join(dir, 'generated', 'config')
 
+    // No .biomeignore, so no glob needs to point back up at the project root.
+    await writeFile(join(dir, '.biomeignore'), '\n', 'utf-8')
+
     const report = await migrate({
       configPath: biomeConfigPath,
       outputDir,
     })
 
-    expect(report.success).toBe(true)
     expect(await pathExists(join(outputDir, '.oxlintrc.json'))).toBe(true)
     expect(await pathExists(join(outputDir, '.oxfmtrc.jsonc'))).toBe(true)
+    // A config below the project root resolves its ignorePatterns against its own
+    // directory, so the Oxfmt-only language exclusions cannot cover the whole project.
+    expect(report.success).toBe(false)
+    expect(report.losses.some((loss) => loss.includes('below the Biome project root'))).toBe(true)
   })
 
   it('rejects report paths that would overwrite migration state', async () => {
@@ -168,9 +174,35 @@ describe('migrate output directory handling', () => {
     expect(await pathExists(join(dir, '.oxfmtrc.jsonc'))).toBe(false)
   })
 
-  it('keeps project mutations at the Biome config root and rebases generated config paths', async () => {
-    const { biomeConfigPath, biomeIgnorePath, dir, packageJsonPath } = await setupMigrationFixture()
+  it('refuses to write configs below the project root when globs would need ".."', async () => {
+    const { biomeConfigPath, dir, packageJsonPath } = await setupMigrationFixture()
     const outputDir = join(dir, 'generated', 'config')
+    const originalPackage = await readFile(packageJsonPath, 'utf-8')
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({ files: { ignore: ['coverage/**'] } }, null, 2)}\n`,
+      'utf-8',
+    )
+
+    const report = await migrate({ configPath: biomeConfigPath, outputDir })
+
+    // Oxlint and Oxfmt reject `..` in config globs, so this layout is unrepresentable.
+    expect(report.success).toBe(false)
+    expect(
+      report.errors.some((message) => message.includes('sits below the Biome project root')),
+    ).toBe(true)
+    expect(await pathExists(join(outputDir, '.oxlintrc.json'))).toBe(false)
+    expect(await readFile(packageJsonPath, 'utf-8')).toBe(originalPackage)
+  })
+
+  it('rebases globs onto an output directory that is an ancestor of the project', async () => {
+    const { dir } = await setupMigrationFixture()
+    const projectDir = join(dir, 'packages', 'app')
+    await mkdir(projectDir, { recursive: true })
+
+    const biomeConfigPath = join(projectDir, 'biome.json')
+    const packageJsonPath = join(projectDir, 'package.json')
 
     await writeFile(
       biomeConfigPath,
@@ -179,8 +211,7 @@ describe('migrate output directory handling', () => {
           files: { ignore: ['coverage/**'] },
           overrides: [
             {
-              includes: ['src/**/*.ts'],
-              ignore: ['src/generated/**'],
+              includes: ['src/**/*.ts', '!src/generated/**'],
               linter: { rules: { style: { noVar: 'error' } } },
             },
           ],
@@ -192,43 +223,31 @@ describe('migrate output directory handling', () => {
     )
     await writeFile(
       packageJsonPath,
-      `${JSON.stringify({ name: 'fixture', devDependencies: { '@biomejs/biome': '^2.0.0' } })}\n`,
+      `${JSON.stringify({
+        name: 'fixture',
+        scripts: { check: 'biome check .' },
+        devDependencies: { '@biomejs/biome': '^2.0.0' },
+      })}\n`,
       'utf-8',
     )
 
-    const packageWithScripts = {
-      name: 'fixture',
-      scripts: { check: 'biome check .' },
-      devDependencies: { '@biomejs/biome': '^2.0.0' },
-    }
-    await writeFile(packageJsonPath, `${JSON.stringify(packageWithScripts)}\n`, 'utf-8')
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir: dir,
+      updateScripts: true,
+    })
 
-    const report = await migrate({ configPath: biomeConfigPath, outputDir, updateScripts: true })
-
-    const oxlint = JSON.parse(await readFile(join(outputDir, '.oxlintrc.json'), 'utf-8')) as {
-      $schema: string
+    const oxlint = JSON.parse(await readFile(join(dir, '.oxlintrc.json'), 'utf-8')) as {
       ignorePatterns: string[]
       overrides: Array<{ excludeFiles?: string[]; files: string[] }>
     }
-    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8')) as {
-      devDependencies: Record<string, string>
-      scripts: Record<string, string>
-    }
 
     expect(report.success).toBe(true)
-    expect(oxlint.$schema).toBe('../../node_modules/oxlint/configuration_schema.json')
-    expect(oxlint.ignorePatterns).toEqual(['../../dist/**', '../../coverage/**'])
+    expect(oxlint.ignorePatterns).toEqual(['packages/app/coverage/**'])
     expect(oxlint.overrides[0]).toMatchObject({
-      files: ['../../src/**/*.ts'],
-      excludeFiles: ['../../src/generated/**'],
+      files: ['packages/app/src/**/*.ts'],
+      excludeFiles: ['packages/app/src/generated/**'],
     })
-    expect(packageJson.devDependencies['@biomejs/biome']).toBeUndefined()
-    expect(packageJson.devDependencies.oxlint).toBeDefined()
-    expect(packageJson.scripts.check).toBe(
-      'oxlint --config generated/config/.oxlintrc.json . && oxfmt --config generated/config/.oxfmtrc.jsonc --check .',
-    )
-    expect(await pathExists(join(outputDir, 'package.json'))).toBe(false)
-    expect(await pathExists(biomeIgnorePath)).toBe(true)
   })
 })
 
@@ -512,5 +531,191 @@ describe('runCli', () => {
     const output = stderr.toString()
     expect(output).toContain('Received SIGTERM')
     expect((output.match(/Received SIGTERM/gu) ?? []).length).toBe(1)
+  })
+})
+
+describe('migrate semantic-loss safeguards', () => {
+  it('refuses to delete the Biome setup when a rule has no Oxlint equivalent', async () => {
+    const { biomeConfigPath, biomeIgnorePath, dir, packageJsonPath } = await setupMigrationFixture()
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({ linter: { rules: { nursery: { noSecrets: 'error' } } } })}\n`,
+      'utf-8',
+    )
+    await writeFile(
+      packageJsonPath,
+      `${JSON.stringify({ name: 'fixture', devDependencies: { '@biomejs/biome': '^2.5.7' } })}\n`,
+      'utf-8',
+    )
+
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir: dir,
+      delete: true,
+      updateScripts: true,
+    })
+
+    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8')) as {
+      devDependencies: Record<string, string>
+    }
+
+    expect(report.success).toBe(false)
+    expect(report.losses).toContain('No Oxlint equivalent found for Biome rule: noSecrets')
+    expect(report.cleanup).toMatchObject({ requested: true, performed: false })
+    // The only working configuration must survive a known-lossy conversion.
+    expect(await pathExists(biomeConfigPath)).toBe(true)
+    expect(await pathExists(biomeIgnorePath)).toBe(true)
+    expect(packageJson.devDependencies['@biomejs/biome']).toBe('^2.5.7')
+  })
+
+  it('completes cleanup when the conversion is lossless', async () => {
+    const { biomeConfigPath, biomeIgnorePath, dir, packageJsonPath } = await setupMigrationFixture()
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({ linter: { rules: { style: { noVar: 'error' } } } })}\n`,
+      'utf-8',
+    )
+    await writeFile(
+      packageJsonPath,
+      `${JSON.stringify({ name: 'fixture', devDependencies: { '@biomejs/biome': '^2.5.7' } })}\n`,
+      'utf-8',
+    )
+
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir: dir,
+      delete: true,
+      updateScripts: true,
+    })
+
+    const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8')) as {
+      devDependencies: Record<string, string>
+    }
+
+    expect(report.success).toBe(true)
+    expect(report.losses).toEqual([])
+    expect(report.cleanup).toMatchObject({ requested: true, performed: true })
+    expect(await pathExists(biomeConfigPath)).toBe(false)
+    expect(await pathExists(biomeIgnorePath)).toBe(false)
+    expect(packageJson.devDependencies['@biomejs/biome']).toBeUndefined()
+  })
+})
+
+describe('migrate file selection fidelity', () => {
+  it('translates negated includes into ignore patterns for both tools', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({
+        files: { includes: ['!**/*.generated.ts'] },
+        linter: { includes: ['!src/legacy/**'] },
+        formatter: { includes: ['!**/*.min.js'] },
+      })}\n`,
+      'utf-8',
+    )
+
+    await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    const oxlint = JSON.parse(await readFile(join(dir, '.oxlintrc.json'), 'utf-8')) as {
+      ignorePatterns: string[]
+    }
+    const oxfmt = JSON.parse(await readFile(join(dir, '.oxfmtrc.jsonc'), 'utf-8')) as {
+      ignorePatterns: string[]
+    }
+
+    expect(oxlint.ignorePatterns).toContain('**/*.generated.ts')
+    expect(oxlint.ignorePatterns).toContain('src/legacy/**')
+    expect(oxfmt.ignorePatterns).toContain('**/*.generated.ts')
+    expect(oxfmt.ignorePatterns).toContain('**/*.min.js')
+  })
+
+  it('applies .biomeignore to the formatter as well as the linter', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    const oxlint = JSON.parse(await readFile(join(dir, '.oxlintrc.json'), 'utf-8')) as {
+      ignorePatterns: string[]
+    }
+    const oxfmt = JSON.parse(await readFile(join(dir, '.oxfmtrc.jsonc'), 'utf-8')) as {
+      ignorePatterns: string[]
+    }
+
+    expect(oxlint.ignorePatterns).toContain('dist/**')
+    expect(oxfmt.ignorePatterns).toContain('dist/**')
+  })
+
+  it('keeps Oxfmt from formatting file types Biome never touched', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    const oxfmt = JSON.parse(await readFile(join(dir, '.oxfmtrc.jsonc'), 'utf-8')) as {
+      ignorePatterns: string[]
+      sortPackageJson: boolean
+    }
+
+    expect(oxfmt.ignorePatterns).toEqual(
+      expect.arrayContaining(['**/*.{yaml,yml}', '**/*.toml', '**/*.{md,mdx}']),
+    )
+    // Oxfmt defaults this to true; Biome never reordered package.json.
+    expect(oxfmt.sortPackageJson).toBe(false)
+  })
+})
+
+describe('migrate report accounting', () => {
+  it('counts source rules rather than emitted target rules', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({
+        linter: { rules: { recommended: false, style: { noCommonJs: 'error' } } },
+      })}\n`,
+      'utf-8',
+    )
+
+    const report = await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    // noCommonJs expands to three Oxlint rules but is one source rule.
+    expect(report.summary.rulesConverted).toBe(1)
+    expect(report.summary.oxlintRulesEmitted).toBe(3)
+  })
+})
+
+describe('migrate concurrency', () => {
+  it('locks the project the Biome config belongs to, not the working directory', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    // A live foreign process holding the project lock must block a second migration
+    // even though this process is running from a different working directory.
+    await writeFile(
+      join(dir, '.biome-to-oxc.lock'),
+      JSON.stringify({ pid: process.ppid, startedAt: Date.now() }),
+      'utf-8',
+    )
+
+    const report = await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    expect(report.success).toBe(false)
+    expect(
+      report.errors.some((message) =>
+        message.includes('Another biome-to-oxc migration is running'),
+      ),
+    ).toBe(true)
+    expect(await pathExists(join(dir, '.oxlintrc.json'))).toBe(false)
+  })
+
+  it('releases the lock so a later migration can run', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    await migrate({ configPath: biomeConfigPath, outputDir: dir })
+    const second = await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    expect(second.errors).toEqual([])
+    expect(await pathExists(join(dir, '.biome-to-oxc.lock'))).toBe(false)
   })
 })
