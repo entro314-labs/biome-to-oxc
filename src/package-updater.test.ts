@@ -76,6 +76,43 @@ describe('updatePackageJson', () => {
     )
   })
 
+  it('applies the DOM script preset without --update-scripts and installs its tools', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: {
+        check: 'biome check',
+        lint: 'biome lint',
+      },
+    })
+    const expectedToolVersions = await getExpectedToolVersions()
+    const reporter = new CollectingReporter()
+
+    await updatePackageJson(dir, reporter, false, {
+      dom: true,
+      updateScripts: false,
+    })
+
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts).toMatchObject({
+      check: 'oxlint . && oxfmt --check .',
+      'check:fix': 'oxlint --fix . && oxfmt --write .',
+      format: 'oxfmt --write .',
+      'format:check': 'oxfmt --check .',
+      lint: 'oxlint -f github . > lint.md 2>&1',
+      'lint:fix': 'oxlint -f stylish --fix .',
+      'lint:fix-unsafe':
+        'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .',
+      'check:fix-suggestions':
+        'oxlint -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && oxfmt --write .',
+      'type-check': 'tsc --noEmit',
+    })
+    expect(pkg.devDependencies.oxlint).toBe(expectedToolVersions.oxlint)
+    expect(pkg.devDependencies.oxfmt).toBe(expectedToolVersions.oxfmt)
+    expect(pkg.devDependencies['oxlint-tsgolint']).toBe(expectedToolVersions.oxlintTsgolint)
+    expect(pkg.devDependencies['@typescript/native-preview']).toBeUndefined()
+  })
+
   it('preserves manifest key order when writing dependency changes', async () => {
     const { dir, packagePath } = await setupPackageJson({
       name: 'fixture',

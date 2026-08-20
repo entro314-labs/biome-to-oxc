@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- Reinstated the hidden `--dom` flag removed in 2.0.0. It applies the opinionated script preset
+  (`check`, `check:fix`, `format`, `format:check`, `lint`, `lint:fix`, `lint:fix-unsafe`,
+  `check:fix-suggestions`, `type-check`). The `type-check` script now runs `tsc --noEmit` instead of
+  `tsgo --noEmit`: since TypeScript 7 the native compiler ships as the regular `typescript` package
+  under the `tsc` binary, which resolves the missing-`tsgo` flaw that led to the flag's removal.
+
 ## [2.0.0] - 2026-08-11
 
 ### Added
