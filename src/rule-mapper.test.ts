@@ -198,6 +198,10 @@ describe('rule-mapper parity expansion', () => {
           level: 'warn',
           options: { words: ['read this', 'more'] },
         },
+        noConsole: {
+          level: 'error',
+          options: { allow: ['error', 'warn'] },
+        },
         noExcessiveClassesPerFile: {
           level: 'error',
           options: { maxClasses: 3 },
@@ -267,6 +271,7 @@ describe('rule-mapper parity expansion', () => {
         },
       ],
       'jsx-a11y/anchor-ambiguous-text': ['warn', { words: ['read this', 'more'] }],
+      'no-console': ['error', { allow: ['error', 'warn'] }],
       'max-classes-per-file': ['error', { max: 3 }],
       'max-params': ['warn', { max: 8 }],
       'no-plusplus': ['warn', { allowForLoopAfterthoughts: true }],
@@ -337,16 +342,16 @@ describe('rule-mapper parity expansion', () => {
     const { rules } = extractRulesFromBiomeConfig(
       {
         suspicious: {
-          noConsole: { level: 'info', options: { allow: ['warn'] } },
+          noDoubleEquals: { level: 'info', options: { ignoreNull: true } },
         },
       },
       reporter,
     )
 
-    expect(rules['no-console']).toBe('warn')
+    expect(rules.eqeqeq).toBe('warn')
     expect(reporter.getWarnings()).toEqual([
-      'Unsupported Biome severity "info" for rule noConsole. Normalized to "warn" for Oxlint compatibility.',
-      'Biome rule noConsole options do not have a verified Oxlint mapping and were not migrated; the rule runs with Oxlint defaults instead.',
+      'Unsupported Biome severity "info" for rule noDoubleEquals. Normalized to "warn" for Oxlint compatibility.',
+      'Biome rule noDoubleEquals options do not have a verified Oxlint mapping and were not migrated; the rule runs with Oxlint defaults instead.',
     ])
   })
 

@@ -193,6 +193,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noExtraBooleanCast: 'no-extra-boolean-cast',
   noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
   noFallthroughSwitchClause: 'no-fallthrough',
+  // Superset: prefer-array-flat also flags other flatten idioms beyond flatMap(x => x).
+  noFlatMapIdentity: 'unicorn/prefer-array-flat',
   noFloatingPromises: 'typescript/no-floating-promises',
   noFocusedTests: ['jest/no-focused-tests', 'vitest/no-focused-tests'],
   noForEach: 'unicorn/no-array-for-each',
@@ -611,6 +613,13 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     const { words } = options
     return Array.isArray(words) && words.every((value) => typeof value === 'string')
       ? [severity, { words }]
+      : severity
+  }
+
+  if (biomeName === 'noConsole') {
+    const { allow } = options
+    return Array.isArray(allow) && allow.every((value) => typeof value === 'string')
+      ? [severity, { allow }]
       : severity
   }
 

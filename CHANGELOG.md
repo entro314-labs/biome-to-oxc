@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Migrate Biome `noConsole`'s `allow` option to Oxlint `no-console` instead of reporting a semantic
+  loss and running the rule with defaults.
+- Map Biome `noFlatMapIdentity` to `unicorn/prefer-array-flat` (verified to flag the same
+  `flatMap(x => x)` pattern; the Oxlint rule additionally covers other flatten idioms).
+
 ## [3.0.0] - 2026-08-20
 
 ### Added
