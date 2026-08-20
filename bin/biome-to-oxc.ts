@@ -33,6 +33,7 @@ interface ParsedCliOptions {
   backup?: boolean
   config?: string
   delete?: boolean
+  dom?: boolean
   dryRun?: boolean
   eslintBridge?: boolean
   fixStrategy?: FixStrategy
@@ -64,6 +65,7 @@ const MigrationOptionsSchema = z.object({
   delete: z.boolean().default(false),
   noBackup: z.boolean().default(false),
   updateScripts: z.boolean().default(false),
+  dom: z.boolean().default(false),
   verbose: z.boolean().default(false),
   typeAware: z.boolean().default(false),
   typeCheck: z.boolean().default(false),
@@ -203,6 +205,7 @@ function createCommand(
     )
     .option('--no-backup', 'Skip backup of existing config files')
     .option('--update-scripts', 'Update package.json scripts to use oxlint/oxfmt')
+    .addOption(new Option('--dom').hideHelp())
     .option('--type-aware', 'Include type-aware linting guidance and dependencies')
     .option('--type-check', 'Enable strict typed linting mode (implies --type-aware)')
     .addOption(
@@ -277,6 +280,7 @@ function normalizeMigrationOptions(
     delete: options.delete,
     noBackup: options.backup === false,
     updateScripts: options.updateScripts,
+    dom: options.dom,
     verbose: options.verbose,
     typeAware,
     typeCheck,

@@ -373,6 +373,7 @@ export interface MigrationOptions {
   delete?: boolean
   noBackup?: boolean
   updateScripts?: boolean
+  dom?: boolean
   verbose?: boolean
   typeAware?: boolean
   typeCheck?: boolean

@@ -321,6 +321,7 @@ async function runMigration(
       const packageJsonErrorCount = reporter.getErrors().length
       packageJsonSummary = await updatePackageJson(projectDir, reporter, false, {
         updateScripts: options.updateScripts,
+        dom: options.dom,
         removeBiome: cleanupAllowed,
         typeAware: typeAwareEnabled,
         typeCheck: typeCheckEnabled,
@@ -358,6 +359,7 @@ async function runMigration(
       const packageJsonErrorCount = reporter.getErrors().length
       packageJsonSummary = await updatePackageJson(projectDir, reporter, true, {
         updateScripts: options.updateScripts,
+        dom: options.dom,
         removeBiome: cleanupAllowed,
         typeAware: typeAwareEnabled,
         typeCheck: typeCheckEnabled,

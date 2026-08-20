@@ -57,6 +57,11 @@ export async function updatePackageJson(
   options: {
     updateScripts?: boolean
     /**
+     * Applies an opinionated script preset (overriding --update-scripts) and installs
+     * the tools those scripts invoke.
+     */
+    dom?: boolean
+    /**
      * Whether removing `@biomejs/biome` is permitted. The caller sets this only when
      * cleanup is semantically safe, so a lossy migration keeps Biome installable.
      */
@@ -95,12 +100,13 @@ export async function updatePackageJson(
 
     let modified = false
     const updateScriptsEnabled = options.updateScripts ?? false
+    const domModeEnabled = options.dom ?? false
     const removeBiomeAllowed = options.removeBiome ?? false
     const typeAwareProfile = options.typeAwareProfile ?? 'standard'
     const typeCheckEnabled = options.typeCheck ?? typeAwareProfile === 'strict'
     const typeAwareEnabled =
       options.typeAware ?? (typeCheckEnabled || typeAwareProfile === 'strict')
-    const needsTypeAwareDependency = typeAwareEnabled || typeCheckEnabled
+    const needsTypeAwareDependency = typeAwareEnabled || typeCheckEnabled || domModeEnabled
     const fixStrategy = options.fixStrategy ?? 'safe'
     const oxlintCommand = buildConfiguredCommand(
       'oxlint',
@@ -109,7 +115,16 @@ export async function updatePackageJson(
     )
     const oxfmtCommand = buildConfiguredCommand('oxfmt', packageJsonPath, options.oxfmtConfigPath)
 
-    if (updateScriptsEnabled && packageJson.scripts) {
+    if (domModeEnabled) {
+      packageJson.scripts ??= {}
+      modified =
+        applyDomScriptPreset(
+          packageJson.scripts,
+          summary.scriptsUpdated,
+          oxlintCommand,
+          oxfmtCommand,
+        ) || modified
+    } else if (updateScriptsEnabled && packageJson.scripts) {
       modified =
         updateScripts(packageJson.scripts, reporter, summary.scriptsUpdated, {
           typeAwareEnabled,
@@ -244,6 +259,40 @@ async function detectLockfile(
   }
 
   return undefined
+}
+
+function applyDomScriptPreset(
+  scripts: Record<string, string>,
+  updates: PackageScriptUpdate[],
+  oxlintCommand: string,
+  oxfmtCommand: string,
+): boolean {
+  let modified = false
+  const preset: Record<string, string> = {
+    check: `${oxlintCommand} . && ${oxfmtCommand} --check .`,
+    'check:fix': `${oxlintCommand} --fix . && ${oxfmtCommand} --write .`,
+    format: `${oxfmtCommand} --write .`,
+    'format:check': `${oxfmtCommand} --check .`,
+    lint: `${oxlintCommand} -f github . > lint.md 2>&1`,
+    'lint:fix': `${oxlintCommand} -f stylish --fix .`,
+    'lint:fix-unsafe': `${oxlintCommand} -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions --fix-dangerously .`,
+    'check:fix-suggestions': `${oxlintCommand} -f stylish --react-plugin --import-plugin --react-perf-plugin --nextjs-plugin --type-aware --type-check --vitest-plugin --fix --fix-suggestions . && ${oxfmtCommand} --write .`,
+    'type-check': 'tsc --noEmit',
+  }
+
+  for (const [scriptName, scriptValue] of Object.entries(preset)) {
+    const before = scripts[scriptName]
+
+    if (before === scriptValue) {
+      continue
+    }
+
+    scripts[scriptName] = scriptValue
+    updates.push({ name: scriptName, before: before ?? '<missing>', after: scriptValue })
+    modified = true
+  }
+
+  return modified
 }
 
 function updateScripts(
