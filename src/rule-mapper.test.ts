@@ -603,3 +603,174 @@ describe('rule-mapper parity expansion', () => {
     expect(reporter.getWarnings()).toEqual([])
   })
 })
+
+describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
+  it('maps the Biome rules whose Oxlint equivalents now exist', () => {
+    const reporter = new CollectingReporter()
+
+    const mappings: Record<string, string> = {
+      noBlankTarget: 'react/jsx-no-target-blank',
+      noExcessiveLinesPerFile: 'max-lines',
+      noExcessiveLinesPerFunction: 'max-lines-per-function',
+      noExportsInTest: 'jest/no-export',
+      noGlobalDirnameFilename: 'unicorn/prefer-module',
+      noGlobalIsFinite: 'unicorn/prefer-number-properties',
+      noGlobalIsNan: 'unicorn/prefer-number-properties',
+      noJsRestrictedProperties: 'no-restricted-properties',
+      noNegationInEqualityCheck: 'unicorn/no-negation-in-equality-check',
+      noUnsafeTypeAssertion: 'typescript/no-unsafe-type-assertion',
+      noUselessContinue: 'no-continue',
+      noUselessElse: 'no-else-return',
+      noUselessUndefinedInitialization: 'unicorn/no-useless-undefined',
+      useConsistentObjectDefinitions: 'object-shorthand',
+      useExplicitReturnType: 'typescript/explicit-function-return-type',
+      useImportExtensions: 'import/extensions',
+      useSingleVarDeclarator: 'one-var',
+    }
+
+    for (const [biomeRule, oxlintRule] of Object.entries(mappings)) {
+      expect(mapBiomeRuleToOxlint(biomeRule, reporter)).toBe(oxlintRule)
+    }
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('replaces Biome useReactCompiler with the recommended React Compiler rule set', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        useReactCompiler: 'error',
+      },
+    }
+
+    const { rules, sourceRulesConverted } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toEqual({
+      'react/error-boundaries': 'error',
+      'react/globals': 'error',
+      'react/immutability': 'error',
+      'react/incompatible-library': 'error',
+      'react/preserve-manual-memoization': 'error',
+      'react/purity': 'error',
+      'react/refs': 'error',
+      'react/set-state-in-effect': 'error',
+      'react/set-state-in-render': 'error',
+      'react/static-components': 'error',
+      'react/unsupported-syntax': 'error',
+      'react/use-memo': 'error',
+    })
+    expect(sourceRulesConverted).toEqual(new Set(['useReactCompiler']))
+    // The rules that are off by default upstream are deliberately left out, so the
+    // narrowing has to be reported rather than applied silently.
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('useReactCompiler')
+  })
+
+  it('reports partially covered mappings once per migration', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      correctness: {
+        noReactPropAssignments: 'error',
+      },
+      nursery: {
+        noComponentHookFactories: 'warn',
+        useExplicitType: 'warn',
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'react/immutability': 'error',
+      'react/no-unstable-nested-components': 'warn',
+      'typescript/explicit-function-return-type': 'warn',
+    })
+    expect(reporter.getLosses()).toHaveLength(3)
+  })
+
+  it('translates the options of the newly mapped rules', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      complexity: {
+        noExcessiveLinesPerFunction: {
+          level: 'warn',
+          options: { maxLines: 20, skipBlankLines: true, skipIifes: true },
+        },
+      },
+      style: {
+        noExcessiveLinesPerFile: {
+          level: 'error',
+          options: { maxLines: 400 },
+        },
+        useConsistentObjectDefinitions: {
+          level: 'warn',
+          options: { syntax: 'explicit' },
+        },
+        useSingleVarDeclarator: 'error',
+      },
+      nursery: {
+        noJsRestrictedProperties: {
+          level: 'error',
+          options: { entries: [{ object: 'require', property: 'ensure' }] },
+        },
+        useExplicitReturnType: {
+          level: 'warn',
+          options: { allowExpressions: true, allowIifes: true, allowedNames: ['setup'] },
+        },
+      },
+      correctness: {
+        useImportExtensions: 'error',
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      // Biome's `skipIifes` excludes IIFEs; Oxlint's `IIFEs` includes them.
+      'max-lines-per-function': ['warn', { max: 20, skipBlankLines: true, IIFEs: false }],
+      'max-lines': ['error', { max: 400, skipBlankLines: false }],
+      'object-shorthand': ['warn', 'never'],
+      'one-var': ['error', 'never'],
+      'no-restricted-properties': ['error', { object: 'require', property: 'ensure' }],
+      'typescript/explicit-function-return-type': [
+        'warn',
+        { allowExpressions: true, allowIIFEs: true, allowedNames: ['setup'] },
+      ],
+      'import/extensions': ['error', 'ignorePackages'],
+    })
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('falls back to the Biome defaults when the line-limit rules carry no options', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      complexity: { noExcessiveLinesPerFunction: 'warn' },
+      style: { noExcessiveLinesPerFile: 'warn' },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({
+      'max-lines-per-function': ['warn', { max: 50, skipBlankLines: false, IIFEs: true }],
+      'max-lines': ['warn', { max: 300, skipBlankLines: false }],
+    })
+  })
+
+  it('reports the useImportExtensions options Oxlint cannot express', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      correctness: {
+        useImportExtensions: {
+          level: 'error',
+          options: { forceJsExtensions: true },
+        },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toMatchObject({ 'import/extensions': ['error', 'ignorePackages'] })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('forceJsExtensions')
+  })
+})

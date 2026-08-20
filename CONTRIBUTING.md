@@ -28,7 +28,9 @@ Thank you for your interest in contributing! This document provides guidelines f
 biome-to-oxc/
 ├── bin/
 │   └── biome-to-oxc.ts       # CLI entry point
-├── docs/                     # Rule/option inventory reference data
+├── docs/                     # Rule/option inventory reference data (generated)
+├── scripts/
+│   └── sync-rule-inventories.ts # Regenerates docs/ from the installed tool schemas
 ├── src/
 │   ├── advanced-detection.ts # Feature detection and migration suggestions
 │   ├── biome-ignore-loader.ts # .biomeignore parsing and loading
@@ -53,14 +55,24 @@ biome-to-oxc/
 
 To add new Biome → Oxlint rule mappings:
 
-1. Edit `src/rule-mapper.ts`
-2. Add entries to `BIOME_TO_OXLINT_RULE_MAP`:
+1. Bump the toolchain (`oxlint`, `oxfmt`, `oxlint-tsgolint`, `@biomejs/biome`) if you are
+   picking up newly released rules, then run `pnpm docs:sync` and review the diff under
+   `docs/` — it is the list of rules that appeared, changed, or went away.
+2. Edit `src/rule-mapper.ts`
+3. Add entries to `BIOME_TO_OXLINT_RULE_MAP`:
    ```typescript
-   const BIOME_TO_OXLINT_RULE_MAP: Record<string, string> = {
+   const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
      biomeRuleName: 'oxlint-rule-name',
      // Add your mapping here
    };
    ```
+4. If the Oxlint rule only covers part of what the Biome rule checked, add a note to
+   `PARTIAL_RULE_MAPPING_NOTES` so the migration report says so.
+5. If the Biome rule carries options, translate them in
+   `mapBiomeRuleOptionsToOxlintSeverity` and report anything Oxlint cannot express.
+
+`src/rule-inventory.test.ts` checks every mapping against the generated inventories, so a
+rule name that neither tool actually has fails the test suite.
 
 ## Testing
 

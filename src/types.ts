@@ -82,6 +82,9 @@ export interface BiomeFormatterConfig {
   lineWidth?: number
   attributePosition?: 'auto' | 'multiline'
   bracketSpacing?: boolean
+  bracketSameLine?: boolean
+  expand?: 'auto' | 'always' | 'never'
+  trailingNewline?: boolean
   // Additional options that might exist
   [key: string]: unknown
 }
@@ -101,10 +104,13 @@ export interface BiomeJavaScriptConfig {
     arrowParentheses?: 'always' | 'asNeeded'
     bracketSameLine?: boolean
     bracketSpacing?: boolean
+    expand?: 'auto' | 'always' | 'never'
     indentStyle?: 'tab' | 'space'
     indentWidth?: number
     lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
     lineWidth?: number
+    operatorLinebreak?: 'after' | 'before'
+    trailingNewline?: boolean
     // Capture any additional options
     [key: string]: unknown
   }
@@ -123,11 +129,13 @@ export interface BiomeJsonConfig {
   }
   formatter?: {
     enabled?: boolean
+    expand?: 'auto' | 'always' | 'never'
     indentStyle?: 'tab' | 'space'
     indentWidth?: number
     lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
     lineWidth?: number
     trailingCommas?: 'none' | 'all'
+    trailingNewline?: boolean
   }
   linter?: {
     enabled?: boolean
@@ -145,6 +153,7 @@ export interface BiomeCssConfig {
     lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
     lineWidth?: number
     quoteStyle?: 'single' | 'double'
+    trailingNewline?: boolean
   }
   linter?: {
     enabled?: boolean
@@ -276,6 +285,9 @@ export interface OxfmtConfig {
 
   // Object formatting
   objectWrap?: 'preserve' | 'collapse'
+
+  // Operator placement when expressions wrap
+  experimentalOperatorPosition?: 'start' | 'end'
 
   // Line endings
   insertFinalNewline?: boolean

@@ -135,6 +135,12 @@ ignore configuration before removing Biome.
 - `docs/oxfmt-rules.tsv`: Oxfmt configuration surface inventory
 - `docs/tsgolint-rules.tsv`: typed linting implementation matrix
 - `docs/oxlint-vs-tsgolint.tsv`: typed rule availability cross-reference
+- `docs/biome-rules.tsv`: Biome rule inventory, so a mapping cannot key off a rule Biome dropped
+- `docs/biome-formatter-options.tsv`: Biome formatter surface inventory
+
+All six are generated from the schemas of the installed `oxlint`, `oxfmt`,
+`oxlint-tsgolint`, and `@biomejs/biome` packages by `pnpm docs:sync`; `pnpm docs:check`
+fails when they drift, and it runs as part of `pnpm check`.
 
 ✅ **Script Rewrite Strategy Controls**
 
