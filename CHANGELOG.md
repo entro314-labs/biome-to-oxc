@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-08-20
+
 ### Fixed
 
 - Migrate Biome `noConsole`'s `allow` option to Oxlint `no-console` instead of reporting a semantic
