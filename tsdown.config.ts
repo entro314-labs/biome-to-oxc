@@ -3,11 +3,11 @@ import { defineConfig } from 'tsdown'
 export default defineConfig({
   entry: ['bin/biome-to-oxc.ts', 'src/index.ts'],
   format: ['esm'],
-  // Generate .d.ts via tsgo (the native TypeScript port) from @typescript/native-preview.
-  // The classic Compiler API path is unusable here: typescript@7 (the tsgo RC) exposes no
-  // `.` main export, so rolldown-plugin-dts's default TS-based mode fails with
-  // `No "exports" main defined`. tsgo mode gives full type-inference declarations without
-  // the legacy compiler. [Experimental]
+  // Generate .d.ts by invoking the native compiler binary, resolved from the installed
+  // typescript package (@typescript/native-preview is only a fallback for pre-7.0 setups).
+  // The classic Compiler API path is unusable here: typescript@7 does not expose the
+  // programmatic API (planned for 7.1), so rolldown-plugin-dts's default TS-based mode
+  // fails with `No "exports" main defined`.
   dts: { tsgo: true },
   sourcemap: false,
   clean: true,
