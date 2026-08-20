@@ -29,6 +29,69 @@ const OXLINT_CATEGORIES = [
 
 type OxlintRuleMapping = string | readonly string[]
 
+/**
+ * The React Compiler rules Oxlint activates for ESLint's `react-hooks/recommended` preset.
+ *
+ * Oxlint 1.79 replaced the single `react/react-compiler` rule with 22 per-diagnostic rules;
+ * Biome's `useReactCompiler` runs the compiler and reports every bailout it finds, so the
+ * `recommended` slice is the closest equivalent. The remaining rules default to off upstream
+ * and would fire on code Biome never flagged.
+ *
+ * @see https://oxc.rs/blog/2026-08-18-react-compiler-support
+ */
+const REACT_COMPILER_RECOMMENDED_RULES = [
+  'react/error-boundaries',
+  'react/globals',
+  'react/immutability',
+  'react/incompatible-library',
+  'react/preserve-manual-memoization',
+  'react/purity',
+  'react/refs',
+  'react/set-state-in-effect',
+  'react/set-state-in-render',
+  'react/static-components',
+  'react/unsupported-syntax',
+  'react/use-memo',
+] as const
+
+/**
+ * Mappings where the Oxlint rule covers only part of what the Biome rule checked. The note
+ * is reported once per migration so the narrowing is visible rather than silent.
+ */
+const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
+  noComponentHookFactories:
+    'Biome rule noComponentHookFactories was mapped to react/no-unstable-nested-components, which reports nested component definitions but not nested custom hook definitions.',
+  noReactPropAssignments:
+    'Biome rule noReactPropAssignments was mapped to the React Compiler rule react/immutability, which reports prop mutation alongside other mutations of values React treats as immutable.',
+  useExplicitType:
+    'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
+  useReactCompiler: `Biome rule useReactCompiler was mapped to Oxlint's React Compiler rules for ESLint's recommended preset (${REACT_COMPILER_RECOMMENDED_RULES.join(', ')}); the compiler rules that are off by default upstream were not enabled. See https://oxc.rs/blog/2026-08-18-react-compiler-support`,
+}
+
+/**
+ * Biome rule names the mapper accepts that the currently supported Biome release does not
+ * define. They are kept so configs written against other Biome versions still migrate, and
+ * listed explicitly so the inventory check can tell them apart from a typo in a new mapping.
+ */
+export const UNVERIFIED_BIOME_RULE_NAMES = [
+  // Removed in Biome 2.x; every one of them has a current replacement that is mapped too.
+  'noConsoleLog', // -> noConsole
+  'noInvalidNewBuiltin', // -> noInvalidBuiltinInstantiation
+  'noNewSymbol', // -> noInvalidBuiltinInstantiation
+  'noUnnecessaryContinue', // -> noUselessContinue
+  // Still in Biome's nursery upstream, so not in the released schema yet.
+  'useFind', // duplicates useArrayFind
+  // Not found in any Biome release; retained because each duplicates a mapped current rule.
+  'noMultiStr', // duplicates noMultilineString
+  'useAriaPropTypes', // duplicates useValidAriaValues
+  'useSpread', // duplicates useSpreadOverApply
+] as const
+
+/** Every Biome rule name this mapper recognises, for inventory conformance checks. */
+export function getMappedBiomeRuleNames(): string[] {
+  return Object.keys(BIOME_TO_OXLINT_RULE_MAP)
+}
+
 /** Every Oxlint rule name this mapper can emit, for inventory conformance checks. */
 export function getMappedOxlintRuleNames(): string[] {
   const names = new Set<string>()
@@ -77,12 +140,14 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noBaseToString: 'typescript/no-base-to-string',
   noBeforeInteractiveScriptOutsideDocument: 'nextjs/no-before-interactive-script-outside-document',
   noBitwiseOperators: 'no-bitwise',
+  noBlankTarget: 'react/jsx-no-target-blank',
   noCatchAssign: 'no-ex-assign',
   noChildrenProp: 'react/no-children-prop',
   noClassAssign: 'no-class-assign',
   noCommaOperator: 'no-sequences',
   noCommentText: 'react/jsx-no-comment-textnodes',
   noCommonJs: ['import/no-commonjs', 'typescript/no-require-imports', 'typescript/no-var-requires'],
+  noComponentHookFactories: 'react/no-unstable-nested-components',
   noCompareNegZero: 'no-compare-neg-zero',
   noConfusingLabels: 'no-labels',
   noConfusingVoidType: 'typescript/no-invalid-void-type',
@@ -120,6 +185,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noEqualsToNull: 'no-eq-null',
   noExcessiveClassesPerFile: 'max-classes-per-file',
   noExcessiveCognitiveComplexity: 'complexity',
+  noExcessiveLinesPerFile: 'max-lines',
+  noExcessiveLinesPerFunction: 'max-lines-per-function',
   noExcessiveNestedCallbacks: 'max-nested-callbacks',
   noExplicitAny: 'typescript/no-explicit-any',
   noExtendNative: 'no-extend-native',
@@ -131,7 +198,10 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noForEach: 'unicorn/no-array-for-each',
   noFunctionAssign: 'no-func-assign',
   noGlobalAssign: 'no-global-assign',
+  noGlobalDirnameFilename: 'unicorn/prefer-module',
   noGlobalEval: 'no-eval',
+  noGlobalIsFinite: 'unicorn/prefer-number-properties',
+  noGlobalIsNan: 'unicorn/prefer-number-properties',
   noGlobalObjectCalls: 'no-obj-calls',
   noHeaderScope: 'jsx-a11y/scope',
   noHeadElement: 'nextjs/no-head-element',
@@ -152,6 +222,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noInteractiveElementToNoninteractiveRole:
     'jsx-a11y/no-interactive-element-to-noninteractive-role',
   noInvalidNewBuiltin: 'no-new-native-nonconstructor',
+  noJsRestrictedProperties: 'no-restricted-properties',
   noJsxLiterals: 'react/jsx-no-literals',
   noJsxNamespace: 'react/no-namespace',
   noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
@@ -166,6 +237,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noMultilineString: 'no-multi-str',
   noMultiStr: 'no-multi-str',
   noNegationElse: 'no-negated-condition',
+  noNegationInEqualityCheck: 'unicorn/no-negation-in-equality-check',
   noNewSymbol: 'no-new-native-nonconstructor',
   noNodejsModules: 'import/no-nodejs-modules',
   noNamespace: 'typescript/no-namespace',
@@ -190,12 +262,14 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noProto: 'no-proto',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
+  noReactPropAssignments: 'react/immutability',
   noRedundantAlt: 'jsx-a11y/img-redundant-alt',
   noRedundantRoles: 'jsx-a11y/no-redundant-roles',
   noReactStringRefs: 'react/no-string-refs',
   noDuplicateTestHooks: ['jest/no-duplicate-hooks', 'vitest/no-duplicate-hooks'],
   noConditionalExpect: ['jest/no-conditional-expect', 'vitest/no-conditional-expect'],
   noExcessiveNestedTestSuites: ['jest/max-nested-describe', 'vitest/max-nested-describe'],
+  noExportsInTest: 'jest/no-export',
   noIdenticalTestTitle: ['jest/no-identical-title', 'vitest/no-identical-title'],
   noMisplacedAssertion: ['jest/no-standalone-expect', 'vitest/no-standalone-expect'],
   noRenderReturnValue: 'react/no-render-return-value',
@@ -233,6 +307,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnreachable: 'no-unreachable',
   noUnreachableSuper: 'constructor-super',
   noUnsafeDeclarationMerging: 'typescript/no-unsafe-declaration-merging',
+  noUnsafeTypeAssertion: 'typescript/no-unsafe-type-assertion',
   noUnsafeFinally: 'no-unsafe-finally',
   noUnsafeNegation: 'no-unsafe-negation',
   noUnsafeOptionalChaining: 'no-unsafe-optional-chaining',
@@ -243,8 +318,10 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnusedVariables: 'no-unused-vars',
   noUnwantedPolyfillio: 'nextjs/no-unwanted-polyfillio',
   noUselessCatch: 'no-useless-catch',
+  noUselessContinue: 'no-continue',
   noUselessCatchBinding: 'unicorn/prefer-optional-catch-binding',
   noUselessConstructor: 'no-useless-constructor',
+  noUselessElse: 'no-else-return',
   noUselessEmptyExport: 'typescript/no-useless-empty-export',
   noUselessEscapeInRegex: 'no-useless-escape',
   noUselessEscapeInString: 'no-useless-escape',
@@ -261,6 +338,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUselessTypeConstraint: 'typescript/no-unnecessary-type-constraint',
   noUselessTypeConversion: 'typescript/no-unnecessary-type-conversion',
   noUselessUndefined: 'unicorn/no-useless-undefined',
+  noUselessUndefinedInitialization: 'unicorn/no-useless-undefined',
   noVoid: 'no-void',
   noVar: 'no-var',
   noVoidElementsWithChildren: 'react/void-dom-elements-no-children',
@@ -304,6 +382,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useConsistentMethodSignatures: 'typescript/method-signature-style',
   useConsistentTypeDefinitions: 'typescript/consistent-type-definitions',
   useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
+  useConsistentObjectDefinitions: 'object-shorthand',
   useConsistentTestIt: ['jest/consistent-test-it', 'vitest/consistent-test-it'],
   useConst: 'prefer-const',
   useDateNow: 'unicorn/prefer-date-now',
@@ -318,6 +397,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useErrorMessage: 'unicorn/error-message',
   useExpect: ['jest/expect-expect', 'vitest/expect-expect'],
   useExplicitLengthCheck: 'unicorn/explicit-length-check',
+  useExplicitReturnType: 'typescript/explicit-function-return-type',
+  useExplicitType: 'typescript/explicit-function-return-type',
   useExponentiationOperator: 'prefer-exponentiation-operator',
   useExportsLast: 'import/exports-last',
   useExportType: 'typescript/consistent-type-exports',
@@ -340,6 +421,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useHookAtTopLevel: 'react/rules-of-hooks',
   useIframeSandbox: 'react/iframe-missing-sandbox',
   useIframeTitle: 'jsx-a11y/iframe-has-title',
+  useImportExtensions: 'import/extensions',
   useImportsFirst: 'import/first',
   useImportType: 'typescript/consistent-type-imports',
   useIncludes: 'typescript/prefer-includes',
@@ -369,6 +451,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useParseIntRadix: 'radix',
   useReadonlyClassProperties: 'typescript/prefer-readonly',
   useReactFunctionComponentDefinition: 'react/function-component-definition',
+  useReactCompiler: REACT_COMPILER_RECOMMENDED_RULES,
   useReactFunctionComponents: 'react/prefer-function-component',
   useReduceTypeParameter: 'typescript/prefer-reduce-type-parameter',
   useRegexLiterals: 'prefer-regex-literals',
@@ -378,6 +461,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useSelfClosingElements: 'react/self-closing-comp',
   useShorthandAssign: 'operator-assignment',
   useShorthandFunctionType: 'typescript/prefer-function-type',
+  useSingleVarDeclarator: 'one-var',
   useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
   useSpread: 'prefer-spread',
   useSpreadOverApply: 'prefer-spread',
@@ -407,6 +491,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
 }
 
 const WARNED_UNMAPPED_RULES_BY_REPORTER = new WeakMap<Reporter, Set<string>>()
+const WARNED_PARTIAL_MAPPINGS_BY_REPORTER = new WeakMap<Reporter, Set<string>>()
 const WARNED_UNSUPPORTED_SEVERITIES_BY_REPORTER = new WeakMap<Reporter, Set<string>>()
 const OXLINT_SEVERITY_NORMALIZATION: Record<string, 'off' | 'warn' | 'error'> = {
   allow: 'off',
@@ -465,6 +550,43 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   if (biomeName === 'useMaxParams') {
     const max = options && isNonNegativeInteger(options.max) ? options.max : 4
     return [severity, { max }]
+  }
+
+  if (biomeName === 'noExcessiveLinesPerFile') {
+    return [
+      severity,
+      {
+        max: options && isNonNegativeInteger(options.maxLines) ? options.maxLines : 300,
+        skipBlankLines: options?.skipBlankLines === true,
+      },
+    ]
+  }
+
+  if (biomeName === 'noExcessiveLinesPerFunction') {
+    return [
+      severity,
+      {
+        max: options && isNonNegativeInteger(options.maxLines) ? options.maxLines : 50,
+        skipBlankLines: options?.skipBlankLines === true,
+        // Biome's `skipIifes` excludes IIFEs from the check; Oxlint's `IIFEs` includes them.
+        IIFEs: options?.skipIifes !== true,
+      },
+    ]
+  }
+
+  if (biomeName === 'useSingleVarDeclarator') {
+    // Biome always requires one declarator per statement; Oxlint's `one-var` needs the mode.
+    return [severity, 'never']
+  }
+
+  if (biomeName === 'useImportExtensions') {
+    if (options?.extensionMappings !== undefined || options?.forceJsExtensions !== undefined) {
+      reporter.loss(
+        'Biome rule useImportExtensions options "extensionMappings" and "forceJsExtensions" are not supported by Oxlint import/extensions; the rule requires an extension without rewriting it.',
+      )
+    }
+    // Biome only checks relative imports, which is what `ignorePackages` selects.
+    return [severity, 'ignorePackages']
   }
 
   if (biomeName === 'noTsIgnore') {
@@ -575,6 +697,45 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return typeof options.requireForObjectLiteral === 'boolean'
       ? [severity, mode, { requireReturnForObjectLiteral: options.requireForObjectLiteral }]
       : [severity, mode]
+  }
+
+  if (biomeName === 'noJsRestrictedProperties') {
+    const { entries } = options
+    if (!Array.isArray(entries) || !entries.every(isRecord)) {
+      return severity
+    }
+
+    // Oxlint's no-restricted-properties takes the restrictions as variadic arguments, and
+    // its entry fields carry the same names as Biome's.
+    return [severity, ...entries]
+  }
+
+  if (biomeName === 'useConsistentObjectDefinitions') {
+    const { syntax } = options
+    return syntax === 'shorthand'
+      ? [severity, 'always']
+      : syntax === 'explicit'
+        ? [severity, 'never']
+        : severity
+  }
+
+  if (biomeName === 'useExplicitReturnType') {
+    const oxlintOptions: Record<string, unknown> = {}
+
+    if (typeof options.allowExpressions === 'boolean') {
+      oxlintOptions.allowExpressions = options.allowExpressions
+    }
+    if (typeof options.allowIifes === 'boolean') {
+      oxlintOptions.allowIIFEs = options.allowIifes
+    }
+    if (
+      Array.isArray(options.allowedNames) &&
+      options.allowedNames.every((value) => typeof value === 'string')
+    ) {
+      oxlintOptions.allowedNames = options.allowedNames
+    }
+
+    return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
   }
 
   if (biomeName === 'useConsistentMethodSignatures') {
@@ -715,12 +876,33 @@ export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): str
 function mapBiomeRuleToOxlintRules(biomeName: string, reporter: Reporter): string[] {
   const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName]
   if (mapped) {
+    const partialMappingNote = PARTIAL_RULE_MAPPING_NOTES[biomeName]
+    if (partialMappingNote) {
+      warnPartialMappingOnce(biomeName, partialMappingNote, reporter)
+    }
+
     const ruleNames = Array.isArray(mapped) ? mapped : [mapped]
     return [...new Set(ruleNames.map((ruleName) => normalizeOxlintRuleName(ruleName)))]
   }
 
   warnUnmappedRuleOnce(biomeName, reporter)
   return []
+}
+
+function warnPartialMappingOnce(biomeName: string, note: string, reporter: Reporter): void {
+  let warnedRules = WARNED_PARTIAL_MAPPINGS_BY_REPORTER.get(reporter)
+
+  if (!warnedRules) {
+    warnedRules = new Set<string>()
+    WARNED_PARTIAL_MAPPINGS_BY_REPORTER.set(reporter, warnedRules)
+  }
+
+  if (warnedRules.has(biomeName)) {
+    return
+  }
+
+  warnedRules.add(biomeName)
+  reporter.loss(note)
 }
 
 function warnUnmappedRuleOnce(biomeName: string, reporter: Reporter): void {

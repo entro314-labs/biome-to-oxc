@@ -142,3 +142,62 @@ describe('generateOxfmtConfig', () => {
     })
   })
 })
+
+describe('generateOxfmtConfig for Biome formatter options with new Oxfmt equivalents', () => {
+  it('maps javascript.formatter.operatorLinebreak onto experimentalOperatorPosition', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      { javascript: { formatter: { operatorLinebreak: 'before' } } },
+      reporter,
+    )
+
+    expect(config.overrides?.[0]?.options).toMatchObject({
+      experimentalOperatorPosition: 'start',
+    })
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('maps Biome expand onto objectWrap and reports the mode Oxfmt lacks', () => {
+    const reporter = new CollectingReporter()
+
+    expect(generateOxfmtConfig({ formatter: { expand: 'auto' } }, reporter).objectWrap).toBe(
+      'preserve',
+    )
+    expect(generateOxfmtConfig({ formatter: { expand: 'never' } }, reporter).objectWrap).toBe(
+      'collapse',
+    )
+    expect(reporter.getLosses()).toEqual([])
+
+    const alwaysReporter = new CollectingReporter()
+    const config = generateOxfmtConfig({ formatter: { expand: 'always' } }, alwaysReporter)
+
+    expect(config.objectWrap).toBeUndefined()
+    expect(alwaysReporter.getLosses()).toHaveLength(1)
+    expect(alwaysReporter.getLosses()[0]).toContain('expand "always"')
+  })
+
+  it('maps trailingNewline and bracketSameLine, which Oxfmt supports directly', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      { formatter: { trailingNewline: false, bracketSameLine: true } },
+      reporter,
+    )
+
+    expect(config.insertFinalNewline).toBe(false)
+    expect(config.bracketSameLine).toBe(true)
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('still reports the Biome formatter options Oxfmt has no equivalent for', () => {
+    const reporter = new CollectingReporter()
+
+    generateOxfmtConfig({ formatter: { delimiterSpacing: true, useEditorconfig: true } }, reporter)
+
+    expect(reporter.getLosses()).toEqual([
+      'Biome formatter option "delimiterSpacing" has no Oxfmt equivalent and was not migrated.',
+      'Biome formatter option "useEditorconfig" has no Oxfmt equivalent and was not migrated.',
+    ])
+  })
+})

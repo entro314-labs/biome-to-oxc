@@ -76,6 +76,9 @@ const BiomeFormatterConfigSchema: z.ZodType<BiomeFormatterConfig> = IncludeField
   lineWidth: z.number().int().optional(),
   attributePosition: z.enum(['auto', 'multiline']).optional(),
   bracketSpacing: z.boolean().optional(),
+  bracketSameLine: z.boolean().optional(),
+  expand: z.enum(['auto', 'always', 'never']).optional(),
+  trailingNewline: z.boolean().optional(),
 }).passthrough()
 const BiomeJavaScriptFormatterSchema: z.ZodType<NonNullable<BiomeJavaScriptConfig['formatter']>> = z
   .object({
@@ -88,10 +91,13 @@ const BiomeJavaScriptFormatterSchema: z.ZodType<NonNullable<BiomeJavaScriptConfi
     arrowParentheses: z.enum(['always', 'asNeeded']).optional(),
     bracketSameLine: z.boolean().optional(),
     bracketSpacing: z.boolean().optional(),
+    expand: z.enum(['auto', 'always', 'never']).optional(),
     indentStyle: z.enum(['tab', 'space']).optional(),
     indentWidth: z.number().int().optional(),
     lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
     lineWidth: z.number().int().optional(),
+    operatorLinebreak: z.enum(['after', 'before']).optional(),
+    trailingNewline: z.boolean().optional(),
   })
   .passthrough()
 const BiomeJavaScriptConfigSchema: z.ZodType<BiomeJavaScriptConfig> = z
@@ -125,11 +131,13 @@ const BiomeJsonConfigSchema: z.ZodType<BiomeJsonConfig> = z
     formatter: z
       .object({
         enabled: z.boolean().optional(),
+        expand: z.enum(['auto', 'always', 'never']).optional(),
         indentStyle: z.enum(['tab', 'space']).optional(),
         indentWidth: z.number().int().optional(),
         lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
         lineWidth: z.number().int().optional(),
         trailingCommas: z.enum(['none', 'all']).optional(),
+        trailingNewline: z.boolean().optional(),
       })
       .passthrough()
       .optional(),
@@ -157,6 +165,7 @@ const BiomeCssConfigSchema: z.ZodType<BiomeCssConfig> = z
         lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
         lineWidth: z.number().int().optional(),
         quoteStyle: z.enum(['single', 'double']).optional(),
+        trailingNewline: z.boolean().optional(),
       })
       .passthrough()
       .optional(),

@@ -1,8 +1,9 @@
-import { generateOxfmtOverrides } from './oxfmt-overrides.js'
+import { generateOxfmtOverrides, mapBiomeExpandToObjectWrap } from './oxfmt-overrides.js'
 import type { BiomeConfig, BiomeFormatterConfig, OxfmtConfig, Reporter } from './types.js'
 
 const EXPLICIT_OXFMT_OPTION_KEYS = [
   'objectWrap',
+  'experimentalOperatorPosition',
   'insertFinalNewline',
   'embeddedLanguageFormatting',
   'htmlWhitespaceSensitivity',
@@ -31,6 +32,9 @@ const GLOBAL_FORMATTER_KEYS = new Set([
   'lineWidth',
   'attributePosition',
   'bracketSpacing',
+  'bracketSameLine',
+  'expand',
+  'trailingNewline',
   ...EXPLICIT_OXFMT_OPTION_KEYS,
   ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
 ])
@@ -44,10 +48,13 @@ const JAVASCRIPT_FORMATTER_KEYS = new Set([
   'arrowParentheses',
   'bracketSameLine',
   'bracketSpacing',
+  'expand',
   'indentStyle',
   'indentWidth',
   'lineEnding',
   'lineWidth',
+  'operatorLinebreak',
+  'trailingNewline',
   ...EXPLICIT_OXFMT_OPTION_KEYS,
   ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
 ])
@@ -231,11 +238,24 @@ function mapFormatterOptions(
     oxfmtConfig.bracketSpacing = bracketSpacing
   }
 
+  if (formatter?.bracketSameLine !== undefined) {
+    oxfmtConfig.bracketSameLine = formatter.bracketSameLine
+  }
+
   const attributePosition = formatter?.attributePosition
   if (attributePosition === 'multiline') {
     oxfmtConfig.singleAttributePerLine = true
   } else if (attributePosition === 'auto') {
     oxfmtConfig.singleAttributePerLine = false
+  }
+
+  const objectWrap = mapBiomeExpandToObjectWrap(formatter?.expand, 'formatter', reporter)
+  if (objectWrap) {
+    oxfmtConfig.objectWrap = objectWrap
+  }
+
+  if (formatter?.trailingNewline !== undefined) {
+    oxfmtConfig.insertFinalNewline = formatter.trailingNewline
   }
 
   if (formatter?.formatWithErrors) {

@@ -6,11 +6,40 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- `pnpm docs:sync` regenerates every inventory under `docs/` from the schemas shipped by the
+  installed `oxlint`, `oxfmt`, `oxlint-tsgolint`, and `@biomejs/biome` packages. Two of them are
+  new: `docs/biome-rules.tsv` and `docs/biome-formatter-options.tsv` record the source side of the
+  migration, which was previously untracked. `pnpm docs:check` fails when an inventory is stale and
+  runs as part of `pnpm check`.
+- A conformance test asserting every Biome rule name the mapper keys off still exists in Biome, so
+  a mapping cannot quietly stop matching after Biome renames or drops a rule.
+- Rule mappings for the Oxlint rules added in 1.66-1.79 and for Biome rules whose Oxlint
+  counterparts already existed: `useSingleVarDeclarator` → `one-var`, `useReactCompiler` → the
+  React Compiler rules Oxlint enables for ESLint's recommended preset, `noComponentHookFactories`,
+  `noReactPropAssignments`, `noBlankTarget`, `noExcessiveLinesPerFile`,
+  `noExcessiveLinesPerFunction`, `noExportsInTest`, `noGlobalDirnameFilename`, `noGlobalIsFinite`,
+  `noGlobalIsNan`, `noJsRestrictedProperties`, `noNegationInEqualityCheck`, `noUnsafeTypeAssertion`,
+  `noUselessContinue`, `noUselessElse`, `noUselessUndefinedInitialization`,
+  `useConsistentObjectDefinitions`, `useExplicitReturnType`, `useExplicitType`, and
+  `useImportExtensions`.
+- Formatter mappings for the Biome options that now have Oxfmt equivalents:
+  `javascript.formatter.operatorLinebreak` → `experimentalOperatorPosition` (new in Oxfmt 0.64),
+  `expand` → `objectWrap`, `trailingNewline` → `insertFinalNewline`, and `formatter.bracketSameLine`
+  → `bracketSameLine`. Each previously reported as an unmigratable option.
 - Reinstated the hidden `--dom` flag removed in 2.0.0. It applies the opinionated script preset
   (`check`, `check:fix`, `format`, `format:check`, `lint`, `lint:fix`, `lint:fix-unsafe`,
   `check:fix-suggestions`, `type-check`). The `type-check` script now runs `tsc --noEmit` instead of
   `tsgo --noEmit`: since TypeScript 7 the native compiler ships as the regular `typescript` package
   under the `tsc` binary, which resolves the missing-`tsgo` flaw that led to the flag's removal.
+
+### Changed
+
+- `noUselessContinue` replaces the `noUnnecessaryContinue` mapping as the current Biome name; the
+  old name is still accepted.
+- Mappings where the Oxlint rule covers only part of the Biome rule now report the narrowing as a
+  semantic loss instead of applying it silently.
+- `react/react-compiler` was removed from the Oxlint inventory: Oxlint 1.79 split it into 22
+  per-diagnostic rules.
 
 ## [2.0.0] - 2026-08-11
 

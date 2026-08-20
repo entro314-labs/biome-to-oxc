@@ -10,6 +10,7 @@ import type {
 
 const EXPLICIT_OXFMT_OPTION_KEYS = [
   'objectWrap',
+  'experimentalOperatorPosition',
   'insertFinalNewline',
   'embeddedLanguageFormatting',
   'htmlWhitespaceSensitivity',
@@ -31,11 +32,13 @@ const JSON_EXTENSIONS = ['json', 'jsonc', 'json5']
 const CSS_EXTENSIONS = ['css', 'scss', 'sass', 'less']
 const JSON_FORMATTER_KEYS = new Set([
   'enabled',
+  'expand',
   'indentStyle',
   'indentWidth',
   'lineEnding',
   'lineWidth',
   'trailingCommas',
+  'trailingNewline',
   ...EXPLICIT_OXFMT_OPTION_KEYS,
   ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
 ])
@@ -46,9 +49,47 @@ const CSS_FORMATTER_KEYS = new Set([
   'lineEnding',
   'lineWidth',
   'quoteStyle',
+  'trailingNewline',
   ...EXPLICIT_OXFMT_OPTION_KEYS,
   ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
 ])
+
+/**
+ * Biome's `expand` and Oxfmt's `objectWrap` agree on two of three modes: Biome's `auto`
+ * (expand when the literal already has a newline after `{`) is Oxfmt's `preserve`, and
+ * Biome's `never` is Oxfmt's `collapse`. Biome's `always` has no Oxfmt counterpart.
+ */
+export function mapBiomeExpandToObjectWrap(
+  expand: unknown,
+  label: string,
+  reporter: Reporter,
+): 'preserve' | 'collapse' | undefined {
+  if (expand === 'auto') {
+    return 'preserve'
+  }
+  if (expand === 'never') {
+    return 'collapse'
+  }
+  if (expand === 'always') {
+    reporter.loss(
+      `Biome ${label}.expand "always" has no Oxfmt equivalent; Oxfmt's objectWrap only offers "preserve" and "collapse", so objects and arrays that fit on one line will not be forced to expand.`,
+    )
+  }
+  return undefined
+}
+
+/** Biome places the operator after or before the break; Oxfmt names the same two positions. */
+export function mapBiomeOperatorLinebreakToOxfmt(
+  operatorLinebreak: unknown,
+): 'start' | 'end' | undefined {
+  if (operatorLinebreak === 'after') {
+    return 'end'
+  }
+  if (operatorLinebreak === 'before') {
+    return 'start'
+  }
+  return undefined
+}
 
 export function generateOxfmtOverrides(
   biomeOverrides: BiomeOverride[] | undefined,
@@ -192,8 +233,21 @@ function mapBaseFormatterOptions(
     options.bracketSpacing = formatter.bracketSpacing
   }
 
+  if (formatter.bracketSameLine !== undefined) {
+    options.bracketSameLine = formatter.bracketSameLine
+  }
+
   if (formatter.attributePosition !== undefined) {
     options.singleAttributePerLine = formatter.attributePosition === 'multiline'
+  }
+
+  const objectWrap = mapBiomeExpandToObjectWrap(formatter.expand, 'formatter', reporter)
+  if (objectWrap) {
+    options.objectWrap = objectWrap
+  }
+
+  if (formatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = formatter.trailingNewline
   }
 
   if (formatter.formatWithErrors) {
@@ -268,6 +322,28 @@ function mapJavaScriptFormatterOptions(
     options.bracketSameLine = jsFormatter.bracketSameLine
   }
 
+  if (jsFormatter.attributePosition !== undefined) {
+    options.singleAttributePerLine = jsFormatter.attributePosition === 'multiline'
+  }
+
+  const objectWrap = mapBiomeExpandToObjectWrap(
+    jsFormatter.expand,
+    'javascript.formatter',
+    reporter,
+  )
+  if (objectWrap) {
+    options.objectWrap = objectWrap
+  }
+
+  const operatorPosition = mapBiomeOperatorLinebreakToOxfmt(jsFormatter.operatorLinebreak)
+  if (operatorPosition) {
+    options.experimentalOperatorPosition = operatorPosition
+  }
+
+  if (jsFormatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = jsFormatter.trailingNewline
+  }
+
   applyExplicitFormatterOptionPassThrough([jsFormatter], options, reporter)
 
   return options
@@ -305,6 +381,15 @@ function mapJsonFormatterOptions(
     options.trailingComma = jsonFormatter.trailingCommas === 'none' ? 'none' : 'all'
   }
 
+  const objectWrap = mapBiomeExpandToObjectWrap(jsonFormatter.expand, 'json.formatter', reporter)
+  if (objectWrap) {
+    options.objectWrap = objectWrap
+  }
+
+  if (jsonFormatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = jsonFormatter.trailingNewline
+  }
+
   applyExplicitFormatterOptionPassThrough([jsonFormatter], options, reporter)
 
   return options
@@ -340,6 +425,10 @@ function mapCssFormatterOptions(
 
   if (cssFormatter.quoteStyle !== undefined) {
     options.singleQuote = cssFormatter.quoteStyle === 'single'
+  }
+
+  if (cssFormatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = cssFormatter.trailingNewline
   }
 
   applyExplicitFormatterOptionPassThrough([cssFormatter], options, reporter)
