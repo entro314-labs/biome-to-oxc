@@ -25,6 +25,9 @@
     "coverage",
     "pnpm-lock.yaml",
     "package-lock.json",
+    // Markdown is hand-written prose (and CHANGELOG.md sections are emitted by the
+    // release step); formatting it only produces churn and blocks `pnpm check`.
+    "**/*.md",
   ],
 
   "sortImports": {
@@ -44,15 +47,4 @@
   },
 
   "sortPackageJson": true,
-
-  "overrides": [
-    {
-      // Markdown docs - don't reformat prose
-      "files": ["**/*.md"],
-      "options": {
-        "proseWrap": "preserve",
-        "printWidth": 120,
-      },
-    },
-  ],
 }
