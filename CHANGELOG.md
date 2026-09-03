@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-09-03
+
+### Added
+
+- `useArrayFind`, `useIncludes` and `useStringStartsEndsWith` now migrate to `unicorn/prefer-array-find`, `unicorn/prefer-includes` and `unicorn/prefer-string-starts-ends-with` when the migration does not enable type-aware linting. Their only Oxlint counterpart was a tsgolint rule that never runs without `--type-aware`, so the default migration dropped those diagnostics. The fallback replaces the type-aware rule instead of joining it, so enabling the type-aware profile later never double-reports a line. `unicorn/prefer-string-starts-ends-with` covers only the anchored-regex form of what Biome flags, so the remainder is reported as a semantic loss. Overrides use the same substitution as the top-level config. ([7e03794](https://github.com/entro314-labs/biome-to-oxc/commit/7e03794))
+- Biome's `assist` section is migrated instead of being dropped as an unrecognised top-level field. Actions the config names explicitly map onto the Oxfmt options that implement them: `assist.actions.source.organizeImports` → `sortImports` (with `sortBareImports` → `sortImports.sortSideEffects`), and `useSortedPackageJson` → `sortPackageJson`, which also lifts the pin that otherwise stops Oxfmt sorting a `package.json`. Every other source action, `assist.includes`, `organizeImports`' `groups` and `identifierOrder`, actions enabled only through a preset, and per-override `assist` are reported as semantic losses. Migrating either action now warns that Oxfmt's first run reorders once, since Biome and Oxfmt sort imports and `package.json` keys differently, and a config that never settles `organizeImports` warns that Biome sorted imports through its recommended assist set while Oxfmt's `sortImports` defaults to off. ([0095ee1](https://github.com/entro314-labs/biome-to-oxc/commit/0095ee1), [372d0e1](https://github.com/entro314-labs/biome-to-oxc/commit/372d0e1))
+- Mappings for three Biome rules whose Oxlint counterparts already existed: `noJsxPropsBind` → `react-perf/jsx-no-new-function-as-prop`, `useControlLabel` → `jsx-a11y/control-has-associated-label`, and `useStaticResponseMethods` → `unicorn/prefer-response-static-json`. The first two report what the Biome rule reports; `useStaticResponseMethods` reports a semantic loss, because the Oxlint rule does not cover the `new Response(null, { status, headers })` form Biome rewrites to `Response.redirect()`. ([08ccf92](https://github.com/entro314-labs/biome-to-oxc/commit/08ccf92))
+- `useReactCompiler`'s `compilationMode` is reported as a semantic loss when set to `annotation` or `all`. Oxlint exposes no React Compiler configuration and runs it with fixed options equivalent to Biome's default `infer`, so those modes change which functions are analysed. The rules still migrate; only the option is dropped. ([5305b17](https://github.com/entro314-labs/biome-to-oxc/commit/5305b17))
+### Changed
+
+- `useReactCompiler` now maps to all 22 React Compiler rules Oxlint implements, instead of the 12 that ESLint's recommended presets enable. Biome runs the whole compiler and reports every bailout, so the shorter list lost diagnostics the source config produced; `react/void-use-memo` is now emitted too. The mapping is no longer reported as a semantic loss. ([94d35b6](https://github.com/entro314-labs/biome-to-oxc/commit/94d35b6))
+
 ## [3.2.0] - 2026-09-03
 
 ### Added
@@ -354,7 +366,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.3.0...HEAD
+[3.3.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.0.0...v3.0.1
