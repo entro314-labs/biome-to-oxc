@@ -71,7 +71,10 @@ export function generateOxlintConfig(
         sourceRulesConverted: new Set<string>(),
         sourceRulesSkipped: new Set<string>(),
       }
-    : extractRulesFromBiomeConfig(biomeConfig.linter?.rules ?? {}, reporter, true)
+    : extractRulesFromBiomeConfig(biomeConfig.linter?.rules ?? {}, reporter, {
+        applyImplicitRecommended: true,
+        typeAware: options.typeAware ?? false,
+      })
 
   if (Object.keys(categories).length > 0) {
     oxlintConfig.categories = categories

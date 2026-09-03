@@ -171,7 +171,9 @@ async function runMigration(
       collectDisabledOxfmtOverridePatterns(biomeConfig.overrides),
     )
 
-    const oxlintOverrideResult = transformOverridesToOxlint(biomeConfig.overrides, reporter)
+    const oxlintOverrideResult = transformOverridesToOxlint(biomeConfig.overrides, reporter, {
+      typeAware: typeAwareEnabled,
+    })
     if (oxlintOverrideResult.overrides.length > 0) {
       oxlintConfig.overrides = oxlintOverrideResult.overrides
     }
