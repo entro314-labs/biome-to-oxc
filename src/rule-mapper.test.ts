@@ -739,8 +739,35 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
       'react/immutability': 'error',
       'react/no-unstable-nested-components': 'warn',
       'typescript/explicit-function-return-type': 'warn',
+      'unicorn/prefer-response-static-json': 'error',
     })
-    expect(reporter.getLosses()).toHaveLength(3)
+    expect(reporter.getLosses()).toHaveLength(4)
+  })
+
+  it('maps the Biome rules whose Oxlint counterparts were verified against both binaries', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      performance: {
+        noJsxPropsBind: 'error',
+      },
+      nursery: {
+        useControlLabel: 'warn',
+      },
+    }
+
+    const { rules, sourceRulesConverted, sourceRulesSkipped } = extractRulesFromBiomeConfig(
+      linterRules,
+      reporter,
+    )
+
+    expect(rules).toMatchObject({
+      'react-perf/jsx-no-new-function-as-prop': 'error',
+      'jsx-a11y/control-has-associated-label': 'warn',
+    })
+    expect(sourceRulesConverted).toEqual(new Set(['noJsxPropsBind', 'useControlLabel']))
+    expect(sourceRulesSkipped).toEqual(new Set())
+    // Both Oxlint rules report exactly what the Biome rule reports, so neither is a narrowing.
+    expect(reporter.getLosses()).toEqual([])
   })
 
   it('translates the options of the newly mapped rules', () => {
