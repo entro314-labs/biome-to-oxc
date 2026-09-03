@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-03
+
 ### Added
 
 - `useArrayFind`, `useIncludes` and `useStringStartsEndsWith` now fall back to a non-type-aware
@@ -339,6 +341,11 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.0.1...v3.1.0
+[3.0.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.0.0...v3.0.1
+[3.0.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v2.0.0...v3.0.0
+[2.0.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v0.6.0...v2.0.0
 [0.6.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v0.3.0...v0.6.0
 [0.3.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v0.1.0...v0.2.0
