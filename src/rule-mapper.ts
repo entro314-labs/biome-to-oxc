@@ -78,7 +78,7 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
   useExplicitType:
     'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
   useStaticResponseMethods:
-    'Biome rule useStaticResponseMethods was mapped to unicorn/prefer-response-static-json, which reports `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers })` forms Biome rewrites to Response.redirect() and Response.error().',
+    'Biome rule useStaticResponseMethods was mapped to unicorn/prefer-response-static-json, which reports `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers: { Location } })` form Biome rewrites to Response.redirect().',
 }
 
 /**

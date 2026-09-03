@@ -2,6 +2,7 @@ import { generateOxfmtOverrides, mapBiomeExpandToObjectWrap } from './oxfmt-over
 import type {
   BiomeAssistAction,
   BiomeAssistConfig,
+  BiomeAssistSource,
   BiomeConfig,
   BiomeFormatterConfig,
   OxfmtConfig,
@@ -293,24 +294,20 @@ function mapAssistActions(
   oxfmtConfig: OxfmtConfig,
   reporter: Reporter,
 ): void {
-  if (!assist) {
-    return
-  }
-
-  if (assist.includes && assist.includes.length > 0) {
+  if (assist?.includes && assist.includes.length > 0) {
     reporter.loss(
       `Biome assist.includes (${assist.includes.join(', ')}) cannot be represented in an Oxfmt config; Oxfmt applies its sorting options to every file it formats.`,
     )
   }
 
   // Assist is on by default, so only an explicit `false` disables the actions below.
-  if (assist.enabled === false) {
+  if (assist?.enabled === false) {
     return
   }
 
-  const source = assist.actions?.source
+  const source = assist?.actions?.source
 
-  if (assist.actions?.recommended || source?.recommended || source?.preset) {
+  if (assist?.actions?.recommended || source?.recommended || source?.preset) {
     reporter.loss(
       'Biome assist actions were enabled through a preset rather than named individually; only the actions the config names explicitly were migrated to Oxfmt.',
     )
@@ -336,11 +333,46 @@ function mapAssistActions(
 
     if (action === 'useSortedPackageJson') {
       oxfmtConfig.sortPackageJson = true
+      // Both tools keep package.json sorted, but not into the same order; a first Oxfmt run
+      // will reorder keys once. Verified by running both binaries over the same manifest.
+      reporter.warn(
+        "Biome assist action useSortedPackageJson became Oxfmt's sortPackageJson; the two use different key orders, so the first Oxfmt run will reorder package.json once.",
+      )
       continue
     }
 
     oxfmtConfig.sortImports = mapOrganizeImportsOptions(value, reporter)
+    reporter.warn(
+      "Biome assist action organizeImports became Oxfmt's sortImports; the two group and order imports differently, so the first Oxfmt run will reorder imports once.",
+    )
   }
+
+  warnAboutDefaultOrganizeImports(source, oxfmtConfig, reporter)
+}
+
+/**
+ * Biome runs `organizeImports` through its recommended assist set even when the config never
+ * mentions it, so `biome check` sorts imports in essentially every project. Oxfmt's
+ * `sortImports` defaults to off and deriving it from that default would start rewriting
+ * imports in projects that never asked for it, so the difference is reported instead.
+ *
+ * Reported as a warning rather than a loss because it applies to nearly every migration, the
+ * way the linter's category-preset approximation does.
+ */
+function warnAboutDefaultOrganizeImports(
+  source: BiomeAssistSource | undefined,
+  oxfmtConfig: OxfmtConfig,
+  reporter: Reporter,
+): void {
+  const organizeImports = source?.organizeImports
+
+  if (oxfmtConfig.sortImports !== undefined || organizeImports !== undefined) {
+    return
+  }
+
+  reporter.warn(
+    'Biome sorts imports by default through its recommended assist set. Oxfmt does not sort imports unless asked, so the generated config leaves them alone; set "sortImports" in the Oxfmt config to keep sorting them.',
+  )
 }
 
 function readAssistActionLevel(

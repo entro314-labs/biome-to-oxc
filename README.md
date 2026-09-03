@@ -323,6 +323,11 @@ Biome's `organizeImports` `groups` are matcher predicates (`:NODE:`, source glob
 are a fixed set of group names, so custom group ordering is reported as a loss rather than guessed
 at. Per-override `assist` is not migrated either, and is likewise reported.
 
+Biome and Oxfmt sort imports and `package.json` keys into different orders, so the first Oxfmt run
+after migrating either action reorders once; the migration warns about it. And because Biome sorts
+imports by default through its recommended assist set, a config that never settles
+`organizeImports` also gets a warning: Oxfmt leaves imports alone unless `sortImports` is set.
+
 ## After Migration
 
 1. **Review generated configs**
