@@ -65,7 +65,7 @@
     "oxlint": "^1.81.0",
     "oxlint-tsgolint": "^7.0.2001",
     "publint": "^0.3.24",
-    "tsdown": "^0.22.14",
+    "tsdown": "rc",
     "typescript": "next",
     "vitest": "^4.1.11"
   },
