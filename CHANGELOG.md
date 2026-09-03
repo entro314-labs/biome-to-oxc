@@ -14,6 +14,13 @@ All notable changes to this project will be documented in this file.
   `organizeImports`' `groups` and `identifierOrder`, actions enabled through a preset rather than
   named, and per-override `assist` are reported as semantic losses. `assist` no longer produces the
   blanket "top-level field has no Oxc equivalent" loss.
+- Migrating `organizeImports` or `useSortedPackageJson` now warns that Oxfmt's first run reorders
+  once, because Biome and Oxfmt sort imports and `package.json` keys into different orders — both
+  verified by running the two binaries over the same fixture.
+- A migration whose Biome config never settles `organizeImports` now warns that Biome sorted
+  imports anyway through its recommended assist set, while Oxfmt's `sortImports` defaults to off.
+  It is a warning rather than a loss because it applies to nearly every migration, the same way
+  the linter's category-preset approximation does.
 - Rule mappings for three Biome rules whose Oxlint counterparts already existed:
   `noJsxPropsBind` → `react-perf/jsx-no-new-function-as-prop`, `useControlLabel` →
   `jsx-a11y/control-has-associated-label`, and `useStaticResponseMethods` →
@@ -21,9 +28,8 @@ All notable changes to this project will be documented in this file.
   same fixture. The first two report exactly what the Biome rule reports — `noJsxPropsBind`'s
   `.bind()` calls, arrow functions and function expressions in JSX props included — so neither is a
   narrowing. `useStaticResponseMethods` is: the Oxlint rule reports
-  `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers })` forms
-  Biome rewrites to `Response.redirect()` and `Response.error()`, so the mapping reports that as a
-  semantic loss.
+  `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers: { Location } })`
+  form Biome rewrites to `Response.redirect()`, so the mapping reports that as a semantic loss.
 - Biome `useReactCompiler`'s `compilationMode` option is now reported as a semantic loss when it is
   set to `annotation` or `all`. Oxlint exposes no React Compiler configuration and runs the
   compiler with fixed options equivalent to Biome's default `infer`, so the migrated rules analyse

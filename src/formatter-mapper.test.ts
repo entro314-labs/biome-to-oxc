@@ -62,6 +62,34 @@ describe('generateOxfmtConfig', () => {
     expect(config.sortImports).toEqual({})
     expect(config.sortPackageJson).toBe(true)
     expect(reporter.getLosses()).toEqual([])
+    // Both tools sort, but not into the same order, so the first Oxfmt run reorders once.
+    const warnings = reporter.getWarnings().join('\n')
+    expect(warnings).toContain('different key orders')
+    expect(warnings).toContain('group and order imports differently')
+  })
+
+  it('warns that Biome sorted imports by default when no assist config enables it', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig({}, reporter)
+
+    expect(config.sortImports).toBeUndefined()
+    expect(reporter.getWarnings().join('\n')).toContain('Biome sorts imports by default')
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('does not warn about default import sorting when the config settles the question', () => {
+    for (const assist of [
+      { enabled: false },
+      { actions: { source: { organizeImports: 'off' as const } } },
+      { actions: { source: { organizeImports: 'on' as const } } },
+    ]) {
+      const reporter = new CollectingReporter()
+
+      generateOxfmtConfig({ assist }, reporter)
+
+      expect(reporter.getWarnings().join('\n')).not.toContain('Biome sorts imports by default')
+    }
   })
 
   it('maps organizeImports sortBareImports onto Oxfmt sortSideEffects', () => {
