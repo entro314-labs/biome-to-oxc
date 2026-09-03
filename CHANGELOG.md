@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Rule mappings for three Biome rules whose Oxlint counterparts already existed:
+  `noJsxPropsBind` → `react-perf/jsx-no-new-function-as-prop`, `useControlLabel` →
+  `jsx-a11y/control-has-associated-label`, and `useStaticResponseMethods` →
+  `unicorn/prefer-response-static-json`. Each pair was verified by running both binaries over the
+  same fixture. The first two report exactly what the Biome rule reports — `noJsxPropsBind`'s
+  `.bind()` calls, arrow functions and function expressions in JSX props included — so neither is a
+  narrowing. `useStaticResponseMethods` is: the Oxlint rule reports
+  `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers })` forms
+  Biome rewrites to `Response.redirect()` and `Response.error()`, so the mapping reports that as a
+  semantic loss.
 - Biome `useReactCompiler`'s `compilationMode` option is now reported as a semantic loss when it is
   set to `annotation` or `all`. Oxlint exposes no React Compiler configuration and runs the
   compiler with fixed options equivalent to Biome's default `infer`, so the migrated rules analyse

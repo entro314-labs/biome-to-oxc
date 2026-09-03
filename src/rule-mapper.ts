@@ -77,6 +77,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noReactPropAssignments was mapped to the React Compiler rule react/immutability, which reports prop mutation alongside other mutations of values React treats as immutable.',
   useExplicitType:
     'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
+  useStaticResponseMethods:
+    'Biome rule useStaticResponseMethods was mapped to unicorn/prefer-response-static-json, which reports `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers })` forms Biome rewrites to Response.redirect() and Response.error().',
 }
 
 /**
@@ -238,6 +240,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noJsRestrictedProperties: 'no-restricted-properties',
   noJsxLiterals: 'react/jsx-no-literals',
   noJsxNamespace: 'react/no-namespace',
+  noJsxPropsBind: 'react-perf/jsx-no-new-function-as-prop',
   noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
   noLabelVar: 'no-label-var',
   noLoopFunc: 'no-loop-func',
@@ -398,6 +401,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useConsistentObjectDefinitions: 'object-shorthand',
   useConsistentTestIt: ['jest/consistent-test-it', 'vitest/consistent-test-it'],
   useConst: 'prefer-const',
+  useControlLabel: 'jsx-a11y/control-has-associated-label',
   useDateNow: 'unicorn/prefer-date-now',
   useDefaultParameterLast: 'default-param-last',
   useDefaultSwitchClause: 'default-case',
@@ -478,6 +482,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
   useSpread: 'prefer-spread',
   useSpreadOverApply: 'prefer-spread',
+  useStaticResponseMethods: 'unicorn/prefer-response-static-json',
   useStringStartsEndsWith: 'typescript/prefer-string-starts-ends-with',
   useSymbolDescription: 'symbol-description',
   useTemplate: 'prefer-template',
