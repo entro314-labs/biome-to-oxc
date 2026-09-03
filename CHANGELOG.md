@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `useReactCompiler` now maps to all 22 React Compiler rules Oxlint implements instead of only the
+  12 that ESLint's recommended presets enable. Biome runs the whole compiler and reports every
+  bailout, so the ten rules that are off by default upstream (`react/no-deriving-state-in-effects`
+  in `perf`, `react/invariant`, `react/rule-suppression`, `react/syntax` and `react/todo` in
+  `restriction`, and `react/capitalized-calls`, `react/exhaustive-effect-dependencies`,
+  `react/hooks` and `react/memo-dependencies` in `suspicious`) cover diagnostics the Biome rule did
+  produce; leaving them out lost coverage. `react/void-use-memo`, which Oxlint enables by default
+  and the previous mapping missed, is now emitted too. The mapping no longer reports a semantic
+  loss, because it is no longer a narrowing.
+
 ## [3.0.1] - 2026-08-20
 
 ### Fixed
