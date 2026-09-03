@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Biome's `assist` section is now migrated instead of being dropped whole. `assist.actions.source`
+  entries the config turns on explicitly map onto the Oxfmt options that implement them:
+  `organizeImports` → `sortImports` (with `options.sortBareImports` → `sortImports.sortSideEffects`)
+  and `useSortedPackageJson` → `sortPackageJson`, which lifts the pin that otherwise keeps Oxfmt
+  from sorting a `package.json` Biome left alone. Every other action, `assist.includes`,
+  `organizeImports`' `groups` and `identifierOrder`, actions enabled through a preset rather than
+  named, and per-override `assist` are reported as semantic losses. `assist` no longer produces the
+  blanket "top-level field has no Oxc equivalent" loss.
 - Rule mappings for three Biome rules whose Oxlint counterparts already existed:
   `noJsxPropsBind` → `react-perf/jsx-no-new-function-as-prop`, `useControlLabel` →
   `jsx-a11y/control-has-associated-label`, and `useStaticResponseMethods` →

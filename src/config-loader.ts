@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { formatZodIssues, pathExists, readJsonFile } from './fs-utils.js'
 import { normalizeBiomeConfig } from './schema-normalizer.js'
 import type {
+  BiomeAssistConfig,
   BiomeConfig,
   BiomeCssConfig,
   BiomeFormatterConfig,
@@ -30,6 +31,7 @@ const SUPPORTED_TOP_LEVEL_FIELDS = new Set([
   'vcs',
   'linter',
   'formatter',
+  'assist',
   'javascript',
   'json',
   'css',
@@ -182,6 +184,34 @@ const BiomeLinterConfigSchema: z.ZodType<BiomeLinterConfig> = IncludeFieldsSchem
   ignore: z.array(z.string()).optional(),
   rules: BiomeLinterRulesSchema.optional(),
 }).passthrough()
+const BiomeAssistActionSchema = z.union([
+  z.enum(['off', 'on']),
+  z
+    .object({
+      level: z.enum(['off', 'on']),
+      options: z.unknown().optional(),
+    })
+    .passthrough(),
+])
+const BiomeAssistConfigSchema: z.ZodType<BiomeAssistConfig> = z
+  .object({
+    enabled: z.boolean().optional(),
+    includes: z.array(z.string()).optional(),
+    actions: z
+      .object({
+        recommended: z.boolean().optional(),
+        source: z
+          .object({
+            recommended: z.boolean().optional(),
+            preset: z.enum(['recommended', 'all', 'none']).optional(),
+          })
+          .catchall(z.union([BiomeAssistActionSchema, z.boolean()]))
+          .optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough()
 const BiomeOverrideSchema: z.ZodType<BiomeOverride> = z
   .object({
     include: z.array(z.string()).optional(),
@@ -189,6 +219,7 @@ const BiomeOverrideSchema: z.ZodType<BiomeOverride> = z
     ignore: z.array(z.string()).optional(),
     linter: BiomeLinterConfigSchema.optional(),
     formatter: BiomeFormatterConfigSchema.optional(),
+    assist: BiomeAssistConfigSchema.optional(),
     javascript: BiomeJavaScriptConfigSchema.optional(),
     json: BiomeJsonConfigSchema.optional(),
     css: BiomeCssConfigSchema.optional(),
@@ -221,6 +252,7 @@ const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
       .optional(),
     linter: BiomeLinterConfigSchema.optional(),
     formatter: BiomeFormatterConfigSchema.optional(),
+    assist: BiomeAssistConfigSchema.optional(),
     javascript: BiomeJavaScriptConfigSchema.optional(),
     json: BiomeJsonConfigSchema.optional(),
     css: BiomeCssConfigSchema.optional(),

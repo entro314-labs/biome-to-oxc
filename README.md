@@ -37,7 +37,10 @@ Current capabilities:
 - Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
 - The set of formatted files: Oxfmt-only formats (YAML, TOML, Markdown) are excluded, and
-  `sortPackageJson` is pinned off, so migrating never reformats files Biome left alone
+  `sortPackageJson` is pinned off unless the Biome config turns the matching assist action on, so
+  migrating never reformats files Biome left alone
+- Assist actions: `organizeImports` and `useSortedPackageJson` become the Oxfmt options that
+  implement them, and every other `assist.actions.source` entry is reported as a loss
 
 ✅ **Refuses to Lose Behaviour Silently**
 
@@ -301,6 +304,25 @@ Oxlint's broader `restriction` category.
 | bracketSpacing   | bracketSpacing  | Direct mapping                                                |
 | bracketSameLine  | bracketSameLine | Direct mapping                                                |
 
+### Assist Actions
+
+Biome's assist actions are code actions rather than lint rules. Oxfmt implements two of them as
+formatter options; the rest have no Oxc equivalent and are reported as semantic losses.
+
+| Biome Assist Action    | Oxfmt Option      | Notes                                                            |
+| ---------------------- | ----------------- | ---------------------------------------------------------------- |
+| `organizeImports`      | `sortImports`     | `options.sortBareImports` → `sortImports.sortSideEffects`        |
+| `useSortedPackageJson` | `sortPackageJson` | Lifts the default pin that keeps Oxfmt from sorting package.json |
+
+Only actions the Biome config names explicitly are migrated. Biome enables `organizeImports`
+through its recommended set even when the config never mentions it, but both Oxfmt options default
+to off here, so deriving them from a preset would start rewriting imports in projects whose Biome
+config never asked for it. When a preset is what turned the actions on, the migration reports it.
+
+Biome's `organizeImports` `groups` are matcher predicates (`:NODE:`, source globs) while Oxfmt's
+are a fixed set of group names, so custom group ordering is reported as a loss rather than guessed
+at. Per-override `assist` is not migrated either, and is likewise reported.
+
 ## After Migration
 
 1. **Review generated configs**
@@ -380,6 +402,9 @@ npx oxlint --type-aware --type-check
   targeted typescript-eslint rules are currently implemented
 - CSS and JSON formatter overrides are mapped but may need manual review
 - Prettier plugin support is not available in Oxfmt
+- Assist actions are migrated only when the Biome config names them explicitly; actions enabled
+  through `recommended` or a preset are reported rather than derived
+- `organizeImports` custom `groups` and `identifierOrder` have no Oxfmt counterpart and are reported
 - Some Biome rules still require JS plugin fallback until native rule parity is available
 
 ## Migration Report

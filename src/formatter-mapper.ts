@@ -1,5 +1,12 @@
 import { generateOxfmtOverrides, mapBiomeExpandToObjectWrap } from './oxfmt-overrides.js'
-import type { BiomeConfig, BiomeFormatterConfig, OxfmtConfig, Reporter } from './types.js'
+import type {
+  BiomeAssistAction,
+  BiomeAssistConfig,
+  BiomeConfig,
+  BiomeFormatterConfig,
+  OxfmtConfig,
+  Reporter,
+} from './types.js'
 
 const EXPLICIT_OXFMT_OPTION_KEYS = [
   'objectWrap',
@@ -65,6 +72,15 @@ const JAVASCRIPT_FORMATTER_KEYS = new Set([
  */
 const OXFMT_ONLY_IGNORE_PATTERNS = ['**/*.{yaml,yml}', '**/*.toml', '**/*.{md,mdx}'] as const
 
+/**
+ * The two Biome assist actions Oxfmt implements. Every other `assist.actions.source` entry
+ * is a code action with no formatter equivalent, so enabling one is a migration loss.
+ */
+const OXFMT_BACKED_ASSIST_ACTIONS = new Set(['organizeImports', 'useSortedPackageJson'])
+
+/** Group-level switches that sit alongside the actions and are not actions themselves. */
+const ASSIST_GROUP_LEVEL_KEYS = new Set(['recommended', 'preset'])
+
 export interface OxfmtGenerationOptions {
   biomeIgnorePatterns?: string[]
 }
@@ -114,6 +130,7 @@ export function generateOxfmtConfig(
   mapFormatterOptions(formatter, oxfmtConfig, reporter)
   mapIgnorePatterns(biomeConfig, oxfmtConfig, options.biomeIgnorePatterns ?? [])
   mapDisabledLanguageFormatters(biomeConfig, oxfmtConfig)
+  mapAssistActions(biomeConfig.assist, oxfmtConfig, reporter)
   applyExplicitFormatterOptionPassThrough([formatter], oxfmtConfig, reporter)
   oxfmtConfig.sortPackageJson ??= false
 
@@ -261,6 +278,118 @@ function mapFormatterOptions(
   if (formatter?.formatWithErrors) {
     reporter.warn("Biome's formatWithErrors option is not supported in Oxfmt")
   }
+}
+
+/**
+ * Maps Biome's assist actions onto the Oxfmt options that implement them.
+ *
+ * Only actions the config turns on explicitly are migrated. Biome enables `organizeImports`
+ * through its recommended set even when the config never mentions it, but both Oxfmt options
+ * default to off here, so deriving them from a preset would start rewriting imports in
+ * projects whose Biome config never asked for it.
+ */
+function mapAssistActions(
+  assist: BiomeAssistConfig | undefined,
+  oxfmtConfig: OxfmtConfig,
+  reporter: Reporter,
+): void {
+  if (!assist) {
+    return
+  }
+
+  if (assist.includes && assist.includes.length > 0) {
+    reporter.loss(
+      `Biome assist.includes (${assist.includes.join(', ')}) cannot be represented in an Oxfmt config; Oxfmt applies its sorting options to every file it formats.`,
+    )
+  }
+
+  // Assist is on by default, so only an explicit `false` disables the actions below.
+  if (assist.enabled === false) {
+    return
+  }
+
+  const source = assist.actions?.source
+
+  if (assist.actions?.recommended || source?.recommended || source?.preset) {
+    reporter.loss(
+      'Biome assist actions were enabled through a preset rather than named individually; only the actions the config names explicitly were migrated to Oxfmt.',
+    )
+  }
+
+  for (const [action, value] of Object.entries(source ?? {})) {
+    if (ASSIST_GROUP_LEVEL_KEYS.has(action) || value === undefined) {
+      continue
+    }
+
+    const level = readAssistActionLevel(value)
+
+    if (level !== 'on') {
+      continue
+    }
+
+    if (!OXFMT_BACKED_ASSIST_ACTIONS.has(action)) {
+      reporter.loss(
+        `Biome assist action "${action}" has no Oxfmt equivalent and was not migrated; its code action is lost.`,
+      )
+      continue
+    }
+
+    if (action === 'useSortedPackageJson') {
+      oxfmtConfig.sortPackageJson = true
+      continue
+    }
+
+    oxfmtConfig.sortImports = mapOrganizeImportsOptions(value, reporter)
+  }
+}
+
+function readAssistActionLevel(
+  value: BiomeAssistAction | boolean | 'recommended' | 'all' | 'none',
+): 'on' | 'off' {
+  if (typeof value === 'boolean') {
+    return value ? 'on' : 'off'
+  }
+
+  if (typeof value === 'string') {
+    return value === 'on' ? 'on' : 'off'
+  }
+
+  return value.level === 'on' ? 'on' : 'off'
+}
+
+/**
+ * Translates the one `organizeImports` option Oxfmt has a counterpart for. Biome's `groups`
+ * are matcher predicates (`:NODE:`, source globs) while Oxfmt's are a fixed list of group
+ * names, so a faithful translation is not available and the ordering is reported as lost.
+ */
+function mapOrganizeImportsOptions(
+  value: BiomeAssistAction | boolean | 'recommended' | 'all' | 'none',
+  reporter: Reporter,
+): NonNullable<OxfmtConfig['sortImports']> {
+  const options =
+    typeof value === 'object' && value.options && typeof value.options === 'object'
+      ? (value.options as Record<string, unknown>)
+      : undefined
+
+  if (!options) {
+    return {}
+  }
+
+  if (options.groups) {
+    reporter.loss(
+      'Biome assist action organizeImports option "groups" was not migrated; Biome\'s groups are matcher predicates while Oxfmt\'s are a fixed set of group names, so Oxfmt will sort imports into its default groups.',
+    )
+  }
+
+  if (options.identifierOrder !== undefined && options.identifierOrder !== 'natural') {
+    reporter.loss(
+      `Biome assist action organizeImports option "identifierOrder": ${JSON.stringify(options.identifierOrder)} has no Oxfmt equivalent; Oxfmt sorts identifiers with its own order.`,
+    )
+  }
+
+  return typeof options.sortBareImports === 'boolean'
+    ? { sortSideEffects: options.sortBareImports }
+    : {}
 }
 
 function mapIgnorePatterns(
