@@ -1,6 +1,6 @@
 {
   "name": "biome-to-oxc",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Migrate from Biome to Oxc ecosystem (oxlint + oxfmt + oxlint-tsgolint)",
   "keywords": [
     "biome",
