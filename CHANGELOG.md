@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Biome `useReactCompiler`'s `compilationMode` option is now reported as a semantic loss when it is
+  set to `annotation` or `all`. Oxlint exposes no React Compiler configuration and runs the
+  compiler with fixed options equivalent to Biome's default `infer`, so the migrated rules analyse
+  a different set of functions: `annotation` narrowed Biome to functions carrying a `"use memo"`
+  directive, and `all` widened it past components and hooks. The rules still migrate; only the
+  option is dropped, and now visibly.
+
 ### Changed
 
 - Toolchain refreshed to Oxlint 1.81.0, Oxfmt 0.66.0 and Biome 2.5.11, and the inventories under
@@ -19,8 +28,8 @@ All notable changes to this project will be documented in this file.
   `restriction`, and `react/capitalized-calls`, `react/exhaustive-effect-dependencies`,
   `react/hooks` and `react/memo-dependencies` in `suspicious`) cover diagnostics the Biome rule did
   produce; leaving them out lost coverage. `react/void-use-memo`, which Oxlint enables by default
-  and the previous mapping missed, is now emitted too. The mapping no longer reports a semantic
-  loss, because it is no longer a narrowing.
+  and the previous mapping missed, is now emitted too. The rule set is no longer reported as a
+  semantic loss, because it is no longer a narrowing.
 
 ## [3.0.1] - 2026-08-20
 

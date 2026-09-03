@@ -616,6 +616,22 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     ]
   }
 
+  if (biomeName === 'useReactCompiler') {
+    // Oxlint exposes no React Compiler configuration; it runs the compiler with fixed options
+    // equivalent to Biome's default `compilationMode: "infer"`, so the other two modes change
+    // which functions are analysed and cannot be carried over.
+    if (options?.compilationMode === 'annotation') {
+      reporter.loss(
+        'Biome rule useReactCompiler option "compilationMode": "annotation" is not supported by Oxlint, which analyses every component and hook rather than only the functions carrying a "use memo" directive.',
+      )
+    } else if (options?.compilationMode === 'all') {
+      reporter.loss(
+        'Biome rule useReactCompiler option "compilationMode": "all" is not supported by Oxlint, which analyses components and hooks only; React Compiler diagnostics in other functions are no longer reported.',
+      )
+    }
+    return severity
+  }
+
   if (!options) {
     return severity
   }

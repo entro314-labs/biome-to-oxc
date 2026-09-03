@@ -680,11 +680,52 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
     expect(reporter.getLosses()).toEqual([])
   })
 
+  it.each([
+    ['annotation', 'analyses every component and hook'],
+    ['all', 'analyses components and hooks only'],
+  ])(
+    'reports useReactCompiler compilationMode %s as a semantic loss',
+    (compilationMode, expectedNote) => {
+      const reporter = new CollectingReporter()
+      const linterRules: BiomeLinterRules = {
+        nursery: {
+          useReactCompiler: { level: 'error', options: { compilationMode } },
+        },
+      }
+
+      const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+      // The option cannot be carried over, but the rules themselves still migrate.
+      expect(Object.keys(rules)).toHaveLength(22)
+      expect(rules['react/purity']).toBe('error')
+      expect(reporter.getLosses()).toHaveLength(1)
+      expect(reporter.getLosses()[0]).toContain(`"compilationMode": "${compilationMode}"`)
+      expect(reporter.getLosses()[0]).toContain(expectedNote)
+    },
+  )
+
+  it('reports no loss for useReactCompiler compilationMode infer, which Oxlint matches', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        useReactCompiler: { level: 'error', options: { compilationMode: 'infer' } },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(Object.keys(rules)).toHaveLength(22)
+    expect(reporter.getLosses()).toEqual([])
+  })
+
   it('reports partially covered mappings once per migration', () => {
     const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {
       correctness: {
         noReactPropAssignments: 'error',
+      },
+      suspicious: {
+        useStaticResponseMethods: 'error',
       },
       nursery: {
         noComponentHookFactories: 'warn',
