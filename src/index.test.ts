@@ -719,3 +719,39 @@ describe('migrate concurrency', () => {
     expect(await pathExists(join(dir, '.biome-to-oxc.lock'))).toBe(false)
   })
 })
+
+describe('migrate assist actions', () => {
+  it('writes the Oxfmt sorting options a Biome assist config asks for', async () => {
+    const { biomeConfigPath, dir } = await setupMigrationFixture()
+
+    await writeFile(
+      biomeConfigPath,
+      JSON.stringify({
+        assist: {
+          actions: {
+            source: {
+              organizeImports: { level: 'on', options: { sortBareImports: true } },
+              useSortedPackageJson: 'on',
+              useSortedKeys: 'on',
+            },
+          },
+        },
+      }),
+      'utf-8',
+    )
+
+    const report = await migrate({ configPath: biomeConfigPath, outputDir: dir })
+    const oxfmtConfig = JSON.parse(await readFile(join(dir, '.oxfmtrc.jsonc'), 'utf-8')) as {
+      sortImports?: unknown
+      sortPackageJson?: unknown
+    }
+
+    expect(report.errors).toEqual([])
+    expect(oxfmtConfig.sortImports).toEqual({ sortSideEffects: true })
+    expect(oxfmtConfig.sortPackageJson).toBe(true)
+    // `assist` is now a recognised section, so it must not be reported as a dropped field.
+    expect(report.losses.some((loss) => loss.includes('top-level field "assist"'))).toBe(false)
+    // `useSortedKeys` has no Oxfmt counterpart, so it must be.
+    expect(report.losses.some((loss) => loss.includes('"useSortedKeys"'))).toBe(true)
+  })
+})

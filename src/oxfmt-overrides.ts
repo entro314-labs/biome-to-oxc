@@ -110,6 +110,12 @@ export function generateOxfmtOverrides(
     // `ignore` and negated `includes` exceptions both exclude files from the override.
     const excludePatterns = [...new Set([...(override.ignore ?? []), ...(override.exclude ?? [])])]
     const excludeFiles = excludePatterns.length > 0 ? excludePatterns : undefined
+
+    if (override.assist) {
+      reporter.loss(
+        `Biome override for ${files.join(', ')} configures assist actions; per-override assist is not migrated, so only the top-level assist configuration reached the Oxfmt config.`,
+      )
+    }
     const baseOptions = mapBaseFormatterOptions(override.formatter, reporter)
     pushOverride(oxfmtOverrides, files, excludeFiles, baseOptions)
 

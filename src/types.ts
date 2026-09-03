@@ -6,6 +6,7 @@ export interface BiomeConfig {
   vcs?: BiomeVcsConfig
   linter?: BiomeLinterConfig
   formatter?: BiomeFormatterConfig
+  assist?: BiomeAssistConfig
   javascript?: BiomeJavaScriptConfig
   json?: BiomeJsonConfig
   css?: BiomeCssConfig
@@ -67,6 +68,33 @@ export type BiomeRuleSeverityValue = 'off' | 'on' | 'info' | 'warn' | 'error'
 export type BiomeRuleSeverity =
   | BiomeRuleSeverityValue
   | { level: BiomeRuleSeverityValue; options?: unknown }
+
+/**
+ * Biome's assist actions. They are code actions rather than lint rules, and the two Oxc
+ * surfaces split them: the sorting actions belong to Oxfmt, everything else has no home.
+ */
+export interface BiomeAssistConfig {
+  enabled?: boolean
+  includes?: string[]
+  actions?: BiomeAssistActions
+}
+
+export interface BiomeAssistActions {
+  recommended?: boolean
+  source?: BiomeAssistSource
+}
+
+export interface BiomeAssistSource {
+  recommended?: boolean
+  preset?: 'recommended' | 'all' | 'none'
+  [action: string]: BiomeAssistAction | boolean | 'recommended' | 'all' | 'none' | undefined
+}
+
+export type BiomeAssistActionLevel = 'off' | 'on'
+
+export type BiomeAssistAction =
+  | BiomeAssistActionLevel
+  | { level: BiomeAssistActionLevel; options?: unknown }
 
 export interface BiomeFormatterConfig {
   enabled?: boolean
@@ -168,6 +196,7 @@ export interface BiomeOverride {
   ignore?: string[]
   linter?: BiomeLinterConfig
   formatter?: BiomeFormatterConfig
+  assist?: BiomeAssistConfig
   javascript?: BiomeJavaScriptConfig
   json?: BiomeJsonConfig
   css?: BiomeCssConfig

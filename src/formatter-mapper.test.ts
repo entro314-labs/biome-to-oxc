@@ -42,6 +42,119 @@ describe('generateOxfmtConfig', () => {
     })
   })
 
+  it('maps the assist actions Oxfmt implements', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        assist: {
+          actions: {
+            source: {
+              organizeImports: 'on',
+              useSortedPackageJson: 'on',
+            },
+          },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.sortImports).toEqual({})
+    expect(config.sortPackageJson).toBe(true)
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('maps organizeImports sortBareImports onto Oxfmt sortSideEffects', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        assist: {
+          actions: {
+            source: {
+              organizeImports: {
+                level: 'on',
+                options: { sortBareImports: true, groups: [[':NODE:']] },
+              },
+            },
+          },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.sortImports).toEqual({ sortSideEffects: true })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('organizeImports option "groups"')
+  })
+
+  it('leaves the Oxfmt sorting options off for assist actions that are off or disabled', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        assist: {
+          enabled: false,
+          actions: { source: { organizeImports: 'on', useSortedPackageJson: 'on' } },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.sortImports).toBeUndefined()
+    expect(config.sortPackageJson).toBe(false)
+
+    const offReporter = new CollectingReporter()
+    const offConfig = generateOxfmtConfig(
+      { assist: { actions: { source: { organizeImports: 'off' } } } },
+      offReporter,
+    )
+
+    expect(offConfig.sortImports).toBeUndefined()
+    expect(offReporter.getLosses()).toEqual([])
+  })
+
+  it('reports assist actions Oxfmt cannot represent', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        assist: {
+          includes: ['src/**'],
+          actions: {
+            source: {
+              recommended: true,
+              useSortedKeys: 'on',
+              useSortedAttributes: 'on',
+            },
+          },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.sortImports).toBeUndefined()
+    const losses = reporter.getLosses().join('\n')
+    expect(losses).toContain('assist.includes')
+    expect(losses).toContain('enabled through a preset')
+    expect(losses).toContain('"useSortedKeys"')
+    expect(losses).toContain('"useSortedAttributes"')
+  })
+
+  it('lets an explicit Oxfmt sorting option win over the assist action it overlaps', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      {
+        assist: { actions: { source: { organizeImports: 'on' } } },
+        formatter: { sortImports: { order: 'desc' } },
+      },
+      reporter,
+    )
+
+    expect(config.sortImports).toEqual({ order: 'desc' })
+  })
+
   it('rejects objectWrap values that are invalid in the current Oxfmt schema', () => {
     const reporter = new CollectingReporter()
 
