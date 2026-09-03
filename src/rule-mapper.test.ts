@@ -640,7 +640,7 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
     expect(reporter.getWarnings()).toEqual([])
   })
 
-  it('replaces Biome useReactCompiler with the recommended React Compiler rule set', () => {
+  it('replaces Biome useReactCompiler with every React Compiler rule Oxlint implements', () => {
     const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {
       nursery: {
@@ -651,24 +651,33 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
     const { rules, sourceRulesConverted } = extractRulesFromBiomeConfig(linterRules, reporter)
 
     expect(rules).toEqual({
+      'react/capitalized-calls': 'error',
       'react/error-boundaries': 'error',
+      'react/exhaustive-effect-dependencies': 'error',
       'react/globals': 'error',
+      'react/hooks': 'error',
       'react/immutability': 'error',
       'react/incompatible-library': 'error',
+      'react/invariant': 'error',
+      'react/memo-dependencies': 'error',
+      'react/no-deriving-state-in-effects': 'error',
       'react/preserve-manual-memoization': 'error',
       'react/purity': 'error',
       'react/refs': 'error',
+      'react/rule-suppression': 'error',
       'react/set-state-in-effect': 'error',
       'react/set-state-in-render': 'error',
       'react/static-components': 'error',
+      'react/syntax': 'error',
+      'react/todo': 'error',
       'react/unsupported-syntax': 'error',
       'react/use-memo': 'error',
+      'react/void-use-memo': 'error',
     })
     expect(sourceRulesConverted).toEqual(new Set(['useReactCompiler']))
-    // The rules that are off by default upstream are deliberately left out, so the
-    // narrowing has to be reported rather than applied silently.
-    expect(reporter.getLosses()).toHaveLength(1)
-    expect(reporter.getLosses()[0]).toContain('useReactCompiler')
+    // Biome runs the whole compiler, so enabling every implemented rule is not a narrowing
+    // and must not be reported as one.
+    expect(reporter.getLosses()).toEqual([])
   })
 
   it('reports partially covered mappings once per migration', () => {

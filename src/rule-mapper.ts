@@ -30,28 +30,40 @@ const OXLINT_CATEGORIES = [
 type OxlintRuleMapping = string | readonly string[]
 
 /**
- * The React Compiler rules Oxlint activates for ESLint's `react-hooks/recommended` preset.
+ * Every React Compiler rule Oxlint implements.
  *
- * Oxlint 1.79 replaced the single `react/react-compiler` rule with 22 per-diagnostic rules;
- * Biome's `useReactCompiler` runs the compiler and reports every bailout it finds, so the
- * `recommended` slice is the closest equivalent. The remaining rules default to off upstream
- * and would fire on code Biome never flagged.
+ * Oxlint 1.79 replaced the single `react/react-compiler` rule with 22 per-diagnostic rules,
+ * spread across the `correctness`, `perf`, `restriction`, and `suspicious` categories. Biome's
+ * `useReactCompiler` runs the compiler and reports every bailout it finds, so the whole set is
+ * the equivalent: mapping only the rules Oxlint enables by default would drop diagnostics the
+ * Biome rule did produce. Oxlint does not implement `gating` or `memoized-effect-dependencies`,
+ * so there is nothing to enable for those two.
  *
  * @see https://oxc.rs/blog/2026-08-18-react-compiler-support
  */
-const REACT_COMPILER_RECOMMENDED_RULES = [
+const REACT_COMPILER_RULES = [
+  'react/capitalized-calls',
   'react/error-boundaries',
+  'react/exhaustive-effect-dependencies',
   'react/globals',
+  'react/hooks',
   'react/immutability',
   'react/incompatible-library',
+  'react/invariant',
+  'react/memo-dependencies',
+  'react/no-deriving-state-in-effects',
   'react/preserve-manual-memoization',
   'react/purity',
   'react/refs',
+  'react/rule-suppression',
   'react/set-state-in-effect',
   'react/set-state-in-render',
   'react/static-components',
+  'react/syntax',
+  'react/todo',
   'react/unsupported-syntax',
   'react/use-memo',
+  'react/void-use-memo',
 ] as const
 
 /**
@@ -65,7 +77,6 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noReactPropAssignments was mapped to the React Compiler rule react/immutability, which reports prop mutation alongside other mutations of values React treats as immutable.',
   useExplicitType:
     'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
-  useReactCompiler: `Biome rule useReactCompiler was mapped to Oxlint's React Compiler rules for ESLint's recommended preset (${REACT_COMPILER_RECOMMENDED_RULES.join(', ')}); the compiler rules that are off by default upstream were not enabled. See https://oxc.rs/blog/2026-08-18-react-compiler-support`,
 }
 
 /**
@@ -453,7 +464,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useParseIntRadix: 'radix',
   useReadonlyClassProperties: 'typescript/prefer-readonly',
   useReactFunctionComponentDefinition: 'react/function-component-definition',
-  useReactCompiler: REACT_COMPILER_RECOMMENDED_RULES,
+  useReactCompiler: REACT_COMPILER_RULES,
   useReactFunctionComponents: 'react/prefer-function-component',
   useReduceTypeParameter: 'typescript/prefer-reduce-type-parameter',
   useRegexLiterals: 'prefer-regex-literals',
