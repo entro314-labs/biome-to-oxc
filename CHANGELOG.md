@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-09-03
+
+### Added
+
+- `useArrayFind`, `useIncludes` and `useStringStartsEndsWith` now migrate to a non-type-aware Oxlint rule when the migration is not enabling type-aware linting: `unicorn/prefer-array-find`, `unicorn/prefer-includes` and `unicorn/prefer-string-starts-ends-with`. Their only Oxlint counterpart was previously a tsgolint rule that never runs without `--type-aware`, so the default migration dropped those diagnostics entirely. The fallback replaces the type-aware rule rather than joining it, so turning the type-aware profile on later never reports the same line twice. `unicorn/prefer-string-starts-ends-with` covers only the anchored-regex form of what Biome flags and reports the rest as a semantic loss. Overrides pick the same substitution as the top-level config. ([7e03794](https://github.com/entro314-labs/biome-to-oxc/commit/7e03794))
+- Biome's `assist` section is migrated instead of being dropped whole as an unrecognised top-level field. Actions the config names explicitly map onto the Oxfmt options that implement them: `assist.actions.source.organizeImports` → `sortImports` (with `sortBareImports` → `sortImports.sortSideEffects`) and `useSortedPackageJson` → `sortPackageJson`, which also lifts the pin that otherwise keeps Oxfmt from sorting a `package.json` Biome left alone. Every other source action, `assist.includes`, `organizeImports`' `groups` and `identifierOrder`, actions enabled only through a preset, and per-override `assist` are reported as semantic losses. Migrating either action warns that Oxfmt's first run reorders once, because Biome and Oxfmt sort imports and `package.json` keys into different orders; a config that never settles `organizeImports` warns that Biome sorted imports anyway through its recommended assist set while Oxfmt's `sortImports` defaults to off. ([0095ee1](https://github.com/entro314-labs/biome-to-oxc/commit/0095ee1), [372d0e1](https://github.com/entro314-labs/biome-to-oxc/commit/372d0e1))
+- Mappings for three Biome rules whose Oxlint counterparts already existed: `noJsxPropsBind` → `react-perf/jsx-no-new-function-as-prop`, `useControlLabel` → `jsx-a11y/control-has-associated-label`, and `useStaticResponseMethods` → `unicorn/prefer-response-static-json`. The first two report what the Biome rule reports. `useStaticResponseMethods` reports a semantic loss: the Oxlint rule covers `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers })` form Biome rewrites to `Response.redirect()`. ([08ccf92](https://github.com/entro314-labs/biome-to-oxc/commit/08ccf92))
+- `useReactCompiler`'s `compilationMode` is reported as a semantic loss when set to `annotation` or `all`. Oxlint exposes no React Compiler configuration and runs the compiler with fixed options equivalent to Biome's default `infer`, so those modes change which functions are analysed and cannot be carried over. The rules still migrate; only the option is dropped. ([5305b17](https://github.com/entro314-labs/biome-to-oxc/commit/5305b17))
+### Changed
+
+- `useReactCompiler` now maps to all 22 React Compiler rules Oxlint implements, instead of only the 12 that ESLint's recommended presets enable. Biome runs the whole compiler and reports every bailout, so the shorter list dropped diagnostics the source config did produce; `react/void-use-memo`, which Oxlint enables by default, is now emitted too. The mapping is no longer reported as a semantic loss. ([94d35b6](https://github.com/entro314-labs/biome-to-oxc/commit/94d35b6))
+
 ## [3.1.0] - 2026-09-03
 
 ### Added
@@ -341,7 +353,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v2.0.0...v3.0.0
