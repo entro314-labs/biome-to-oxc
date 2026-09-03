@@ -9,9 +9,15 @@ export interface OverrideTransformResult {
   sourceRulesSkipped: Set<string>
 }
 
+export interface OverrideTransformOptions {
+  /** Passed through so overrides pick the same rule mappings the top-level config did. */
+  typeAware?: boolean
+}
+
 export function transformOverridesToOxlint(
   biomeOverrides: BiomeOverride[] | undefined,
   reporter: Reporter,
+  options: OverrideTransformOptions = {},
 ): OverrideTransformResult {
   const oxlintOverrides: OxlintOverride[] = []
   const sourceRulesConverted = new Set<string>()
@@ -48,6 +54,7 @@ export function transformOverridesToOxlint(
       const { rules, categories, ...ruleStats } = extractRulesFromBiomeConfig(
         override.linter.rules,
         reporter,
+        { typeAware: options.typeAware ?? false },
       )
 
       for (const ruleName of ruleStats.sourceRulesConverted) {

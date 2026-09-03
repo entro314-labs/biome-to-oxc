@@ -82,6 +82,29 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
 }
 
 /**
+ * Biome rules whose only Oxlint counterpart is a type-aware rule, even though the Biome rule
+ * itself needs no type information. Without type-aware linting the type-aware rule never runs,
+ * so the migration would silently drop diagnostics the source config did produce. These
+ * non-type-aware Oxlint rules take its place whenever the migration is not enabling type-aware
+ * linting; they replace rather than accompany it, so switching the profile on later can never
+ * report the same line twice.
+ *
+ * Every pair was checked by running both binaries over the same fixture.
+ */
+const TYPE_AWARE_RULE_FALLBACKS: Record<string, string> = {
+  useArrayFind: 'unicorn/prefer-array-find',
+  useFind: 'unicorn/prefer-array-find',
+  useIncludes: 'unicorn/prefer-includes',
+  useStringStartsEndsWith: 'unicorn/prefer-string-starts-ends-with',
+}
+
+/** Fallbacks that cover less than the type-aware rule they stand in for. */
+const TYPE_AWARE_FALLBACK_NOTES: Record<string, string> = {
+  useStringStartsEndsWith:
+    'Biome rule useStringStartsEndsWith was mapped to unicorn/prefer-string-starts-ends-with because type-aware linting is off; it reports anchored RegExp#test() prefix checks but not the indexOf(), slice() and charAt() comparisons Biome also reports. Enabling type-aware linting maps it to typescript/prefer-string-starts-ends-with instead, which covers all four.',
+}
+
+/**
  * Biome rule names the mapper accepts that the currently supported Biome release does not
  * define. They are kept so configs written against other Biome versions still migrate, and
  * listed explicitly so the inventory check can tell them apart from a typo in a new mapping.
@@ -118,6 +141,10 @@ export function getMappedOxlintRuleNames(): string[] {
     for (const name of mapping) {
       names.add(name)
     }
+  }
+
+  for (const name of Object.values(TYPE_AWARE_RULE_FALLBACKS)) {
+    names.add(name)
   }
 
   return [...names]
@@ -910,11 +937,27 @@ export function mapBiomeRuleSeverity(
   return 'warn'
 }
 
+/** The rule's canonical mapping, before any non-type-aware fallback is substituted. */
 export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): string | null {
-  return mapBiomeRuleToOxlintRules(biomeName, reporter)[0] ?? null
+  return mapBiomeRuleToOxlintRules(biomeName, reporter, true)[0] ?? null
 }
 
-function mapBiomeRuleToOxlintRules(biomeName: string, reporter: Reporter): string[] {
+function mapBiomeRuleToOxlintRules(
+  biomeName: string,
+  reporter: Reporter,
+  typeAware: boolean,
+): string[] {
+  const fallback = typeAware ? undefined : TYPE_AWARE_RULE_FALLBACKS[biomeName]
+
+  if (fallback) {
+    const fallbackNote = TYPE_AWARE_FALLBACK_NOTES[biomeName]
+    if (fallbackNote) {
+      warnPartialMappingOnce(biomeName, fallbackNote, reporter)
+    }
+
+    return [normalizeOxlintRuleName(fallback)]
+  }
+
   const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName]
   if (mapped) {
     const partialMappingNote = PARTIAL_RULE_MAPPING_NOTES[biomeName]
@@ -1002,11 +1045,22 @@ export function mapBiomeCategoryToOxlint(biomeCategory: string): string | null {
   return BIOME_TO_OXLINT_CATEGORY_MAP[biomeCategory] || null
 }
 
+export interface RuleExtractionOptions {
+  /** Applies Biome's implicit `recommended` preset, which only the top-level rules carry. */
+  applyImplicitRecommended?: boolean
+  /**
+   * Whether the migration is enabling type-aware linting. When it is not, Biome rules whose
+   * only counterpart is a type-aware Oxlint rule fall back to a non-type-aware equivalent.
+   */
+  typeAware?: boolean
+}
+
 export function extractRulesFromBiomeConfig(
   linterRules: BiomeLinterRules | undefined,
   reporter: Reporter,
-  applyImplicitRecommended = false,
+  options: RuleExtractionOptions = {},
 ): RuleExtractionResult {
+  const { applyImplicitRecommended = false, typeAware = false } = options
   const rules: Record<string, OxlintRuleSeverity> = {}
   const categories: Record<string, 'off' | 'warn' | 'error'> = {}
   const sourceRulesConverted = new Set<string>()
@@ -1055,7 +1109,7 @@ export function extractRulesFromBiomeConfig(
           continue
         }
 
-        const oxlintRuleNames = mapBiomeRuleToOxlintRules(ruleName, reporter)
+        const oxlintRuleNames = mapBiomeRuleToOxlintRules(ruleName, reporter, typeAware)
         if (oxlintRuleNames.length > 0) {
           sourceRulesConverted.add(ruleName)
           const oxlintSeverity = mapBiomeRuleOptionsToOxlintSeverity(

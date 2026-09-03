@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- `useArrayFind`, `useIncludes` and `useStringStartsEndsWith` now fall back to a non-type-aware
+  Oxlint rule when the migration is not enabling type-aware linting. All three need no type
+  information in Biome, but their only Oxlint counterpart is a tsgolint rule that never runs
+  without `--type-aware`, so the default migration was dropping their diagnostics entirely:
+  `useArrayFind` → `unicorn/prefer-array-find`, `useIncludes` → `unicorn/prefer-includes`, and
+  `useStringStartsEndsWith` → `unicorn/prefer-string-starts-ends-with`. The fallback replaces the
+  type-aware rule rather than joining it, so switching the profile on later never reports a line
+  twice. The first two were verified to report exactly what the Biome rule reports; the third
+  covers only the anchored-regex form of the four Biome flags and reports that as a semantic loss.
+  Overrides pick the same substitution as the top-level config.
 - Biome's `assist` section is now migrated instead of being dropped whole. `assist.actions.source`
   entries the config turns on explicitly map onto the Oxfmt options that implement them:
   `organizeImports` → `sortImports` (with `options.sortBareImports` → `sortImports.sortSideEffects`)
