@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Toolchain refreshed to Oxlint 1.81.0, Oxfmt 0.66.0 and Biome 2.5.11, and the inventories under
+  `docs/` regenerated from their schemas. Oxlint 1.80/1.81 and Oxfmt 0.65/0.66 shipped no new rules
+  or configuration options, so `docs/oxlint-rules.tsv`, `docs/oxfmt-rules.tsv`,
+  `docs/tsgolint-rules.tsv` and `docs/oxlint-vs-tsgolint.tsv` are unchanged. Biome 2.5.11 added two
+  nursery rules — `noAstroSetHtmlDirective` (Astro templates) and `noUndeclaredCustomProperties`
+  (CSS) — neither of which Oxlint can lint, so both stay unmapped.
 - `useReactCompiler` now maps to all 22 React Compiler rules Oxlint implements instead of only the
   12 that ESLint's recommended presets enable. Biome runs the whole compiler and reports every
   bailout, so the ten rules that are off by default upstream (`react/no-deriving-state-in-effects`

@@ -10,6 +10,7 @@ noAriaHiddenOnFocusable	a11y
 noAriaUnsupportedElements	a11y
 noArrayIndexKey	suspicious
 noAssignInExpressions	suspicious
+noAstroSetHtmlDirective	nursery
 noAsyncPromiseExecutor	suspicious
 noAutofocus	a11y
 noAwaitInLoops	performance
@@ -255,6 +256,7 @@ noTopLevelLiterals	nursery
 noTsIgnore	suspicious
 noUnassignedVariables	suspicious
 noUndeclaredClasses	nursery
+noUndeclaredCustomProperties	nursery
 noUndeclaredDependencies	correctness
 noUndeclaredEnvVars	suspicious
 noUndeclaredVariables	correctness
