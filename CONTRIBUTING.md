@@ -24,7 +24,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ## Project Structure
 
-```
+```tree
 biome-to-oxc/
 ├── bin/
 │   └── biome-to-oxc.ts       # CLI entry point
