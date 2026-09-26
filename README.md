@@ -427,8 +427,9 @@ npx oxlint --type-aware --type-check
 - Oxfmt is in beta; review formatting changes before replacing the existing formatter
 - Overlapping `overrides` are migrated as-is. Biome and Oxfmt both merge matching overrides field
   by field with later entries winning, so the two agree; a conformance test pins this
-- Type-aware linting is stable as of `oxlint-tsgolint` v7 and requires TypeScript 7; 59 of the 61
-  targeted typescript-eslint rules are currently implemented
+- Type-aware linting is stable as of `oxlint-tsgolint` v7 and requires TypeScript 7; 60 of the 62
+  targeted typescript-eslint rules are currently implemented, and Oxlint 1.85 does not yet expose
+  `no-generated-empty-object-type`, so 59 can be enabled
 - CSS and JSON formatter overrides are mapped but may need manual review
 - Prettier plugin support is not available in Oxfmt
 - Assist actions are migrated only when the Biome config names them explicitly; actions enabled
