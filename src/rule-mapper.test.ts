@@ -856,3 +856,134 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
     expect(reporter.getLosses()[0]).toContain('forceJsExtensions')
   })
 })
+
+describe('rule-mapper coverage for rules added by Biome 2.5.12-2.5.14', () => {
+  it('maps the new Biome rules whose Oxlint counterparts were verified against both binaries', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        noReturnInFinally: 'error',
+        noUnmodifiedLoopCondition: 'error',
+        useConsistentFunctionStyle: 'warn',
+        useModernMathApis: 'warn',
+        useValidTestTitle: 'error',
+        useVueBaseImport: 'warn',
+      },
+    }
+
+    const { rules, sourceRulesSkipped } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toEqual({
+      'promise/no-return-in-finally': 'error',
+      'no-unmodified-loop-condition': 'error',
+      'func-style': 'warn',
+      'unicorn/prefer-modern-math-apis': 'warn',
+      'jest/valid-title': 'error',
+      'vitest/valid-title': 'error',
+      'vue/prefer-import-from-vue': 'warn',
+    })
+    expect(sourceRulesSkipped).toEqual(new Set())
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('exempts type-annotated variables when useConsistentFunctionStyle requires declarations', () => {
+    const reporter = new CollectingReporter()
+
+    const declaration = extractRulesFromBiomeConfig(
+      {
+        nursery: {
+          useConsistentFunctionStyle: { level: 'error', options: { style: 'declaration' } },
+        },
+      },
+      reporter,
+    )
+    const declarationWithArrows = extractRulesFromBiomeConfig(
+      {
+        nursery: {
+          useConsistentFunctionStyle: {
+            level: 'error',
+            options: { style: 'declaration', allowArrowFunctions: true },
+          },
+        },
+      },
+      reporter,
+    )
+    const expression = extractRulesFromBiomeConfig(
+      {
+        nursery: {
+          useConsistentFunctionStyle: { level: 'error', options: { style: 'expression' } },
+        },
+      },
+      reporter,
+    )
+
+    expect(declaration.rules['func-style']).toEqual([
+      'error',
+      'declaration',
+      { allowArrowFunctions: false, allowTypeAnnotation: true },
+    ])
+    expect(declarationWithArrows.rules['func-style']).toEqual([
+      'error',
+      'declaration',
+      { allowArrowFunctions: true, allowTypeAnnotation: true },
+    ])
+    expect(expression.rules['func-style']).toBe('error')
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('migrates useValidTestTitle disallowedWords and reports what Oxlint then stops checking', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        useValidTestTitle: { level: 'error', options: { disallowedWords: ['todo'] } },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+
+    expect(rules).toEqual({
+      'jest/valid-title': ['error', { disallowedWords: ['todo'] }],
+      'vitest/valid-title': ['error', { disallowedWords: ['todo'] }],
+    })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('disallowedWords')
+  })
+
+  it('maps noUnsafeIframeSandbox with a note on what the Oxlint rule reports differently', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { nursery: { noUnsafeIframeSandbox: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'react/iframe-missing-sandbox': 'error' })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('allow-same-origin')
+  })
+})
+
+describe('rule-mapper coverage for Biome rules with existing partial Oxlint counterparts', () => {
+  it('maps noInlineStyles onto forbid-dom-props for the style prop and reports the narrowing', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig({ nursery: { noInlineStyles: 'warn' } }, reporter)
+
+    expect(rules).toEqual({ 'react/forbid-dom-props': ['warn', { forbid: ['style'] }] })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('React.createElement()')
+  })
+
+  it('maps noUnresolvedImports onto import/named and reports the narrowing', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { correctness: { noUnresolvedImports: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'import/named': 'error' })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('skips TypeScript files')
+  })
+})

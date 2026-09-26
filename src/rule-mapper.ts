@@ -73,8 +73,14 @@ const REACT_COMPILER_RULES = [
 const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
   noComponentHookFactories:
     'Biome rule noComponentHookFactories was mapped to react/no-unstable-nested-components, which reports nested component definitions but not nested custom hook definitions.',
+  noInlineStyles:
+    'Biome rule noInlineStyles was mapped to react/forbid-dom-props, which reports the `style` prop on JSX DOM elements but not `style` passed through React.createElement() or written in HTML, Vue, Svelte or Astro templates.',
   noReactPropAssignments:
     'Biome rule noReactPropAssignments was mapped to the React Compiler rule react/immutability, which reports prop mutation alongside other mutations of values React treats as immutable.',
+  noUnresolvedImports:
+    'Biome rule noUnresolvedImports was mapped to import/named, which reports named imports a JavaScript module does not export but skips TypeScript files entirely and does not report import paths that cannot be resolved.',
+  noUnsafeIframeSandbox:
+    'Biome rule noUnsafeIframeSandbox was mapped to react/iframe-missing-sandbox, which reports `allow-scripts` combined with `allow-same-origin` only when the sandbox value is a plain string attribute, not a `{"..."}` or template-literal expression; it also reports iframes with no or an invalid sandbox attribute, which Biome leaves to useIframeSandbox.',
   useExplicitType:
     'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
   useStaticResponseMethods:
@@ -253,6 +259,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noImportCycles: 'import/no-cycle',
   noImplicitCoercions: 'no-implicit-coercion',
   noInnerDeclarations: 'no-inner-declarations',
+  noInlineStyles: 'react/forbid-dom-props',
   noImplicitBoolean: 'no-implicit-coercion',
   noImpliedEval: 'no-implied-eval',
   noIncrementDecrement: 'no-plusplus',
@@ -321,6 +328,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noRestrictedImports: 'no-restricted-imports',
   noRestrictedTypes: 'typescript/no-restricted-types',
   noReturnAssign: 'no-return-assign',
+  noReturnInFinally: 'promise/no-return-in-finally',
   noScriptUrl: 'no-script-url',
   noSelfCompare: 'no-self-compare',
   noSelfAssign: 'no-self-assign',
@@ -345,13 +353,16 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnusedFunctionParameters: 'no-unused-vars',
   noUnusedImports: 'no-unused-vars',
   noUnnecessaryContinue: 'no-continue',
+  noUnmodifiedLoopCondition: 'no-unmodified-loop-condition',
   noUnnecessaryConditions: 'typescript/no-unnecessary-condition',
   noUnnecessaryTemplateExpression: 'typescript/no-unnecessary-template-expression',
   noUnreachable: 'no-unreachable',
   noUnreachableSuper: 'constructor-super',
+  noUnresolvedImports: 'import/named',
   noUnsafeDeclarationMerging: 'typescript/no-unsafe-declaration-merging',
   noUnsafeTypeAssertion: 'typescript/no-unsafe-type-assertion',
   noUnsafeFinally: 'no-unsafe-finally',
+  noUnsafeIframeSandbox: 'react/iframe-missing-sandbox',
   noUnsafeNegation: 'no-unsafe-negation',
   noUnsafeOptionalChaining: 'no-unsafe-optional-chaining',
   noUnsafePlusOperands: 'typescript/restrict-plus-operands',
@@ -422,6 +433,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useConsistentBuiltinInstantiation: 'no-new-wrappers',
   useConsistentCurlyBraces: 'curly',
   useConsistentEnumValueType: 'typescript/no-mixed-enums',
+  useConsistentFunctionStyle: 'func-style',
   useConsistentMethodSignatures: 'typescript/method-signature-style',
   useConsistentTypeDefinitions: 'typescript/consistent-type-definitions',
   useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
@@ -482,6 +494,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useMathMinMax: 'unicorn/prefer-math-min-max',
   useMaxParams: 'max-params',
   useMediaCaption: 'jsx-a11y/media-has-caption',
+  useModernMathApis: 'unicorn/prefer-modern-math-apis',
   useNamedCaptureGroup: 'prefer-named-capture-group',
   useNamespaceKeyword: 'typescript/prefer-namespace-keyword',
   useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
@@ -528,8 +541,14 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useValidAutocomplete: 'jsx-a11y/autocomplete-valid',
   useValidForDirection: 'for-direction',
   useValidLang: 'jsx-a11y/lang',
+  // Superset: valid-title also reports titles that repeat the test function's name as a
+  // prefix (`it('it should ...')`), which Biome does not.
+  useValidTestTitle: ['jest/valid-title', 'vitest/valid-title'],
   useValidTypeof: 'valid-typeof',
   useVarsOnTop: 'vars-on-top',
+  // Superset: prefer-import-from-vue reports every named import from `@vue/shared`, while Biome
+  // skips the names `vue` does not re-export.
+  useVueBaseImport: 'vue/prefer-import-from-vue',
   useVueConsistentDefinePropsDeclaration: 'vue/define-props-declaration',
   useVueNextTickPromise: 'vue/next-tick-style',
   useYield: 'require-yield',
@@ -622,6 +641,11 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   if (biomeName === 'useSingleVarDeclarator') {
     // Biome always requires one declarator per statement; Oxlint's `one-var` needs the mode.
     return [severity, 'never']
+  }
+
+  if (biomeName === 'noInlineStyles') {
+    // Oxlint's `forbid-dom-props` forbids nothing until it is told which props to forbid.
+    return [severity, { forbid: ['style'] }]
   }
 
   if (biomeName === 'useImportExtensions') {
@@ -806,6 +830,21 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
   }
 
+  if (biomeName === 'useConsistentFunctionStyle') {
+    if (options.style !== 'declaration') {
+      // `expression` is the default on both sides.
+      return severity
+    }
+
+    // Biome's declaration mode exempts variables with a type annotation, which Oxlint's
+    // `func-style` reports unless `allowTypeAnnotation` is set.
+    return [
+      severity,
+      'declaration',
+      { allowArrowFunctions: options.allowArrowFunctions === true, allowTypeAnnotation: true },
+    ]
+  }
+
   if (biomeName === 'useConsistentMethodSignatures') {
     const { style } = options
     return style === 'method' || style === 'property' ? [severity, style] : severity
@@ -846,6 +885,22 @@ function mapBiomeRuleOptionsToOxlintSeverity(
             : null
 
     return namedComponents ? [severity, { namedComponents }] : severity
+  }
+
+  if (biomeName === 'useValidTestTitle') {
+    const { disallowedWords } = options
+    if (
+      !Array.isArray(disallowedWords) ||
+      disallowedWords.length === 0 ||
+      !disallowedWords.every((value) => typeof value === 'string')
+    ) {
+      return severity
+    }
+
+    reporter.loss(
+      'Biome rule useValidTestTitle option "disallowedWords" was migrated, but Oxlint valid-title stops reporting titles with leading or trailing whitespace and titles that repeat the test function name once disallowedWords is set.',
+    )
+    return [severity, { disallowedWords }]
   }
 
   if (biomeName === 'useThisInClassMethods') {
