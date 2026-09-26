@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-09-26
+
 ### Added
 
 - Mappings for seven Biome rules added in Biome 2.5.12–2.5.14, each verified by running both binaries over the same fixture. `noReturnInFinally` → `promise/no-return-in-finally`, `noUnmodifiedLoopCondition` → `no-unmodified-loop-condition` and `useModernMathApis` → `unicorn/prefer-modern-math-apis` report what the Biome rule reports. `useConsistentFunctionStyle` → `func-style` carries `style` and `allowArrowFunctions` over and sets `allowTypeAnnotation` in declaration mode, because Biome exempts variables with a type annotation there. `useValidTestTitle` → `jest/valid-title` and `vitest/valid-title` carries `disallowedWords` over, and also reports titles that repeat the test function's name (`it('it should …')`), which Biome does not; setting `disallowedWords` is reported as a semantic loss because Oxlint then stops reporting titles with leading or trailing whitespace. `useVueBaseImport` → `vue/prefer-import-from-vue` also reports `@vue/shared` imports of names `vue` does not re-export. `noUnsafeIframeSandbox` → `react/iframe-missing-sandbox` is reported as a semantic loss: it misses the `allow-scripts allow-same-origin` combination when the value is written as a JSX expression, and it also reports iframes with no or an invalid `sandbox`, which Biome leaves to `useIframeSandbox`.
@@ -402,7 +404,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.5.0...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.2.0...v3.3.0
