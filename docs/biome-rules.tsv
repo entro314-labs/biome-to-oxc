@@ -21,6 +21,7 @@ noBeforeInteractiveScriptOutsideDocument	correctness
 noBiomeFirstException	suspicious
 noBitwiseOperators	suspicious
 noBlankTarget	security
+noBunModules	nursery
 noCatchAssign	suspicious
 noChildrenProp	correctness
 noClassAssign	suspicious
@@ -141,12 +142,14 @@ noInteractiveElementToNoninteractiveRole	a11y
 noInvalidBuiltinInstantiation	correctness
 noInvalidConstructorSuper	correctness
 noInvalidDirectionInLinearGradient	correctness
+noInvalidFileInputAccept	nursery
 noInvalidGridAreas	correctness
 noInvalidPositionAtImportRule	correctness
 noInvalidPropertyInitValue	nursery
 noInvalidUseBeforeDeclaration	correctness
 noIrregularWhitespace	suspicious
 noJsRestrictedProperties	nursery
+noJsonUnsafeValues	nursery
 noJsxLeakedDollar	nursery
 noJsxLiterals	style
 noJsxNamespace	nursery
@@ -181,6 +184,7 @@ noNoninteractiveElementInteractions	a11y
 noNoninteractiveElementToInteractiveRole	a11y
 noNoninteractiveTabindex	a11y
 noNonoctalDecimalEscape	correctness
+noObsoleteTags	nursery
 noOctalEscape	suspicious
 noParameterAssign	style
 noParameterProperties	style
@@ -224,6 +228,7 @@ noRestrictedGlobals	style
 noRestrictedImports	style
 noRestrictedTypes	style
 noReturnAssign	suspicious
+noReturnInFinally	nursery
 noRootType	style
 noScriptUrl	security
 noSecrets	security
@@ -242,6 +247,8 @@ noStaticOnlyClass	complexity
 noStringCaseMismatch	correctness
 noSubstr	style
 noSuspiciousSemicolonInJsx	suspicious
+noSvelteAtDebugTags	nursery
+noSvelteAtHtmlTags	nursery
 noSvelteLegacyConst	nursery
 noSvelteUnnecessaryStateWrap	nursery
 noSvgWithoutTitle	a11y
@@ -252,6 +259,7 @@ noTemplateCurlyInString	suspicious
 noTernary	style
 noThenProperty	suspicious
 noThisInStatic	complexity
+noThisOutsideOfClass	nursery
 noTopLevelLiterals	nursery
 noTsIgnore	suspicious
 noUnassignedVariables	suspicious
@@ -270,6 +278,7 @@ noUnknownPseudoElement	correctness
 noUnknownTypeSelector	correctness
 noUnknownUnit	correctness
 noUnmatchableAnbSelector	correctness
+noUnmodifiedLoopCondition	nursery
 noUnnecessaryConditions	suspicious
 noUnnecessaryTemplateExpression	nursery
 noUnreachable	correctness
@@ -277,6 +286,7 @@ noUnreachableSuper	correctness
 noUnresolvedImports	correctness
 noUnsafeDeclarationMerging	suspicious
 noUnsafeFinally	correctness
+noUnsafeIframeSandbox	nursery
 noUnsafeNegation	suspicious
 noUnsafeOptionalChaining	correctness
 noUnsafePlusOperands	nursery
@@ -322,6 +332,7 @@ noVoidElementsWithChildren	correctness
 noVoidTypeReturn	correctness
 noVueArrowFuncInWatch	suspicious
 noVueDataObjectDeclaration	correctness
+noVueDeprecatedScopedSlots	nursery
 noVueDuplicateKeys	correctness
 noVueImportCompilerMacros	nursery
 noVueOptionsApi	style
@@ -329,9 +340,11 @@ noVueRefAsOperand	nursery
 noVueReservedKeys	correctness
 noVueReservedProps	correctness
 noVueSetupPropsReactivityLoss	correctness
+noVueUndeclaredDirectives	nursery
 noVueVIfWithVFor	correctness
 noVueVOnNumberValues	nursery
 noWith	suspicious
+noXorAsExponentiation	nursery
 noYodaExpression	style
 useAdjacentOverloadSignatures	suspicious
 useAltText	a11y
@@ -350,6 +363,7 @@ useAtIndex	style
 useAwait	suspicious
 useAwaitThenable	nursery
 useBaseline	nursery
+useBetterDomTraversing	nursery
 useBiomeIgnoreFolder	suspicious
 useBlockStatements	style
 useButtonType	a11y
@@ -361,10 +375,12 @@ useConsistentArrowReturn	style
 useConsistentBuiltinInstantiation	style
 useConsistentCurlyBraces	style
 useConsistentEnumValueType	style
+useConsistentFunctionStyle	nursery
 useConsistentGraphqlDescriptions	style
 useConsistentMemberAccessibility	style
 useConsistentMethodSignatures	style
 useConsistentObjectDefinitions	style
+useConsistentObjectKeys	nursery
 useConsistentTestIt	nursery
 useConsistentTypeDefinitions	style
 useConst	style
@@ -393,6 +409,7 @@ useExportType	style
 useExportsLast	style
 useFilenamingConvention	style
 useFlatMap	complexity
+useFlatMathMinMax	nursery
 useFocusableInteractive	a11y
 useForOf	style
 useFragmentSyntax	style
@@ -425,6 +442,7 @@ useJsonImportAttributes	correctness
 useJsxKeyInIterable	correctness
 useKeyWithClickEvents	a11y
 useKeyWithMouseEvents	a11y
+useLayeredStyles	nursery
 useLiteralEnumMembers	style
 useLiteralKeys	complexity
 useLoneAnonymousOperation	correctness
@@ -432,6 +450,7 @@ useLoneExecutableDefinition	style
 useMathMinMax	nursery
 useMaxParams	complexity
 useMediaCaption	a11y
+useModernMathApis	nursery
 useNamedCaptureGroup	nursery
 useNamedLayer	nursery
 useNamespaceKeyword	suspicious
@@ -455,6 +474,7 @@ useReactAsyncServerFunction	nursery
 useReactCompiler	nursery
 useReactFunctionComponentDefinition	nursery
 useReactFunctionComponents	style
+useReactNamingConvention	nursery
 useReactNativePlatformComponents	nursery
 useReadonlyClassProperties	style
 useReduceTypeParameter	nursery
@@ -498,8 +518,10 @@ useValidAriaValues	a11y
 useValidAutocomplete	a11y
 useValidForDirection	correctness
 useValidLang	a11y
+useValidTestTitle	nursery
 useValidTypeof	correctness
 useVarsOnTop	nursery
+useVueBaseImport	nursery
 useVueConsistentDefinePropsDeclaration	nursery
 useVueConsistentVBindStyle	style
 useVueConsistentVOnStyle	style
