@@ -94,6 +94,7 @@ const UNFORMATTED_SOURCES = {
   'src/styles.css': 'a{color:red}\n',
   'src/data.json': '{"a":1,"b":2}\n',
   'src/schema.graphql': 'type Query{user(id:ID!):User}\n',
+  'src/fragment.gql': 'fragment F on User{id name}\n',
   'src/notes.md': '#  Heading\n\n*  item\n',
   'src/config.yaml': 'a:   1\nb:    2\n',
   'build/generated.ts': 'const c={x:1,y:2}\n',
@@ -129,6 +130,7 @@ describe('source-versus-target formatter scope', () => {
     // Oxfmt formats YAML and Markdown by default and Biome does not; the generated config
     // has to hold that difference back.
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+    expect(sourceFilesOnly(biomeScope)).toContain('src/fragment.gql')
     expect(sourceFilesOnly(biomeScope)).not.toContain('src/config.yaml')
     expect(sourceFilesOnly(oxfmtScope)).not.toContain('src/config.yaml')
   })
@@ -172,6 +174,7 @@ describe('source-versus-target formatter scope', () => {
     const oxfmtScope = await oxfmtFormatScope(dir)
 
     expect(sourceFilesOnly(biomeScope)).not.toContain('src/schema.graphql')
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/fragment.gql')
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
   })
 
