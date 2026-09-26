@@ -109,7 +109,8 @@ export function generateOxfmtConfig(
     const languageFormatterEnabled =
       jsFormatter?.enabled === true ||
       biomeConfig.json?.formatter?.enabled === true ||
-      biomeConfig.css?.formatter?.enabled === true
+      biomeConfig.css?.formatter?.enabled === true ||
+      biomeConfig.graphql?.formatter?.enabled === true
 
     if (!languageFormatterEnabled) {
       oxfmtConfig.ignorePatterns = ['**/*']
@@ -143,6 +144,7 @@ export function generateOxfmtConfig(
       },
       { include: ['**/*.{json,jsonc,json5}'], json: biomeConfig.json },
       { include: ['**/*.{css,scss,sass,less}'], css: biomeConfig.css },
+      { include: ['**/*.{graphql,gql}'], graphql: biomeConfig.graphql },
     ],
     reporter,
   )
@@ -183,6 +185,9 @@ function mapDisabledLanguageFormatters(biomeConfig: BiomeConfig, oxfmtConfig: Ox
   }
   if (biomeConfig.css?.formatter?.enabled === false) {
     disabledPatterns.push('**/*.{css,scss,sass,less}')
+  }
+  if (biomeConfig.graphql?.formatter?.enabled === false) {
+    disabledPatterns.push('**/*.{graphql,gql}')
   }
 
   if (disabledPatterns.length > 0) {

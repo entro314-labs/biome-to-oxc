@@ -13,6 +13,7 @@ import type {
   BiomeConfig,
   BiomeCssConfig,
   BiomeFormatterConfig,
+  BiomeGraphqlConfig,
   BiomeJavaScriptConfig,
   BiomeJsonConfig,
   BiomeLinterConfig,
@@ -35,6 +36,7 @@ const SUPPORTED_TOP_LEVEL_FIELDS = new Set([
   'javascript',
   'json',
   'css',
+  'graphql',
   'html',
   'overrides',
 ])
@@ -179,6 +181,29 @@ const BiomeCssConfigSchema: z.ZodType<BiomeCssConfig> = z
       .optional(),
   })
   .passthrough()
+const BiomeGraphqlConfigSchema: z.ZodType<BiomeGraphqlConfig> = z
+  .object({
+    formatter: z
+      .object({
+        enabled: z.boolean().optional(),
+        bracketSpacing: z.boolean().optional(),
+        indentStyle: z.enum(['tab', 'space']).optional(),
+        indentWidth: z.number().int().optional(),
+        lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
+        lineWidth: z.number().int().optional(),
+        quoteStyle: z.enum(['single', 'double']).optional(),
+        trailingNewline: z.boolean().optional(),
+      })
+      .passthrough()
+      .optional(),
+    linter: z
+      .object({
+        enabled: z.boolean().optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough()
 const BiomeLinterConfigSchema: z.ZodType<BiomeLinterConfig> = IncludeFieldsSchema.extend({
   enabled: z.boolean().optional(),
   ignore: z.array(z.string()).optional(),
@@ -223,6 +248,7 @@ const BiomeOverrideSchema: z.ZodType<BiomeOverride> = z
     javascript: BiomeJavaScriptConfigSchema.optional(),
     json: BiomeJsonConfigSchema.optional(),
     css: BiomeCssConfigSchema.optional(),
+    graphql: BiomeGraphqlConfigSchema.optional(),
   })
   .passthrough()
 const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
@@ -256,6 +282,7 @@ const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
     javascript: BiomeJavaScriptConfigSchema.optional(),
     json: BiomeJsonConfigSchema.optional(),
     css: BiomeCssConfigSchema.optional(),
+    graphql: BiomeGraphqlConfigSchema.optional(),
     html: z.record(z.string(), z.unknown()).optional(),
     overrides: z.array(BiomeOverrideSchema).optional(),
   })

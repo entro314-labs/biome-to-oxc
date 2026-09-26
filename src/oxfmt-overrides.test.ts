@@ -61,6 +61,31 @@ describe('generateOxfmtOverrides', () => {
     ])
   })
 
+  it('maps per-override graphql.formatter options for GraphQL-only globs', () => {
+    const reporter = new CollectingReporter()
+
+    const overrides = generateOxfmtOverrides(
+      [
+        {
+          include: ['schema/**/*.graphql'],
+          graphql: { formatter: { indentWidth: 4, bracketSpacing: false } },
+        },
+        {
+          include: ['src/**/*'],
+          graphql: { formatter: { indentWidth: 4 } },
+        },
+      ],
+      reporter,
+    )
+
+    expect(overrides).toEqual([
+      { files: ['schema/**/*.graphql'], options: { tabWidth: 4, bracketSpacing: false } },
+    ])
+    expect(reporter.getLosses()).toEqual([
+      'Biome graphql.formatter settings for src/**/* were dropped: Oxfmt overrides select by file glob, and these patterns are not graphql-specific, so applying them would also reformat other languages.',
+    ])
+  })
+
   it('passes through Svelte formatter options in base overrides', () => {
     const reporter = new CollectingReporter()
 

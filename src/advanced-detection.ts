@@ -139,8 +139,8 @@ export function generateFeatureSpecificSuggestions(features: ProjectFeatures): s
   if (features.hasGraphQL) {
     suggestions.push('')
     suggestions.push('GraphQL detected:')
-    suggestions.push('  - Consider using graphql-prettier for GraphQL formatting')
-    suggestions.push('  - Oxfmt may support GraphQL in future releases')
+    suggestions.push('  - Oxfmt formats .graphql and .gql files natively')
+    suggestions.push('  - Biome graphql.formatter settings are migrated to an Oxfmt override')
   }
 
   if (features.hasMonorepo) {

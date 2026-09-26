@@ -10,6 +10,7 @@ export interface BiomeConfig {
   javascript?: BiomeJavaScriptConfig
   json?: BiomeJsonConfig
   css?: BiomeCssConfig
+  graphql?: BiomeGraphqlConfig
   html?: Record<string, unknown>
   overrides?: BiomeOverride[]
 }
@@ -188,6 +189,22 @@ export interface BiomeCssConfig {
   }
 }
 
+export interface BiomeGraphqlConfig {
+  formatter?: {
+    enabled?: boolean
+    bracketSpacing?: boolean
+    indentStyle?: 'tab' | 'space'
+    indentWidth?: number
+    lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
+    lineWidth?: number
+    quoteStyle?: 'single' | 'double'
+    trailingNewline?: boolean
+  }
+  linter?: {
+    enabled?: boolean
+  }
+}
+
 export interface BiomeOverride {
   include?: string[]
   includes?: string[]
@@ -200,6 +217,7 @@ export interface BiomeOverride {
   javascript?: BiomeJavaScriptConfig
   json?: BiomeJsonConfig
   css?: BiomeCssConfig
+  graphql?: BiomeGraphqlConfig
 }
 
 export type FixStrategy = 'safe' | 'suggestions' | 'dangerous'

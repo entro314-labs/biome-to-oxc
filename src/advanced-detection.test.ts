@@ -25,4 +25,15 @@ describe('advanced detection', () => {
       '  - Review whether to opt into Oxfmt sortImports manually',
     )
   })
+
+  it('points GraphQL projects at Oxfmt, which formats GraphQL natively', () => {
+    const reporter = new CollectingReporter()
+
+    const features = detectProjectFeatures({ files: { include: ['src/**/*.graphql'] } }, reporter)
+    const suggestions = generateFeatureSpecificSuggestions(features)
+
+    expect(features.hasGraphQL).toBe(true)
+    expect(suggestions).toContain('  - Oxfmt formats .graphql and .gql files natively')
+    expect(suggestions.some((line) => line.includes('graphql-prettier'))).toBe(false)
+  })
 })

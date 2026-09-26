@@ -237,6 +237,58 @@ describe('generateOxfmtConfig', () => {
     ])
   })
 
+  it('maps Biome graphql.formatter options onto a GraphQL-scoped Oxfmt override', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig(
+      {
+        graphql: {
+          formatter: {
+            indentStyle: 'space',
+            indentWidth: 4,
+            lineWidth: 60,
+            bracketSpacing: false,
+            quoteStyle: 'single',
+            trailingNewline: false,
+          },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.overrides).toEqual([
+      {
+        files: ['**/*.{graphql,gql}'],
+        options: {
+          useTabs: false,
+          tabWidth: 4,
+          printWidth: 60,
+          bracketSpacing: false,
+          insertFinalNewline: false,
+        },
+      },
+    ])
+    // GraphQL strings are always double-quoted, so neither tool acts on quoteStyle.
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('stops Oxfmt formatting GraphQL when Biome disables the GraphQL formatter', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig({ graphql: { formatter: { enabled: false } } }, reporter)
+
+    expect(config.ignorePatterns).toContain('**/*.{graphql,gql}')
+  })
+
+  it('reports that a re-enabled GraphQL formatter under a disabled global one cannot be expressed', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig(
+      { formatter: { enabled: false }, graphql: { formatter: { enabled: true } } },
+      reporter,
+    )
+
+    expect(config.ignorePatterns ?? []).not.toContain('**/*')
+    expect(reporter.getLosses()).toHaveLength(1)
+  })
+
   it('passes through explicitly configured Svelte formatter options', () => {
     const reporter = new CollectingReporter()
 

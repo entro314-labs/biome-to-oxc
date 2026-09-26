@@ -93,6 +93,7 @@ const UNFORMATTED_SOURCES = {
   'src/app.test.ts': 'const b={x:1,y:2}\n',
   'src/styles.css': 'a{color:red}\n',
   'src/data.json': '{"a":1,"b":2}\n',
+  'src/schema.graphql': 'type Query{user(id:ID!):User}\n',
   'src/notes.md': '#  Heading\n\n*  item\n',
   'src/config.yaml': 'a:   1\nb:    2\n',
   'build/generated.ts': 'const c={x:1,y:2}\n',
@@ -163,6 +164,17 @@ describe('source-versus-target formatter scope', () => {
     )
   })
 
+  it('stops formatting GraphQL when Biome disables its GraphQL formatter', async () => {
+    const dir = await setupConformanceFixture({ graphql: { formatter: { enabled: false } } })
+
+    const biomeScope = await biomeFormatScope(dir)
+    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtScope = await oxfmtFormatScope(dir)
+
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/schema.graphql')
+    expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+  })
+
   it('honours formatter-level exclusions the same way Biome does', async () => {
     const dir = await setupConformanceFixture({
       formatter: { includes: ['**', '!build/**', '!src/*.json'] },
@@ -208,6 +220,34 @@ describe('generated configs load in the real target tools', () => {
     expect(oxlintRun.stdout).not.toContain('invalid config file')
     expect(oxfmtRun.stderr).not.toContain('Failed to parse configuration')
     expect(oxfmtRun.stdout).not.toContain('Failed to parse configuration')
+  })
+})
+
+describe('GraphQL formatter options', () => {
+  it('formats GraphQL identically to Biome under migrated graphql.formatter options', async () => {
+    const source =
+      'query Q($id: ID = "x") { user(id: $id, filter: {name: "a", age: 3}) { id name } }\n'
+    const dir = await setupConformanceFixture(
+      {
+        graphql: {
+          formatter: { indentStyle: 'space', indentWidth: 4, lineWidth: 40, bracketSpacing: false },
+        },
+      },
+      { 'src/query.graphql': source },
+    )
+
+    await run(BIOME_BIN, ['format', '--write', 'src/query.graphql'], dir)
+    const biomeFormatted = await readFile(join(dir, 'src/query.graphql'), 'utf-8')
+
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    await writeFile(join(dir, 'src/query.graphql'), source, 'utf-8')
+    await run(OXFMT_BIN, ['--config', '.oxfmtrc.jsonc', 'src/query.graphql'], dir)
+    const oxfmtFormatted = await readFile(join(dir, 'src/query.graphql'), 'utf-8')
+
+    expect(biomeFormatted).toContain('\n    user(')
+    expect(biomeFormatted).toContain('{name: "a", age: 3}')
+    expect(oxfmtFormatted).toBe(biomeFormatted)
+    expect(report.losses).toEqual([])
   })
 })
 

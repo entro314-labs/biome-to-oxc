@@ -1,6 +1,7 @@
 import type {
   BiomeCssConfig,
   BiomeFormatterConfig,
+  BiomeGraphqlConfig,
   BiomeJavaScriptConfig,
   BiomeJsonConfig,
   BiomeOverride,
@@ -30,6 +31,7 @@ const LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES = {
 const JAVASCRIPT_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx', 'mjs', 'mts', 'cjs', 'cts']
 const JSON_EXTENSIONS = ['json', 'jsonc', 'json5']
 const CSS_EXTENSIONS = ['css', 'scss', 'sass', 'less']
+const GRAPHQL_EXTENSIONS = ['graphql', 'gql']
 const JSON_FORMATTER_KEYS = new Set([
   'enabled',
   'expand',
@@ -44,6 +46,19 @@ const JSON_FORMATTER_KEYS = new Set([
 ])
 const CSS_FORMATTER_KEYS = new Set([
   'enabled',
+  'indentStyle',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  'quoteStyle',
+  'trailingNewline',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
+
+const GRAPHQL_FORMATTER_KEYS = new Set([
+  'enabled',
+  'bracketSpacing',
   'indentStyle',
   'indentWidth',
   'lineEnding',
@@ -150,6 +165,17 @@ export function generateOxfmtOverrides(
       reporter,
       'css.formatter',
       CSS_EXTENSIONS,
+    )
+
+    const graphqlOptions = mapGraphqlFormatterOptions(override.graphql?.formatter, reporter)
+    pushScopedOverride(
+      oxfmtOverrides,
+      files,
+      excludeFiles,
+      graphqlOptions,
+      reporter,
+      'graphql.formatter',
+      GRAPHQL_EXTENSIONS,
     )
   }
 
@@ -438,6 +464,49 @@ function mapCssFormatterOptions(
   }
 
   applyExplicitFormatterOptionPassThrough([cssFormatter], options, reporter)
+
+  return options
+}
+
+function mapGraphqlFormatterOptions(
+  graphqlFormatter: BiomeGraphqlConfig['formatter'] | undefined,
+  reporter: Reporter,
+): Partial<Record<string, unknown>> {
+  const options: Record<string, unknown> = {}
+
+  if (!graphqlFormatter) {
+    return options
+  }
+
+  // `quoteStyle` is accepted but not mapped: GraphQL strings are always double-quoted, and
+  // neither Biome nor Oxfmt changes them for a single-quote setting.
+  warnAboutUnsupportedKeys(graphqlFormatter, GRAPHQL_FORMATTER_KEYS, 'graphql.formatter', reporter)
+
+  if (graphqlFormatter.lineWidth !== undefined) {
+    options.printWidth = graphqlFormatter.lineWidth
+  }
+
+  if (graphqlFormatter.indentStyle !== undefined) {
+    options.useTabs = graphqlFormatter.indentStyle === 'tab'
+  }
+
+  if (graphqlFormatter.indentWidth !== undefined) {
+    options.tabWidth = graphqlFormatter.indentWidth
+  }
+
+  if (graphqlFormatter.lineEnding !== undefined) {
+    options.endOfLine = graphqlFormatter.lineEnding
+  }
+
+  if (graphqlFormatter.bracketSpacing !== undefined) {
+    options.bracketSpacing = graphqlFormatter.bracketSpacing
+  }
+
+  if (graphqlFormatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = graphqlFormatter.trailingNewline
+  }
+
+  applyExplicitFormatterOptionPassThrough([graphqlFormatter], options, reporter)
 
   return options
 }
