@@ -5,24 +5,25 @@ import {
   collectUnsupportedBiomeRules,
   recommendJsPluginSpecifiersForUnsupportedRules,
 } from './js-plugin-scaffolder.js'
+import { getMappedBiomeRuleNames } from './rule-mapper.js'
 
 describe('js-plugin-scaffolder fallback guidance', () => {
   it('collects and de-duplicates unsupported biome rule warnings', () => {
     const warnings = [
       'No Oxlint equivalent found for Biome rule: noReExportAll',
       'No Oxlint equivalent found for Biome rule: noReExportAll',
-      'No Oxlint equivalent found for Biome rule: useSingleVarDeclarator',
+      'No Oxlint equivalent found for Biome rule: noRedundantUseStrict',
       'Some unrelated warning',
     ]
 
     expect(collectUnsupportedBiomeRules(warnings)).toEqual([
       'noReExportAll',
-      'useSingleVarDeclarator',
+      'noRedundantUseStrict',
     ])
   })
 
   it('recommends plugin packages for unsupported rules with known JS-plugin fallbacks', () => {
-    const unsupportedRules = ['noReExportAll', 'noRedundantUseStrict', 'useSingleVarDeclarator']
+    const unsupportedRules = ['noReExportAll', 'noRedundantUseStrict']
 
     expect(recommendJsPluginSpecifiersForUnsupportedRules(unsupportedRules)).toEqual([
       'eslint-plugin-import',
@@ -33,7 +34,6 @@ describe('js-plugin-scaffolder fallback guidance', () => {
     const suggestions = buildUnsupportedRuleFallbackSuggestions([
       'noReExportAll',
       'noRedundantUseStrict',
-      'useSingleVarDeclarator',
       'unknownRule',
     ])
 
@@ -42,8 +42,11 @@ describe('js-plugin-scaffolder fallback guidance', () => {
     expect(suggestions).toContain('  - Suggested --js-plugin values: eslint-plugin-import')
 
     expect(suggestions).toContain('Fallback for noRedundantUseStrict:')
-    expect(suggestions).toContain('Fallback for useSingleVarDeclarator:')
 
     expect(suggestions.some((line) => line.includes('unknownRule'))).toBe(false)
+  })
+
+  it('carries no fallback guidance for Biome rules that now map to a native Oxlint rule', () => {
+    expect(buildUnsupportedRuleFallbackSuggestions(getMappedBiomeRuleNames())).toEqual([])
   })
 })

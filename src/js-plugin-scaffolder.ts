@@ -40,10 +40,6 @@ const UNSUPPORTED_BIOME_RULE_GUIDANCE: Record<string, UnsupportedRuleGuidance> =
     notes:
       'No native Oxlint equivalent for redundant `"use strict"` directives. For ESM, strict mode is already implicit.',
   },
-  useSingleVarDeclarator: {
-    notes:
-      'No native Oxlint equivalent for enforcing single declarators (ESLint `one-var`). Consider custom JS plugin policy if this is mandatory.',
-  },
 }
 
 export function collectUnsupportedBiomeRules(warnings: string[]): string[] {
