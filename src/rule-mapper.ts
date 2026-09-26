@@ -898,7 +898,7 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     }
 
     reporter.loss(
-      'Biome rule useValidTestTitle option "disallowedWords" was migrated, but Oxlint valid-title stops reporting titles with leading or trailing whitespace and titles that repeat the test function name once disallowedWords is set.',
+      'Biome rule useValidTestTitle option "disallowedWords" was migrated, but Oxlint valid-title stops reporting titles with leading or trailing whitespace once disallowedWords is set.',
     )
     return [severity, { disallowedWords }]
   }
