@@ -494,7 +494,9 @@ function replaceBiomeCommand(
       ? escalateFixStrategy(defaultFixStrategy, 'dangerous')
       : defaultFixStrategy
 
-    const replacement = hasFix || hasUnsafe ? fixByStrategy[effectiveFixStrategy] : checkReplacement
+    // Biome applies nothing without --write/--fix, even with --unsafe, so such a script
+    // stays read-only.
+    const replacement = hasFix ? fixByStrategy[effectiveFixStrategy] : checkReplacement
     return `${leading}${applySuffixToCommands(replacement, suffix)}`
   })
 

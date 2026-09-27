@@ -198,6 +198,26 @@ describe('updatePackageJson', () => {
     )
   })
 
+  it('keeps a script read-only when Biome --unsafe comes without --write', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      scripts: {
+        lint: 'biome lint --unsafe .',
+        check: 'biome check --unsafe .',
+      },
+    })
+
+    await updatePackageJson(dir, new CollectingReporter(), false, {
+      updateScripts: true,
+      fixStrategy: 'safe',
+    })
+
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.scripts.lint).toBe('oxlint .')
+    expect(pkg.scripts.check).toBe('oxlint . && oxfmt --check .')
+  })
+
   it('pins rewritten scripts to generated configs outside the package root', async () => {
     const { dir, packagePath } = await setupPackageJson({
       name: 'fixture',
