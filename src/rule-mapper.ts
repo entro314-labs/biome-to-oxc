@@ -75,6 +75,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noAssignInExpressions was mapped to no-cond-assign in `always` mode, which reports assignments inside conditions but not assignments nested in other expressions, such as `const a = (b = 1)` or a call argument.',
   noComponentHookFactories:
     'Biome rule noComponentHookFactories was mapped to react/no-unstable-nested-components, which reports nested component definitions but not nested custom hook definitions.',
+  noBarrelFile:
+    'Biome rule noBarrelFile was mapped to oxc/no-barrel-file, which only counts `export *` re-exports and reports a file once it re-exports more modules than its threshold (100 by default); Biome reports any file that re-exports, including through named `export { ... } from`.',
   noExcessiveCognitiveComplexity:
     'Biome rule noExcessiveCognitiveComplexity was mapped to complexity, which scores cyclomatic complexity rather than cognitive complexity; the threshold carries over, but the two scores differ, so a different set of functions is reported.',
   noInlineStyles:

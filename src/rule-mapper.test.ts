@@ -16,7 +16,6 @@ describe('rule-mapper parity expansion', () => {
       noAccessKey: 'jsx-a11y/no-access-key',
       noArguments: 'prefer-rest-params',
       noAriaHiddenOnFocusable: 'jsx-a11y/no-aria-hidden-on-focusable',
-      noBarrelFile: 'oxc/no-barrel-file',
       noConstantBinaryExpressions: 'no-constant-binary-expression',
       noConsole: 'no-console',
       noDefaultExport: 'import/no-default-export',
@@ -1267,6 +1266,12 @@ describe('rule-mapper reports Oxlint counterparts that cover only part of the Bi
       severity: { level: 'error', options: { maxAllowedComplexity: 25 } },
       expected: { complexity: ['error', { max: 25 }] },
       note: 'cyclomatic complexity',
+    },
+    {
+      biomeRule: 'noBarrelFile',
+      severity: 'error',
+      expected: { 'oxc/no-barrel-file': 'error' },
+      note: 'only counts `export *`',
     },
     {
       biomeRule: 'useArrowFunction',
