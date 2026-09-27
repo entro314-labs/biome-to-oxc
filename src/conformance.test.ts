@@ -385,6 +385,50 @@ describe('source-versus-target lint diagnostics', () => {
         'src/if.js': 'export function f(a) {\n  if (a) return 1\n  return 2\n}\n',
       },
     },
+    {
+      name: 'allows labels on loops only',
+      rules: { suspicious: { noConfusingLabels: 'error' } },
+      files: {
+        'src/block.js': 'export function f() {\n  label: {\n    return 1\n  }\n}\n',
+        'src/loop.js':
+          'export function g(xs) {\n  outer: for (const x of xs) {\n    if (x) break outer\n  }\n}\n',
+      },
+    },
+    {
+      name: 'allows loose equality against null',
+      rules: { suspicious: { noDoubleEquals: 'error' } },
+      files: {
+        'src/loose.js': 'export const f = (a, b) => a == b\n',
+        'src/null.js': 'export const g = (a) => a == null\n',
+      },
+    },
+    {
+      name: 'denies the globals Biome always denies',
+      rules: { style: { noRestrictedGlobals: 'error' } },
+      files: {
+        'src/event.js': 'export const f = () => event.type\n',
+        'src/local.js': 'export const g = (event) => event.type\n',
+      },
+    },
+    {
+      name: 'reports empty functions and static blocks as well as empty blocks',
+      rules: { suspicious: { noEmptyBlockStatements: 'error' } },
+      files: {
+        'src/function.js': 'export function f() {}\n',
+        'src/static.js': 'export class A {\n  static {}\n}\n',
+        'src/block.js': 'export function g(a) {\n  if (a) {\n  }\n  return a\n}\n',
+        'src/commented.js': 'export function h() {\n  // intentionally empty\n}\n',
+      },
+    },
+    {
+      name: 'forbids the public modifier by default',
+      rules: { style: { useConsistentMemberAccessibility: 'error' } },
+      files: {
+        'src/public.ts': 'export class A {\n  public x = 1\n}\n',
+        'src/implicit.ts':
+          'export class B {\n  y = 1\n  private z = 2\n  get w() {\n    return this.z\n  }\n}\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 

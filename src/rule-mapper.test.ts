@@ -341,16 +341,16 @@ describe('rule-mapper parity expansion', () => {
     const { rules } = extractRulesFromBiomeConfig(
       {
         suspicious: {
-          noDoubleEquals: { level: 'info', options: { ignoreNull: true } },
+          noParameterAssign: { level: 'info', options: { propertyAssignment: 'deny' } },
         },
       },
       reporter,
     )
 
-    expect(rules.eqeqeq).toBe('warn')
+    expect(rules['no-param-reassign']).toBe('warn')
     expect(reporter.getWarnings()).toEqual([
-      'Unsupported Biome severity "info" for rule noDoubleEquals. Normalized to "warn" for Oxlint compatibility.',
-      'Biome rule noDoubleEquals options do not have a verified Oxlint mapping and were not migrated; the rule runs with Oxlint defaults instead.',
+      'Unsupported Biome severity "info" for rule noParameterAssign. Normalized to "warn" for Oxlint compatibility.',
+      'Biome rule noParameterAssign options do not have a verified Oxlint mapping and were not migrated; the rule runs with Oxlint defaults instead.',
     ])
   })
 
@@ -594,7 +594,7 @@ describe('rule-mapper parity expansion', () => {
       'unicorn/no-array-for-each': 'warn',
       'prefer-template': 'error',
       'typescript/consistent-type-imports': 'warn',
-      'typescript/explicit-member-accessibility': 'warn',
+      'typescript/explicit-member-accessibility': ['warn', { accessibility: 'no-public' }],
       'typescript/no-extra-non-null-assertion': 'warn',
       'no-unneeded-ternary': 'error',
       'prefer-rest-params': 'warn',
@@ -1150,4 +1150,108 @@ describe('rule-mapper retargeting of Biome rules mapped to unrelated Oxlint rule
       ])
     },
   )
+})
+
+describe('rule-mapper carries Biome defaults that differ from the Oxlint rule defaults', () => {
+  it.each([
+    {
+      biomeRule: 'noConfusingLabels',
+      severity: 'error',
+      expected: { 'no-labels': ['error', { allowLoop: true }] },
+      losses: 0,
+    },
+    {
+      biomeRule: 'noConfusingLabels',
+      severity: { level: 'error', options: { allowedLabels: ['DEV'] } },
+      expected: { 'no-labels': ['error', { allowLoop: true }] },
+      losses: 1,
+    },
+    {
+      biomeRule: 'noDoubleEquals',
+      severity: 'error',
+      expected: { eqeqeq: ['error', 'always', { null: 'ignore' }] },
+      losses: 0,
+    },
+    {
+      biomeRule: 'noDoubleEquals',
+      severity: { level: 'warn', options: { ignoreNull: false } },
+      expected: { eqeqeq: ['warn', 'always'] },
+      losses: 0,
+    },
+    {
+      biomeRule: 'noRestrictedGlobals',
+      severity: 'error',
+      expected: { 'no-restricted-globals': ['error', 'event', 'error'] },
+      losses: 0,
+    },
+    {
+      biomeRule: 'noRestrictedGlobals',
+      severity: { level: 'error', options: { deniedGlobals: { $: 'Use the DOM API.' } } },
+      expected: {
+        'no-restricted-globals': [
+          'error',
+          'event',
+          'error',
+          { name: '$', message: 'Use the DOM API.' },
+        ],
+      },
+      losses: 0,
+    },
+    {
+      biomeRule: 'noRestrictedGlobals',
+      severity: { level: 'error', options: { deniedGlobals: ['jQuery'] } },
+      expected: { 'no-restricted-globals': ['error', 'event', 'error', 'jQuery'] },
+      losses: 0,
+    },
+    {
+      biomeRule: 'useConsistentMemberAccessibility',
+      severity: 'error',
+      expected: {
+        'typescript/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
+      },
+      losses: 0,
+    },
+    {
+      biomeRule: 'useConsistentMemberAccessibility',
+      severity: { level: 'error', options: { accessibility: 'explicit' } },
+      expected: {
+        'typescript/explicit-member-accessibility': ['error', { accessibility: 'explicit' }],
+      },
+      losses: 0,
+    },
+    {
+      biomeRule: 'useConsistentMemberAccessibility',
+      severity: { level: 'error', options: { accessibility: 'none' } },
+      expected: {
+        'typescript/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
+      },
+      losses: 1,
+    },
+    {
+      biomeRule: 'noAssignInExpressions',
+      severity: 'error',
+      expected: { 'no-cond-assign': ['error', 'always'] },
+      losses: 1,
+    },
+    {
+      biomeRule: 'noEmptyBlockStatements',
+      severity: 'warn',
+      expected: {
+        'no-empty': 'warn',
+        'no-empty-function': 'warn',
+        'no-empty-static-block': 'warn',
+      },
+      losses: 0,
+    },
+  ] as const)('$biomeRule with $severity', ({ biomeRule, severity, expected, losses }) => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { suspicious: { [biomeRule]: severity } } as BiomeLinterRules,
+      reporter,
+    )
+
+    expect(rules).toEqual(expected)
+    expect(reporter.getLosses()).toHaveLength(losses)
+  })
 })

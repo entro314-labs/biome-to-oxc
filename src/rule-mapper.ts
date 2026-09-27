@@ -71,6 +71,8 @@ const REACT_COMPILER_RULES = [
  * is reported once per migration so the narrowing is visible rather than silent.
  */
 const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
+  noAssignInExpressions:
+    'Biome rule noAssignInExpressions was mapped to no-cond-assign in `always` mode, which reports assignments inside conditions but not assignments nested in other expressions, such as `const a = (b = 1)` or a call argument.',
   noComponentHookFactories:
     'Biome rule noComponentHookFactories was mapped to react/no-unstable-nested-components, which reports nested component definitions but not nested custom hook definitions.',
   noInlineStyles:
@@ -299,7 +301,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noDocumentImportInPage: 'nextjs/no-document-import-in-page',
   noDoneCallback: 'jest/no-done-callback',
   noDivRegex: 'no-div-regex',
-  noEmptyBlockStatements: 'no-empty',
+  noEmptyBlockStatements: ['no-empty', 'no-empty-function', 'no-empty-static-block'],
   noEmptyCharacterClassInRegex: 'no-empty-character-class',
   noEmptyInterface: 'typescript/no-empty-interface',
   noEmptyPattern: 'no-empty-pattern',
@@ -714,6 +716,56 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   if (biomeName === 'useSingleVarDeclarator') {
     // Biome always requires one declarator per statement; Oxlint's `one-var` needs the mode.
     return [severity, 'never']
+  }
+
+  if (biomeName === 'noAssignInExpressions') {
+    // Biome reports assignments in conditions even when wrapped in extra parentheses, which
+    // no-cond-assign's default `except-parens` mode allows.
+    return [severity, 'always']
+  }
+
+  if (biomeName === 'noConfusingLabels') {
+    // Biome allows labels on loops only; Oxlint's no-labels forbids every label by default.
+    if (options?.allowedLabels !== undefined) {
+      reporter.loss(
+        'Biome rule noConfusingLabels option "allowedLabels" is not supported by Oxlint no-labels; those labels are reported again unless they label a loop.',
+      )
+    }
+    return [severity, { allowLoop: true }]
+  }
+
+  if (biomeName === 'noDoubleEquals') {
+    // Biome's `ignoreNull` defaults to true, which is Oxlint eqeqeq's `null: "ignore"`.
+    return options?.ignoreNull === false
+      ? [severity, 'always']
+      : [severity, 'always', { null: 'ignore' }]
+  }
+
+  if (biomeName === 'noRestrictedGlobals') {
+    // Biome always denies `event` and `error`; Oxlint restricts nothing until told to.
+    const denied = options?.deniedGlobals
+    const extra = Array.isArray(denied)
+      ? denied.filter((name): name is string => typeof name === 'string')
+      : isRecord(denied)
+        ? Object.entries(denied).map(([name, message]) =>
+            typeof message === 'string' ? { name, message } : name,
+          )
+        : []
+    return [severity, 'event', 'error', ...extra]
+  }
+
+  if (biomeName === 'useConsistentMemberAccessibility') {
+    // Biome defaults to `noPublic`; Oxlint explicit-member-accessibility defaults to
+    // `explicit`, which demands the modifiers Biome forbids.
+    if (options?.accessibility === 'explicit') {
+      return [severity, { accessibility: 'explicit' }]
+    }
+    if (options?.accessibility === 'none') {
+      reporter.loss(
+        'Biome rule useConsistentMemberAccessibility option "accessibility": "none" is not supported by Oxlint explicit-member-accessibility, which can forbid `public` but not `protected` or `private`; it was migrated as `no-public`.',
+      )
+    }
+    return [severity, { accessibility: 'no-public' }]
   }
 
   if (biomeName === 'noImplicitBoolean') {
