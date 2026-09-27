@@ -75,6 +75,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noAssignInExpressions was mapped to no-cond-assign in `always` mode, which reports assignments inside conditions but not assignments nested in other expressions, such as `const a = (b = 1)` or a call argument.',
   noComponentHookFactories:
     'Biome rule noComponentHookFactories was mapped to react/no-unstable-nested-components, which reports nested component definitions but not nested custom hook definitions.',
+  noExcessiveCognitiveComplexity:
+    'Biome rule noExcessiveCognitiveComplexity was mapped to complexity, which scores cyclomatic complexity rather than cognitive complexity; the threshold carries over, but the two scores differ, so a different set of functions is reported.',
   noInlineStyles:
     'Biome rule noInlineStyles was mapped to react/forbid-dom-props, which reports the `style` prop on JSX DOM elements but not `style` passed through React.createElement() or written in HTML, Vue, Svelte or Astro templates.',
   noReactPropAssignments:
@@ -85,8 +87,12 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noUnsafeIframeSandbox was mapped to react/iframe-missing-sandbox, which reports `allow-scripts` combined with `allow-same-origin` only when the sandbox value is a plain string attribute, not a `{"..."}` or template-literal expression; it also reports iframes with no or an invalid sandbox attribute, which Biome leaves to useIframeSandbox.',
   useConsistentCurlyBraces:
     'Biome rule useConsistentCurlyBraces was mapped to react/jsx-curly-brace-presence, which reports unnecessary braces around string literals in JSX props and children but not a JSX element passed as a prop value without braces (`foo=<Bar />`).',
+  useArrowFunction:
+    'Biome rule useArrowFunction was mapped to prefer-arrow-callback, which reports function expressions passed as callbacks but not ones assigned to variables or properties, such as `const f = function () {}`.',
   useExplicitType:
     'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
+  noUselessSwitchCase:
+    'Biome rule noUselessSwitchCase was mapped to unicorn/no-useless-switch-case, which reports a case that falls through into a trailing `default` but not one next to a `default` placed earlier in the switch.',
   useStaticResponseMethods:
     'Biome rule useStaticResponseMethods was mapped to unicorn/prefer-response-static-json, which reports `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers: { Location } })` form Biome rewrites to Response.redirect().',
 }
@@ -688,6 +694,15 @@ function mapBiomeRuleOptionsToOxlintSeverity(
 
   if (biomeName === 'useMaxParams') {
     const max = options && isNonNegativeInteger(options.max) ? options.max : 4
+    return [severity, { max }]
+  }
+
+  if (biomeName === 'noExcessiveCognitiveComplexity') {
+    // Biome's default threshold is 15; Oxlint complexity defaults to 20.
+    const max =
+      options && isNonNegativeInteger(options.maxAllowedComplexity)
+        ? options.maxAllowedComplexity
+        : 15
     return [severity, { max }]
   }
 

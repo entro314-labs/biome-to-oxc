@@ -22,7 +22,6 @@ describe('rule-mapper parity expansion', () => {
       noDefaultExport: 'import/no-default-export',
       noDuplicateElseIf: 'no-dupe-else-if',
       noEmptyBlockStatements: 'no-empty',
-      noExcessiveCognitiveComplexity: 'complexity',
       noConfusingVoidType: 'typescript/no-invalid-void-type',
       noExtraNonNullAssertion: 'typescript/no-extra-non-null-assertion',
       noFloatingPromises: 'typescript/no-floating-promises',
@@ -64,7 +63,6 @@ describe('rule-mapper parity expansion', () => {
       noVueReservedKeys: 'vue/no-reserved-keys',
       noVueReservedProps: 'vue/no-reserved-props',
       useAltText: 'jsx-a11y/alt-text',
-      useArrowFunction: 'prefer-arrow-callback',
       useAsConstAssertion: 'typescript/prefer-as-const',
       useAwait: 'require-await',
       useAwaitThenable: 'typescript/await-thenable',
@@ -1253,5 +1251,45 @@ describe('rule-mapper carries Biome defaults that differ from the Oxlint rule de
 
     expect(rules).toEqual(expected)
     expect(reporter.getLosses()).toHaveLength(losses)
+  })
+})
+
+describe('rule-mapper reports Oxlint counterparts that cover only part of the Biome rule', () => {
+  it.each([
+    {
+      biomeRule: 'noExcessiveCognitiveComplexity',
+      severity: 'warn',
+      expected: { complexity: ['warn', { max: 15 }] },
+      note: 'cyclomatic complexity',
+    },
+    {
+      biomeRule: 'noExcessiveCognitiveComplexity',
+      severity: { level: 'error', options: { maxAllowedComplexity: 25 } },
+      expected: { complexity: ['error', { max: 25 }] },
+      note: 'cyclomatic complexity',
+    },
+    {
+      biomeRule: 'useArrowFunction',
+      severity: 'error',
+      expected: { 'prefer-arrow-callback': 'error' },
+      note: 'assigned to variables',
+    },
+    {
+      biomeRule: 'noUselessSwitchCase',
+      severity: 'error',
+      expected: { 'unicorn/no-useless-switch-case': 'error' },
+      note: 'trailing `default`',
+    },
+  ] as const)('$biomeRule with $severity', ({ biomeRule, severity, expected, note }) => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { complexity: { [biomeRule]: severity } } as BiomeLinterRules,
+      reporter,
+    )
+
+    expect(rules).toEqual(expected)
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain(note)
   })
 })
