@@ -37,7 +37,9 @@ Current capabilities:
   not read `.biomeignore` itself, so this deliberately narrows scope; the migration says so
 - Linter configuration overrides
 - Formatter configuration overrides when they can be represented as Oxfmt file-glob overrides
-- JavaScript globals
+- JavaScript globals, plus `env: { browser: true, node: true }`, which gives Oxlint the browser and
+  Node.js globals Biome resolves without configuration (`no-undef`, `no-global-assign` and
+  `no-implied-eval` depend on it)
 - Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
 - The set of formatted files: Oxfmt-only formats (YAML, TOML, Markdown) are excluded, and

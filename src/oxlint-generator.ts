@@ -92,7 +92,7 @@ export function generateOxlintConfig(
 
   determinePlugins(oxlintConfig)
   mapIgnorePatterns(biomeConfig, oxlintConfig, options.biomeIgnorePatterns ?? [])
-  mapEnvironment(biomeConfig, oxlintConfig)
+  mapEnvironment(biomeConfig, oxlintConfig, linterDisabled)
   mapTypeAwareOptions(oxlintConfig, options.typeAware ?? false, options.typeCheck ?? false)
   mapSettings(biomeConfig, oxlintConfig, options.typeAwareProfile ?? 'standard')
 
@@ -220,7 +220,22 @@ function mapIgnorePatterns(
   }
 }
 
-function mapEnvironment(biomeConfig: BiomeConfig, oxlintConfig: OxlintConfig): void {
+/**
+ * Biome resolves browser and Node.js globals without any configuration, while Oxlint only
+ * knows ECMAScript builtins until an `env` names more. Without these two environments
+ * `no-undef` reports `window`, `console` and `process`, and `no-global-assign` and
+ * `no-implied-eval` stop recognising the globals they guard, so each would diverge from the
+ * Biome rule it replaces. Both environments together match Biome's set of known globals.
+ */
+function mapEnvironment(
+  biomeConfig: BiomeConfig,
+  oxlintConfig: OxlintConfig,
+  linterDisabled: boolean,
+): void {
+  if (!linterDisabled) {
+    oxlintConfig.env = { browser: true, node: true }
+  }
+
   if (biomeConfig.javascript?.globals) {
     const globals: Record<string, boolean | 'readonly' | 'writable' | 'off'> = {}
 

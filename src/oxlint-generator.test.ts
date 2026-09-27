@@ -145,3 +145,14 @@ describe('generateOxlintConfig type-aware rule fallbacks', () => {
     expect(overrides[0]?.rules).toMatchObject({ 'unicorn/prefer-array-find': 'error' })
   })
 })
+
+describe('generateOxlintConfig environments', () => {
+  it.each([
+    { name: 'an enabled linter', biomeConfig: {}, expected: { browser: true, node: true } },
+    { name: 'a disabled linter', biomeConfig: { linter: { enabled: false } }, expected: undefined },
+  ])('declares the globals Biome knows for $name', ({ biomeConfig, expected }) => {
+    const { config } = generateOxlintConfig(biomeConfig, new CollectingReporter())
+
+    expect(config.env).toEqual(expected)
+  })
+})

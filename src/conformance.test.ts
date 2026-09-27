@@ -386,6 +386,20 @@ describe('source-versus-target lint diagnostics', () => {
       },
     },
     {
+      name: 'knows the browser and Node.js globals Biome knows',
+      rules: {
+        correctness: { noUndeclaredVariables: 'error' },
+        suspicious: { noGlobalAssign: 'error' },
+        security: { noGlobalEval: 'error' },
+      },
+      files: {
+        'src/globals.js':
+          'export const a = [window.location, document.title, process.env.X, console, Buffer]\n',
+        'src/undeclared.js': 'export const b = Deno.version\n',
+        'src/assign.js': 'window = 1\n',
+      },
+    },
+    {
       name: 'allows labels on loops only',
       rules: { suspicious: { noConfusingLabels: 'error' } },
       files: {
