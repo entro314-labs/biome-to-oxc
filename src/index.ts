@@ -341,7 +341,7 @@ async function runMigration(
         throwIfMigrationErrorsIncreased(turboErrorCount, reporter)
       }
 
-      if (cleanupAllowed) {
+      if (cleanupAllowed && !biomeStillInvoked(packageJsonSummary)) {
         deleteWasAttempted = true
         deletedLegacyFiles = await cleanupLegacyBiomeFiles(
           projectDir,
@@ -379,7 +379,7 @@ async function runMigration(
         throwIfMigrationErrorsIncreased(turboErrorCount, reporter)
       }
 
-      if (cleanupAllowed) {
+      if (cleanupAllowed && !biomeStillInvoked(packageJsonSummary)) {
         deleteWasAttempted = true
         deletedLegacyFiles = await cleanupLegacyBiomeFiles(
           projectDir,
@@ -418,6 +418,7 @@ async function runMigration(
     deletedLegacyFiles,
     dryRun: options.dryRun ?? false,
     semanticLosses: reporter.getLosses(),
+    scriptsStillUsingBiome: packageJsonSummary?.scriptsStillUsingBiome ?? [],
     suggestions,
   })
 
@@ -648,6 +649,7 @@ function buildCleanupOutcome({
   deletedLegacyFiles,
   dryRun,
   semanticLosses,
+  scriptsStillUsingBiome,
   suggestions,
 }: {
   requested: boolean
@@ -656,6 +658,7 @@ function buildCleanupOutcome({
   deletedLegacyFiles: string[]
   dryRun: boolean
   semanticLosses: string[]
+  scriptsStillUsingBiome: string[]
   suggestions: string[]
 }): CleanupOutcome {
   if (!requested) {
@@ -676,6 +679,14 @@ function buildCleanupOutcome({
     return { requested: true, performed: false, blockedReason, files: [] }
   }
 
+  if (scriptsStillUsingBiome.length > 0) {
+    const blockedReason = `package scripts still invoke Biome: ${scriptsStillUsingBiome.join(', ')}`
+    suggestions.push(
+      `--delete was skipped because ${blockedReason}. Deleting the Biome config would leave them running with Biome's defaults; update them (or re-run with --update-scripts), then re-run with --delete.`,
+    )
+    return { requested: true, performed: false, blockedReason, files: [] }
+  }
+
   if (!deleteWasAttempted) {
     const blockedReason = 'the migration did not complete successfully'
     suggestions.push(`--delete skipped because ${blockedReason}.`)
@@ -692,6 +703,11 @@ function buildCleanupOutcome({
   suggestions.push(...deletedLegacyFiles.map((filePath) => `  - ${filePath}`))
 
   return { requested: true, performed: true, files: deletedLegacyFiles }
+}
+
+/** Scripts that still run Biome need its config, so it cannot be deleted from under them. */
+function biomeStillInvoked(summary: PackageUpdateSummary | undefined): boolean {
+  return (summary?.scriptsStillUsingBiome.length ?? 0) > 0
 }
 
 async function detectWorkspaceMonorepo(projectDir: string): Promise<boolean> {

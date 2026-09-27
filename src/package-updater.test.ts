@@ -72,7 +72,7 @@ describe('updatePackageJson', () => {
     expect(pkg.devDependencies['@biomejs/biome']).toBe('^2.0.0')
     expect(summary.dependenciesRemoved).toEqual([])
     expect(reporter.getWarnings()).toContain(
-      'Keeping @biomejs/biome because these package scripts still invoke Biome: check',
+      'Keeping @biomejs/biome and the Biome config because these package scripts still invoke Biome: check',
     )
   })
 

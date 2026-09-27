@@ -475,6 +475,8 @@ export interface PackageUpdateSummary {
   scriptsUpdated: PackageScriptUpdate[]
   dependenciesRemoved: PackageDependencyRemoval[]
   devDependencies: PackageDevDependencyChange[]
+  /** Package scripts that still invoke Biome after the update, which keep Biome in use. */
+  scriptsStillUsingBiome: string[]
   changed: boolean
   /** Lockfile that dependency changes invalidated, when one was detected. */
   lockfile?: LockfileStatus

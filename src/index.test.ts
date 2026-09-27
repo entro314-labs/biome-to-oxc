@@ -603,6 +603,48 @@ describe('migrate semantic-loss safeguards', () => {
   })
 })
 
+describe('migrate --delete with package scripts that still invoke Biome', () => {
+  it.each([
+    { name: 'without --update-scripts', updateScripts: false, deleted: false },
+    { name: 'with --update-scripts rewriting them', updateScripts: true, deleted: true },
+  ])(
+    'keeps the Biome config only while scripts need it, $name',
+    async ({ updateScripts, deleted }) => {
+      const { biomeConfigPath, dir, packageJsonPath } = await setupMigrationFixture()
+
+      await writeFile(
+        packageJsonPath,
+        `${JSON.stringify({
+          name: 'fixture',
+          scripts: { lint: 'biome check .' },
+          devDependencies: { '@biomejs/biome': '^2.5.7' },
+        })}\n`,
+        'utf-8',
+      )
+
+      const report = await migrate({
+        configPath: biomeConfigPath,
+        outputDir: dir,
+        delete: true,
+        updateScripts,
+      })
+
+      const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf-8')) as {
+        devDependencies: Record<string, string>
+      }
+
+      expect(report.errors).toEqual([])
+      expect(await pathExists(biomeConfigPath)).toBe(!deleted)
+      expect(report.cleanup?.performed).toBe(deleted)
+      expect(packageJson.devDependencies['@biomejs/biome']).toBe(deleted ? undefined : '^2.5.7')
+
+      if (!deleted) {
+        expect(report.cleanup?.blockedReason).toBe('package scripts still invoke Biome: lint')
+      }
+    },
+  )
+})
+
 describe('migrate file selection fidelity', () => {
   it('translates negated includes into ignore patterns for both tools', async () => {
     const { biomeConfigPath, dir } = await setupMigrationFixture()

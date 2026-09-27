@@ -84,6 +84,7 @@ export async function updatePackageJson(
     scriptsUpdated: [],
     dependenciesRemoved: [],
     devDependencies: [],
+    scriptsStillUsingBiome: [],
     changed: false,
   }
 
@@ -138,6 +139,7 @@ export async function updatePackageJson(
     const scriptsStillUsingBiome = Object.entries(packageJson.scripts ?? {})
       .filter(([, script]) => containsBiomeExecutable(script))
       .map(([name]) => name)
+    summary.scriptsStillUsingBiome = scriptsStillUsingBiome
 
     if (!removeBiomeAllowed) {
       reporter.info(
@@ -145,7 +147,7 @@ export async function updatePackageJson(
       )
     } else if (scriptsStillUsingBiome.length > 0) {
       reporter.warn(
-        `Keeping @biomejs/biome because these package scripts still invoke Biome: ${scriptsStillUsingBiome.join(', ')}`,
+        `Keeping @biomejs/biome and the Biome config because these package scripts still invoke Biome: ${scriptsStillUsingBiome.join(', ')}`,
       )
     } else {
       if (packageJson.devDependencies) {
