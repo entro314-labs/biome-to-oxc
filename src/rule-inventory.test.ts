@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getMappedBiomeRuleNames,
   getMappedOxlintRuleNames,
+  getTypeAwareOxlintRuleNames,
   UNVERIFIED_BIOME_RULE_NAMES,
 } from './rule-mapper.js'
 
@@ -67,6 +68,19 @@ describe('rule inventory conformance', () => {
     const staleExceptions = UNVERIFIED_BIOME_RULE_NAMES.filter((rule) => inventory.has(rule))
 
     expect(staleExceptions).toEqual([])
+  })
+
+  it('treats exactly the rules tsgolint implements as type-aware', async () => {
+    const [header, ...rows] = await readInventory('tsgolint-rules.tsv')
+
+    expect(header).toEqual(['rule', 'status', 'oxlint_key'])
+
+    const implemented = rows
+      .filter(([, status]) => status === 'implemented')
+      .map(([, , oxlintKey]) => oxlintKey as string)
+
+    expect(implemented.length).toBeGreaterThan(50)
+    expect(getTypeAwareOxlintRuleNames().sort()).toEqual(implemented.sort())
   })
 
   it('reads non-trivial inventories, so an empty file cannot make the checks vacuous', async () => {

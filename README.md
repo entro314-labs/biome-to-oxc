@@ -22,8 +22,10 @@ Current capabilities:
 
 - Converts `biome.json`/`biome.jsonc` to `.oxlintrc.json` and `.oxfmtrc.jsonc`
 - Maps 80+ Biome linter rules to Oxlint equivalents (native `typescript/` rules)
-- Substitutes a non-type-aware Oxlint rule for the three Biome rules that need no types but whose
-  only Oxlint counterpart is type-aware, so a migration without tsgolint keeps their coverage
+- Substitutes a non-type-aware Oxlint rule for the four Biome rules that need no types but whose
+  only Oxlint counterpart is type-aware, so a migration without tsgolint keeps their coverage, and
+  reports every other rule that maps only to a type-aware Oxlint rule as a semantic loss when
+  type-aware linting is off
 - Transforms Biome formatter options to Oxfmt (Prettier-compatible)
 - Normalizes `include`/`includes` field variations automatically
 
@@ -308,7 +310,7 @@ Oxlint's broader `restriction` category.
 
 ### Type-Aware Rule Fallbacks
 
-Three Biome rules need no type information, but their only Oxlint counterpart is a type-aware
+Four Biome rules need no type information, but their only Oxlint counterpart is a type-aware
 (tsgolint) rule. Type-aware linting is off unless the migration enables it, so mapping straight to
 the tsgolint rule would drop diagnostics the Biome config did produce. When type-aware linting is
 off, a non-type-aware Oxlint rule takes its place instead:
@@ -318,15 +320,18 @@ off, a non-type-aware Oxlint rule takes its place instead:
 | `useArrayFind`            | `typescript/prefer-find`                    | `unicorn/prefer-array-find`              |
 | `useIncludes`             | `typescript/prefer-includes`                | `unicorn/prefer-includes`                |
 | `useStringStartsEndsWith` | `typescript/prefer-string-starts-ends-with` | `unicorn/prefer-string-starts-ends-with` |
+| `useThrowOnlyError`       | `typescript/only-throw-error`               | `no-throw-literal`                       |
 
 The fallback replaces the type-aware rule rather than joining it, so turning type-aware linting on
-later can never report the same line twice. The first two pairs report exactly what the Biome rule
-reports; `unicorn/prefer-string-starts-ends-with` covers only the anchored-regex form of the four
+later can never report the same line twice. `useArrayFind`, `useIncludes` and `useThrowOnlyError`
+report exactly what the Biome rule reports; `unicorn/prefer-string-starts-ends-with` covers only the anchored-regex form of the four
 Biome flags, so that substitution is reported as a semantic loss.
 
 Every other Biome rule that maps only to a type-aware Oxlint rule — `noFloatingPromises`,
-`noMisusedPromises`, `useOptionalChain` and the rest — needs types on both sides and has no
-fallback.
+`noMisusedPromises`, `useOptionalChain`, `useLiteralKeys` and the rest — has no non-type-aware
+Oxlint counterpart. Oxlint skips type-aware rules unless type-aware linting is on, so a migration
+without `--type-aware` reports each of them as a semantic loss instead of emitting a rule that
+never runs.
 
 ### Assist Actions
 

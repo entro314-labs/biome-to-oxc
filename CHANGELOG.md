@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Biome rules whose only Oxlint counterpart is a type-aware (tsgolint) rule are reported as a semantic loss when the migration does not turn on type-aware linting. Oxlint skips those rules without `--type-aware`, so twenty mappings — `useLiteralKeys`, `useOptionalChain`, `useExportType`, `noFloatingPromises` and others — previously emitted a rule that never ran, while the migration reported success. `useThrowOnlyError` instead falls back to `no-throw-literal`, which reports what the Biome rule reports.
 - When several configured Biome rules map to the same Oxlint rule, the strongest severity now wins instead of whichever rule the config listed last. Previously `noUnusedVariables: "error"` followed by `noUnusedFunctionParameters: "off"` wrote `no-unused-vars: "off"` and dropped every unused-variable diagnostic; that pair now emits `no-unused-vars` with `args: "none"`, which reports exactly what Biome does. Other disabled sources whose shared Oxlint rule stays on are reported as a warning, and enabled sources carrying conflicting options are reported as a semantic loss. A conformance test runs both binaries over the same fixture.
 
 ## [3.6.0] - 2026-09-26

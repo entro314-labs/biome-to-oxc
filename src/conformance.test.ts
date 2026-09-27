@@ -7,6 +7,7 @@ import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
 
 import { migrate } from './index.js'
+import type { BiomeLinterRules } from './types.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -153,7 +154,7 @@ async function oxlintLintLines(dir: string): Promise<string[]> {
 }
 
 async function setupLintFixture(
-  rules: Record<string, Record<string, unknown>>,
+  rules: BiomeLinterRules,
   files: Record<string, string>,
 ): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-lint-conformance-'))
@@ -341,14 +342,29 @@ describe('Biome override precedence', () => {
   })
 })
 
+interface LintParityCase {
+  name: string
+  rules: BiomeLinterRules
+  files: Record<string, string>
+}
+
 describe('source-versus-target lint diagnostics', () => {
-  it.each([
+  it.each<LintParityCase>([
     {
       name: 'keeps unused variables reported when only unused parameters are turned off',
       rules: { correctness: { noUnusedVariables: 'error', noUnusedFunctionParameters: 'off' } },
       files: {
         'src/params.js': 'export function f(unused) {\n  return 1\n}\n',
         'src/vars.js': 'export function g() {\n  const unused = 1\n  return 2\n}\n',
+      },
+    },
+    {
+      name: 'reports thrown non-Error values without type-aware linting',
+      rules: { style: { useThrowOnlyError: 'error' } },
+      files: {
+        'src/literal.js': 'export function f() {\n  throw "boom"\n}\n',
+        'src/object.js': 'export function g() {\n  throw { code: 1 }\n}\n',
+        'src/error.js': 'export function h() {\n  throw new Error("boom")\n}\n',
       },
     },
   ])('$name', async ({ rules, files }) => {

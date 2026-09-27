@@ -102,7 +102,77 @@ const TYPE_AWARE_RULE_FALLBACKS: Record<string, string> = {
   useFind: 'unicorn/prefer-array-find',
   useIncludes: 'unicorn/prefer-includes',
   useStringStartsEndsWith: 'unicorn/prefer-string-starts-ends-with',
+  useThrowOnlyError: 'no-throw-literal',
 }
+
+/**
+ * Oxlint rules implemented by tsgolint, which only run when type-aware linting is on. A Biome
+ * rule that maps onto one of them with no fallback above loses its diagnostics in a migration
+ * that leaves type-aware linting off, so that is reported rather than emitted silently.
+ * `rule-inventory.test.ts` keeps this list equal to `docs/tsgolint-rules.tsv`.
+ */
+const TYPE_AWARE_OXLINT_RULES = new Set([
+  'typescript/await-thenable',
+  'typescript/consistent-return',
+  'typescript/consistent-type-exports',
+  'typescript/dot-notation',
+  'typescript/no-array-delete',
+  'typescript/no-base-to-string',
+  'typescript/no-confusing-void-expression',
+  'typescript/no-deprecated',
+  'typescript/no-duplicate-type-constituents',
+  'typescript/no-floating-promises',
+  'typescript/no-for-in-array',
+  'typescript/no-generated-empty-object-type',
+  'typescript/no-implied-eval',
+  'typescript/no-meaningless-void-operator',
+  'typescript/no-misused-promises',
+  'typescript/no-misused-spread',
+  'typescript/no-mixed-enums',
+  'typescript/no-redundant-type-constituents',
+  'typescript/no-unnecessary-boolean-literal-compare',
+  'typescript/no-unnecessary-condition',
+  'typescript/no-unnecessary-qualifier',
+  'typescript/no-unnecessary-template-expression',
+  'typescript/no-unnecessary-type-arguments',
+  'typescript/no-unnecessary-type-assertion',
+  'typescript/no-unnecessary-type-conversion',
+  'typescript/no-unnecessary-type-parameters',
+  'typescript/no-unsafe-argument',
+  'typescript/no-unsafe-assignment',
+  'typescript/no-unsafe-call',
+  'typescript/no-unsafe-enum-comparison',
+  'typescript/no-unsafe-member-access',
+  'typescript/no-unsafe-return',
+  'typescript/no-unsafe-type-assertion',
+  'typescript/no-unsafe-unary-minus',
+  'typescript/no-useless-default-assignment',
+  'typescript/non-nullable-type-assertion-style',
+  'typescript/only-throw-error',
+  'typescript/prefer-find',
+  'typescript/prefer-includes',
+  'typescript/prefer-nullish-coalescing',
+  'typescript/prefer-optional-chain',
+  'typescript/prefer-promise-reject-errors',
+  'typescript/prefer-readonly',
+  'typescript/prefer-readonly-parameter-types',
+  'typescript/prefer-reduce-type-parameter',
+  'typescript/prefer-regexp-exec',
+  'typescript/prefer-return-this-type',
+  'typescript/prefer-string-starts-ends-with',
+  'typescript/promise-function-async',
+  'typescript/related-getter-setter-pairs',
+  'typescript/require-array-sort-compare',
+  'typescript/require-await',
+  'typescript/restrict-plus-operands',
+  'typescript/restrict-template-expressions',
+  'typescript/return-await',
+  'typescript/strict-boolean-expressions',
+  'typescript/strict-void-return',
+  'typescript/switch-exhaustiveness-check',
+  'typescript/unbound-method',
+  'typescript/use-unknown-in-catch-callback-variable',
+])
 
 /** Fallbacks that cover less than the type-aware rule they stand in for. */
 const TYPE_AWARE_FALLBACK_NOTES: Record<string, string> = {
@@ -132,6 +202,11 @@ export const UNVERIFIED_BIOME_RULE_NAMES = [
 /** Every Biome rule name this mapper recognises, for inventory conformance checks. */
 export function getMappedBiomeRuleNames(): string[] {
   return Object.keys(BIOME_TO_OXLINT_RULE_MAP)
+}
+
+/** Every type-aware Oxlint rule the mapper knows of, for inventory conformance checks. */
+export function getTypeAwareOxlintRuleNames(): string[] {
+  return [...TYPE_AWARE_OXLINT_RULES]
 }
 
 /** Every Oxlint rule name this mapper can emit, for inventory conformance checks. */
@@ -1020,15 +1095,28 @@ function mapBiomeRuleToOxlintRules(
       warnPartialMappingOnce(biomeName, partialMappingNote, reporter)
     }
 
-    const ruleNames = Array.isArray(mapped) ? mapped : [mapped]
-    return [...new Set(ruleNames.map((ruleName) => normalizeOxlintRuleName(ruleName)))]
+    const ruleNames = [
+      ...new Set((Array.isArray(mapped) ? mapped : [mapped]).map(normalizeOxlintRuleName)),
+    ]
+
+    if (!typeAware) {
+      for (const ruleName of ruleNames.filter((name) => TYPE_AWARE_OXLINT_RULES.has(name))) {
+        warnPartialMappingOnce(
+          `${biomeName}::${ruleName}`,
+          `Biome rule ${biomeName} was mapped to ${ruleName}, a type-aware Oxlint rule that only runs with type-aware linting, so its diagnostics are not reported. Re-run the migration with --type-aware to keep them.`,
+          reporter,
+        )
+      }
+    }
+
+    return ruleNames
   }
 
   warnUnmappedRuleOnce(biomeName, reporter)
   return []
 }
 
-function warnPartialMappingOnce(biomeName: string, note: string, reporter: Reporter): void {
+function warnPartialMappingOnce(key: string, note: string, reporter: Reporter): void {
   let warnedRules = WARNED_PARTIAL_MAPPINGS_BY_REPORTER.get(reporter)
 
   if (!warnedRules) {
@@ -1036,11 +1124,11 @@ function warnPartialMappingOnce(biomeName: string, note: string, reporter: Repor
     WARNED_PARTIAL_MAPPINGS_BY_REPORTER.set(reporter, warnedRules)
   }
 
-  if (warnedRules.has(biomeName)) {
+  if (warnedRules.has(key)) {
     return
   }
 
-  warnedRules.add(biomeName)
+  warnedRules.add(key)
   reporter.loss(note)
 }
 

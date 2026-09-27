@@ -586,7 +586,7 @@ describe('rule-mapper parity expansion', () => {
       },
     }
 
-    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter, { typeAware: true })
 
     expect(rules).toMatchObject({
       'no-use-before-define': 'error',
@@ -1052,4 +1052,62 @@ describe('rule-mapper resolution of Oxlint rules shared by several Biome rules',
       'typescript/explicit-function-return-type': ['error', { allowExpressions: true }],
     })
   })
+})
+
+describe('rule-mapper handling of type-aware Oxlint targets', () => {
+  it('reports each Biome rule whose only counterpart needs type-aware linting when it is off', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      {
+        complexity: { useLiteralKeys: 'error', useOptionalChain: 'warn' },
+        nursery: { noFloatingPromises: 'error' },
+      },
+      reporter,
+    )
+
+    expect(rules).toEqual({
+      'typescript/dot-notation': 'error',
+      'typescript/prefer-optional-chain': 'warn',
+      'typescript/no-floating-promises': 'error',
+    })
+    expect(reporter.getLosses()).toHaveLength(3)
+    expect(reporter.getLosses()[0]).toContain(
+      'useLiteralKeys was mapped to typescript/dot-notation',
+    )
+  })
+
+  it('reports nothing for the same rules when the migration enables type-aware linting', () => {
+    const reporter = new CollectingReporter()
+
+    extractRulesFromBiomeConfig(
+      {
+        complexity: { useLiteralKeys: 'error', useOptionalChain: 'warn' },
+        nursery: { noFloatingPromises: 'error' },
+      },
+      reporter,
+      { typeAware: true },
+    )
+
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it.each([
+    { typeAware: false, expected: { 'no-throw-literal': 'error' } },
+    { typeAware: true, expected: { 'typescript/only-throw-error': 'error' } },
+  ])(
+    'maps useThrowOnlyError to $expected when typeAware is $typeAware, without a loss',
+    ({ typeAware, expected }) => {
+      const reporter = new CollectingReporter()
+
+      const { rules } = extractRulesFromBiomeConfig(
+        { style: { useThrowOnlyError: 'error' } },
+        reporter,
+        { typeAware },
+      )
+
+      expect(rules).toEqual(expected)
+      expect(reporter.getWarnings()).toEqual([])
+    },
+  )
 })
