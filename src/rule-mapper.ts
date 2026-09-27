@@ -671,7 +671,8 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   biomeSeverity: BiomeRuleSeverity,
   reporter: Reporter,
 ): OxlintRuleSeverity {
-  if (typeof severity !== 'string') {
+  // An off rule reports nothing, so its options neither need carrying over nor count as lost.
+  if (typeof severity !== 'string' || severity === 'off') {
     return severity
   }
 
@@ -759,7 +760,9 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   }
 
   if (biomeName === 'noRestrictedGlobals') {
-    // Biome always denies `event` and `error`; Oxlint restricts nothing until told to.
+    // Biome always denies the globals `event` and `error`; Oxlint restricts nothing until
+    // told to. Restricted names follow the severity positionally, so the second 'error' below
+    // is the global's name, not a severity.
     const denied = options?.deniedGlobals
     const extra = Array.isArray(denied)
       ? denied.filter((name): name is string => typeof name === 'string')
@@ -1144,16 +1147,22 @@ export function mapBiomeRuleToOxlint(biomeName: string, reporter: Reporter): str
   return mapBiomeRuleToOxlintRules(biomeName, reporter, true)[0] ?? null
 }
 
+/**
+ * Maps a Biome rule to its Oxlint rules. Coverage gaps are only reported for an `enabled`
+ * rule: a rule the Biome config turns off produced no diagnostics, so nothing is lost when
+ * the Oxlint side covers less of it, or none of it.
+ */
 function mapBiomeRuleToOxlintRules(
   biomeName: string,
   reporter: Reporter,
   typeAware: boolean,
+  enabled = true,
 ): string[] {
   const fallback = typeAware ? undefined : TYPE_AWARE_RULE_FALLBACKS[biomeName]
 
   if (fallback) {
     const fallbackNote = TYPE_AWARE_FALLBACK_NOTES[biomeName]
-    if (fallbackNote) {
+    if (fallbackNote && enabled) {
       warnPartialMappingOnce(biomeName, fallbackNote, reporter)
     }
 
@@ -1163,7 +1172,7 @@ function mapBiomeRuleToOxlintRules(
   const mapped = BIOME_TO_OXLINT_RULE_MAP[biomeName]
   if (mapped) {
     const partialMappingNote = PARTIAL_RULE_MAPPING_NOTES[biomeName]
-    if (partialMappingNote) {
+    if (partialMappingNote && enabled) {
       warnPartialMappingOnce(biomeName, partialMappingNote, reporter)
     }
 
@@ -1171,7 +1180,7 @@ function mapBiomeRuleToOxlintRules(
       ...new Set((Array.isArray(mapped) ? mapped : [mapped]).map(normalizeOxlintRuleName)),
     ]
 
-    if (!typeAware) {
+    if (!typeAware && enabled) {
       for (const ruleName of ruleNames.filter((name) => TYPE_AWARE_OXLINT_RULES.has(name))) {
         warnPartialMappingOnce(
           `${biomeName}::${ruleName}`,
@@ -1184,7 +1193,9 @@ function mapBiomeRuleToOxlintRules(
     return ruleNames
   }
 
-  warnUnmappedRuleOnce(biomeName, reporter)
+  if (enabled) {
+    warnUnmappedRuleOnce(biomeName, reporter)
+  }
   return []
 }
 
@@ -1326,7 +1337,9 @@ export function extractRulesFromBiomeConfig(
           continue
         }
 
-        const oxlintRuleNames = mapBiomeRuleToOxlintRules(ruleName, reporter, typeAware)
+        const enabled =
+          (typeof ruleSeverity === 'string' ? ruleSeverity : ruleSeverity.level) !== 'off'
+        const oxlintRuleNames = mapBiomeRuleToOxlintRules(ruleName, reporter, typeAware, enabled)
         if (oxlintRuleNames.length > 0) {
           sourceRulesConverted.add(ruleName)
           const oxlintSeverity = mapBiomeRuleOptionsToOxlintSeverity(

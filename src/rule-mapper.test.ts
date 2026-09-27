@@ -1298,3 +1298,45 @@ describe('rule-mapper reports Oxlint counterparts that cover only part of the Bi
     expect(reporter.getLosses()[0]).toContain(note)
   })
 })
+
+describe('rule-mapper does not report coverage gaps for Biome rules the config turns off', () => {
+  it.each([
+    { group: 'complexity', biomeRule: 'useLiteralKeys', expected: 'typescript/dot-notation' },
+    { group: 'nursery', biomeRule: 'noBarrelFile', expected: 'oxc/no-barrel-file' },
+    { group: 'nursery', biomeRule: 'noInlineStyles', expected: 'react/forbid-dom-props' },
+    { group: 'suspicious', biomeRule: 'noAssignInExpressions', expected: 'no-cond-assign' },
+    {
+      group: 'style',
+      biomeRule: 'useStringStartsEndsWith',
+      expected: 'unicorn/prefer-string-starts-ends-with',
+    },
+    { group: 'suspicious', biomeRule: 'noConfusingLabels', expected: 'no-labels' },
+  ])('$biomeRule: "off" is emitted as off without a loss', ({ group, biomeRule, expected }) => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      {
+        [group]: {
+          [biomeRule]: { level: 'off', options: { allowedLabels: ['DEV'] } },
+        },
+      },
+      reporter,
+    )
+
+    expect(rules).toEqual({ [expected]: 'off' })
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('does not report an unmapped rule the config turns off', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules, sourceRulesSkipped } = extractRulesFromBiomeConfig(
+      { complexity: { noUselessContinue: 'off' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({})
+    expect([...sourceRulesSkipped]).toEqual(['noUselessContinue'])
+    expect(reporter.getLosses()).toEqual([])
+  })
+})
