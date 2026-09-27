@@ -196,12 +196,14 @@ describe('source-versus-target formatter scope', () => {
     })
 
     const biomeScope = await biomeFormatScope(dir)
-    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
     const oxfmtScope = await oxfmtFormatScope(dir)
 
     expect(sourceFilesOnly(biomeScope)).not.toContain('src/app.test.ts')
     expect(sourceFilesOnly(biomeScope)).not.toContain('build/generated.ts')
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+    // `**` selects every file, so the selection narrows nothing and loses nothing.
+    expect(report.losses).toEqual([])
   })
 
   it('applies .biomeignore, which Biome 2.x itself ignores, as a deliberate narrowing', async () => {
@@ -239,7 +241,8 @@ describe('source-versus-target formatter scope', () => {
     })
 
     const biomeScope = await biomeFormatScope(dir)
-    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    expect(report.losses).toEqual([])
     const oxfmtScope = await oxfmtFormatScope(dir)
 
     expect(sourceFilesOnly(biomeScope)).not.toContain('build/generated.ts')

@@ -32,6 +32,8 @@ const GLOBAL_FORMATTER_KEYS = new Set([
   'enabled',
   'include',
   'includes',
+  // Negated `includes` entries, split out during normalization and migrated as ignores.
+  'exclude',
   'ignore',
   'formatWithErrors',
   'indentStyle',

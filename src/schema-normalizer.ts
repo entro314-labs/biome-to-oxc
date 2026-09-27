@@ -71,21 +71,41 @@ function splitIncludes(
   }
 }
 
+/** Patterns that select every file, which Biome 2.x configs list before their `!` exceptions. */
+const MATCH_ALL_PATTERNS = new Set(['**', '**/*'])
+
+/**
+ * Drops a positive selection that already selects every file. `["**", "!dist"]` is Biome's
+ * canonical way to exclude a directory, and the positive part narrows nothing, so keeping
+ * it would report an unrepresentable include selection for a config that has none.
+ */
+function withoutMatchAllSelection(selection: NormalizedSelection): NormalizedSelection {
+  return selection.include?.some((pattern) => MATCH_ALL_PATTERNS.has(pattern))
+    ? { ...selection, include: undefined }
+    : selection
+}
+
 export function normalizeBiomeConfig(config: BiomeConfig, reporter: Reporter): BiomeConfig {
   const normalized = { ...config }
 
   if (normalized.files) {
-    const { include, exclude } = normalizeIncludeFields(normalized.files, 'files', reporter)
+    const { include, exclude } = withoutMatchAllSelection(
+      normalizeIncludeFields(normalized.files, 'files', reporter),
+    )
     normalized.files = { ...normalized.files, include, exclude, includes: undefined }
   }
 
   if (normalized.linter) {
-    const { include, exclude } = normalizeIncludeFields(normalized.linter, 'linter', reporter)
+    const { include, exclude } = withoutMatchAllSelection(
+      normalizeIncludeFields(normalized.linter, 'linter', reporter),
+    )
     normalized.linter = { ...normalized.linter, include, exclude, includes: undefined }
   }
 
   if (normalized.formatter) {
-    const { include, exclude } = normalizeIncludeFields(normalized.formatter, 'formatter', reporter)
+    const { include, exclude } = withoutMatchAllSelection(
+      normalizeIncludeFields(normalized.formatter, 'formatter', reporter),
+    )
     normalized.formatter = { ...normalized.formatter, include, exclude, includes: undefined }
   }
 
