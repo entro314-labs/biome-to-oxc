@@ -987,3 +987,69 @@ describe('rule-mapper coverage for Biome rules with existing partial Oxlint coun
     expect(reporter.getLosses()[0]).toContain('skips TypeScript files')
   })
 })
+
+describe('rule-mapper resolution of Oxlint rules shared by several Biome rules', () => {
+  it.each([
+    {
+      name: 'keeps unused-variable checks when only parameters are turned off',
+      correctness: { noUnusedVariables: 'error', noUnusedFunctionParameters: 'off' },
+      expected: { 'no-unused-vars': ['error', { args: 'none' }] },
+      warnings: 0,
+    },
+    {
+      name: 'does not let key order decide, parameters listed first',
+      correctness: { noUnusedFunctionParameters: 'off', noUnusedVariables: 'error' },
+      expected: { 'no-unused-vars': ['error', { args: 'none' }] },
+      warnings: 0,
+    },
+    {
+      name: 'keeps the enabled rule and reports the widening when imports are turned off',
+      correctness: { noUnusedVariables: 'warn', noUnusedImports: 'off' },
+      expected: { 'no-unused-vars': 'warn' },
+      warnings: 1,
+    },
+    {
+      name: 'takes the strongest severity when every source is on',
+      correctness: { noUnusedVariables: 'warn', noUnusedImports: 'error' },
+      expected: { 'no-unused-vars': 'error' },
+      warnings: 0,
+    },
+    {
+      name: 'stays off when every source is off',
+      correctness: { noUnusedVariables: 'off', noUnusedImports: 'off' },
+      expected: { 'no-unused-vars': 'off' },
+      warnings: 0,
+    },
+  ] as const)('$name', ({ correctness, expected, warnings }) => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig({ correctness }, reporter)
+
+    expect(rules).toEqual(expected)
+    expect(reporter.getWarnings()).toHaveLength(warnings)
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('keeps the options of the only source that carries them, at the strongest severity', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      {
+        style: {
+          useNumberNamespace: 'warn',
+          noGlobalIsNan: 'error',
+        },
+        nursery: {
+          useExplicitReturnType: { level: 'warn', options: { allowExpressions: true } },
+          useExplicitType: 'error',
+        },
+      },
+      reporter,
+    )
+
+    expect(rules).toMatchObject({
+      'unicorn/prefer-number-properties': 'error',
+      'typescript/explicit-function-return-type': ['error', { allowExpressions: true }],
+    })
+  })
+})

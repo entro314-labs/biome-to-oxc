@@ -1127,6 +1127,8 @@ export function extractRulesFromBiomeConfig(
 
   applyTopLevelPreset(linterRules, categories, reporter, applyImplicitRecommended)
 
+  const sourcesByOxlintRule = new Map<string, SharedRuleSource[]>()
+
   for (const [key, value] of Object.entries(linterRules)) {
     if (key === 'recommended' || key === 'all' || key === 'preset') {
       continue
@@ -1174,7 +1176,9 @@ export function extractRulesFromBiomeConfig(
             reporter,
           )
           for (const oxlintRuleName of oxlintRuleNames) {
-            rules[oxlintRuleName] = oxlintSeverity
+            const sources = sourcesByOxlintRule.get(oxlintRuleName) ?? []
+            sources.push({ biomeRule: ruleName, severity: oxlintSeverity })
+            sourcesByOxlintRule.set(oxlintRuleName, sources)
           }
         } else {
           sourceRulesSkipped.add(ruleName)
@@ -1195,7 +1199,95 @@ export function extractRulesFromBiomeConfig(
     }
   }
 
+  for (const [oxlintRuleName, sources] of sourcesByOxlintRule) {
+    rules[oxlintRuleName] = resolveSharedRuleSeverity(oxlintRuleName, sources, reporter)
+  }
+
   return { rules, categories, sourceRulesConverted, sourceRulesSkipped }
+}
+
+interface SharedRuleSource {
+  biomeRule: string
+  severity: OxlintRuleSeverity
+}
+
+const SEVERITY_RANK = { off: 0, warn: 1, error: 2 } as const
+
+function severityLevel(severity: OxlintRuleSeverity): 'off' | 'warn' | 'error' {
+  return typeof severity === 'string' ? severity : severity[0]
+}
+
+/**
+ * Resolves one Oxlint rule that several configured Biome rules map onto.
+ *
+ * Writing each source in turn would let whichever Biome rule the config lists last decide,
+ * so `noUnusedFunctionParameters: "off"` listed after `noUnusedVariables: "error"` would turn
+ * off `no-unused-vars` and drop every unused-variable diagnostic. Instead the strongest
+ * severity wins, because an enabled Biome rule's diagnostics are behaviour to keep, while a
+ * disabled one only means that Biome rule stayed quiet. What the shared rule then reports
+ * beyond the enabled sources is surfaced rather than hidden.
+ */
+function resolveSharedRuleSeverity(
+  oxlintRuleName: string,
+  sources: SharedRuleSource[],
+  reporter: Reporter,
+): OxlintRuleSeverity {
+  const [first] = sources
+  const enabled = sources.filter(({ severity }) => severityLevel(severity) !== 'off')
+
+  if (!first || sources.length === 1 || enabled.length === 0) {
+    return first?.severity ?? 'off'
+  }
+
+  const strongest = enabled.reduce((current, candidate) =>
+    SEVERITY_RANK[severityLevel(candidate.severity)] >
+    SEVERITY_RANK[severityLevel(current.severity)]
+      ? candidate
+      : current,
+  )
+  const optionSets = new Map<string, unknown[]>()
+
+  for (const { severity } of enabled) {
+    if (typeof severity !== 'string') {
+      optionSets.set(JSON.stringify(severity.slice(1)), severity.slice(1))
+    }
+  }
+
+  if (optionSets.size > 1) {
+    reporter.loss(
+      `Biome rules ${formatRuleList(enabled)} all map to Oxlint ${oxlintRuleName} with different options; Oxlint accepts one set, so the options of ${strongest.biomeRule} were kept and the others were not migrated.`,
+    )
+  }
+
+  const level = severityLevel(strongest.severity)
+  const options =
+    typeof strongest.severity === 'string'
+      ? ([...optionSets.values()][0] ?? [])
+      : strongest.severity.slice(1)
+  const disabled = sources.filter(({ severity }) => severityLevel(severity) === 'off')
+
+  // Oxlint's no-unused-vars can stop checking parameters, which is exactly what turning
+  // off Biome's noUnusedFunctionParameters alongside noUnusedVariables asks for.
+  if (
+    oxlintRuleName === 'no-unused-vars' &&
+    disabled.length === 1 &&
+    disabled[0]?.biomeRule === 'noUnusedFunctionParameters'
+  ) {
+    const [currentOptions] = options
+    return [level, { ...(isRecord(currentOptions) ? currentOptions : {}), args: 'none' }]
+  }
+
+  if (disabled.length > 0) {
+    reporter.warn(
+      `Biome ${formatRuleList(disabled)} ${disabled.length === 1 ? 'is' : 'are'} off, but Oxlint ${oxlintRuleName} also implements ${formatRuleList(enabled)}, which ${enabled.length === 1 ? 'is' : 'are'} on; Oxlint will also report what ${disabled.length === 1 ? 'that rule' : 'those rules'} would have reported.`,
+    )
+  }
+
+  return options.length > 0 ? [level, ...options] : level
+}
+
+function formatRuleList(sources: SharedRuleSource[]): string {
+  return sources.map(({ biomeRule }) => biomeRule).join(', ')
 }
 
 function applyTopLevelPreset(

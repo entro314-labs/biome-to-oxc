@@ -118,6 +118,60 @@ async function setupConformanceFixture(
   return dir
 }
 
+/** `file:line` of every lint diagnostic Biome reports under `src/`. */
+async function biomeLintLines(dir: string): Promise<string[]> {
+  const { stdout } = await run(BIOME_BIN, ['lint', '.', '--reporter=json'], dir)
+  const report = JSON.parse(stdout) as {
+    diagnostics?: Array<{
+      category?: string
+      location?: { path?: string; start?: { line: number } }
+    }>
+  }
+
+  return (report.diagnostics ?? [])
+    .filter((diagnostic) => diagnostic.category?.startsWith('lint/'))
+    .map((diagnostic) => `${diagnostic.location?.path}:${diagnostic.location?.start?.line}`)
+    .filter((line) => line.startsWith('src/'))
+    .sort()
+}
+
+/** `file:line` of every diagnostic Oxlint reports under `src/` with the generated config. */
+async function oxlintLintLines(dir: string): Promise<string[]> {
+  const { stdout } = await run(
+    OXLINT_BIN,
+    ['--config', '.oxlintrc.json', '--format=json', '.'],
+    dir,
+  )
+  const report = JSON.parse(stdout) as {
+    diagnostics?: Array<{ filename: string; labels?: Array<{ span: { line: number } }> }>
+  }
+
+  return (report.diagnostics ?? [])
+    .map((diagnostic) => `${diagnostic.filename}:${diagnostic.labels?.[0]?.span.line}`)
+    .filter((line) => line.startsWith('src/'))
+    .sort()
+}
+
+async function setupLintFixture(
+  rules: Record<string, Record<string, unknown>>,
+  files: Record<string, string>,
+): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-lint-conformance-'))
+  const biomeConfig = {
+    linter: { rules: { recommended: false, ...rules } },
+    formatter: { enabled: false },
+    assist: { enabled: false },
+  }
+
+  await writeFixtureFiles(dir, {
+    ...files,
+    'biome.json': `${JSON.stringify(biomeConfig, null, 2)}\n`,
+    'package.json': `${JSON.stringify({ name: 'lint-conformance-fixture' }, null, 2)}\n`,
+  })
+
+  return dir
+}
+
 describe('source-versus-target formatter scope', () => {
   it('formats the same source files as Biome for a default configuration', async () => {
     const dir = await setupConformanceFixture({})
@@ -284,5 +338,28 @@ describe('Biome override precedence', () => {
     // Because the models agree, an overlap is not a semantic loss.
     expect(report.losses).toEqual([])
     expect(report.success).toBe(true)
+  })
+})
+
+describe('source-versus-target lint diagnostics', () => {
+  it.each([
+    {
+      name: 'keeps unused variables reported when only unused parameters are turned off',
+      rules: { correctness: { noUnusedVariables: 'error', noUnusedFunctionParameters: 'off' } },
+      files: {
+        'src/params.js': 'export function f(unused) {\n  return 1\n}\n',
+        'src/vars.js': 'export function g() {\n  const unused = 1\n  return 2\n}\n',
+      },
+    },
+  ])('$name', async ({ rules, files }) => {
+    const dir = await setupLintFixture(rules, files)
+
+    const biomeLines = await biomeLintLines(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxlintLines = await oxlintLintLines(dir)
+
+    expect(report.errors).toEqual([])
+    expect(biomeLines.length).toBeGreaterThan(0)
+    expect(oxlintLines).toEqual(biomeLines)
   })
 })
