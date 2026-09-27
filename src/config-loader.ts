@@ -45,7 +45,7 @@ const IncludeFieldsSchema = z
     include: z.array(z.string()).optional(),
     includes: z.array(z.string()).optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeRuleSeveritySchema = z.union([
   z.enum(['off', 'on', 'info', 'warn', 'error']),
   z
@@ -53,7 +53,7 @@ const BiomeRuleSeveritySchema = z.union([
       level: z.enum(['off', 'on', 'info', 'warn', 'error']),
       options: z.unknown().optional(),
     })
-    .passthrough(),
+    .loose(),
 ])
 const BiomeRuleGroupSchema: z.ZodType<BiomeRuleGroup> = z
   .object({
@@ -83,7 +83,7 @@ const BiomeFormatterConfigSchema: z.ZodType<BiomeFormatterConfig> = IncludeField
   bracketSameLine: z.boolean().optional(),
   expand: z.enum(['auto', 'always', 'never']).optional(),
   trailingNewline: z.boolean().optional(),
-}).passthrough()
+}).loose()
 const BiomeJavaScriptFormatterSchema: z.ZodType<NonNullable<BiomeJavaScriptConfig['formatter']>> = z
   .object({
     enabled: z.boolean().optional(),
@@ -103,7 +103,7 @@ const BiomeJavaScriptFormatterSchema: z.ZodType<NonNullable<BiomeJavaScriptConfi
     operatorLinebreak: z.enum(['after', 'before']).optional(),
     trailingNewline: z.boolean().optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeJavaScriptConfigSchema: z.ZodType<BiomeJavaScriptConfig> = z
   .object({
     parser: z
@@ -111,18 +111,18 @@ const BiomeJavaScriptConfigSchema: z.ZodType<BiomeJavaScriptConfig> = z
         unsafeParameterDecoratorsEnabled: z.boolean().optional(),
         jsxEverywhere: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     formatter: BiomeJavaScriptFormatterSchema.optional(),
     linter: z
       .object({
         enabled: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     globals: z.array(z.string()).optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeJsonConfigSchema: z.ZodType<BiomeJsonConfig> = z
   .object({
     parser: z
@@ -130,7 +130,7 @@ const BiomeJsonConfigSchema: z.ZodType<BiomeJsonConfig> = z
         allowComments: z.boolean().optional(),
         allowTrailingCommas: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     formatter: z
       .object({
@@ -143,23 +143,23 @@ const BiomeJsonConfigSchema: z.ZodType<BiomeJsonConfig> = z
         trailingCommas: z.enum(['none', 'all']).optional(),
         trailingNewline: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     linter: z
       .object({
         enabled: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeCssConfigSchema: z.ZodType<BiomeCssConfig> = z
   .object({
     parser: z
       .object({
         cssModules: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     formatter: z
       .object({
@@ -171,16 +171,16 @@ const BiomeCssConfigSchema: z.ZodType<BiomeCssConfig> = z
         quoteStyle: z.enum(['single', 'double']).optional(),
         trailingNewline: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     linter: z
       .object({
         enabled: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeGraphqlConfigSchema: z.ZodType<BiomeGraphqlConfig> = z
   .object({
     formatter: z
@@ -194,21 +194,21 @@ const BiomeGraphqlConfigSchema: z.ZodType<BiomeGraphqlConfig> = z
         quoteStyle: z.enum(['single', 'double']).optional(),
         trailingNewline: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     linter: z
       .object({
         enabled: z.boolean().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeLinterConfigSchema: z.ZodType<BiomeLinterConfig> = IncludeFieldsSchema.extend({
   enabled: z.boolean().optional(),
   ignore: z.array(z.string()).optional(),
   rules: BiomeLinterRulesSchema.optional(),
-}).passthrough()
+}).loose()
 const BiomeAssistActionSchema = z.union([
   z.enum(['off', 'on']),
   z
@@ -216,7 +216,7 @@ const BiomeAssistActionSchema = z.union([
       level: z.enum(['off', 'on']),
       options: z.unknown().optional(),
     })
-    .passthrough(),
+    .loose(),
 ])
 const BiomeAssistConfigSchema: z.ZodType<BiomeAssistConfig> = z
   .object({
@@ -233,10 +233,10 @@ const BiomeAssistConfigSchema: z.ZodType<BiomeAssistConfig> = z
           .catchall(z.union([BiomeAssistActionSchema, z.boolean()]))
           .optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeOverrideSchema: z.ZodType<BiomeOverride> = z
   .object({
     include: z.array(z.string()).optional(),
@@ -250,7 +250,7 @@ const BiomeOverrideSchema: z.ZodType<BiomeOverride> = z
     css: BiomeCssConfigSchema.optional(),
     graphql: BiomeGraphqlConfigSchema.optional(),
   })
-  .passthrough()
+  .loose()
 const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
   .object({
     $schema: z.string().optional(),
@@ -264,7 +264,7 @@ const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
         ignoreUnknown: z.boolean().optional(),
         maxSize: z.number().int().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     vcs: z
       .object({
@@ -274,7 +274,7 @@ const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
         root: z.string().optional(),
         defaultBranch: z.string().optional(),
       })
-      .passthrough()
+      .loose()
       .optional(),
     linter: BiomeLinterConfigSchema.optional(),
     formatter: BiomeFormatterConfigSchema.optional(),
@@ -286,12 +286,12 @@ const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
     html: z.record(z.string(), z.unknown()).optional(),
     overrides: z.array(BiomeOverrideSchema).optional(),
   })
-  .passthrough()
+  .loose()
 const WorkspacePackageJsonSchema = z
   .object({
     workspaces: z.union([z.array(z.string()), z.record(z.string(), z.unknown())]).optional(),
   })
-  .passthrough()
+  .loose()
 
 export async function findBiomeConfig(startDir: string): Promise<string | undefined> {
   for (const name of BIOME_CONFIG_NAMES) {

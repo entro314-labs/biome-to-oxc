@@ -61,7 +61,7 @@ const WorkspacePackageJsonSchema = z
   .object({
     workspaces: z.union([z.array(z.string()), z.record(z.string(), z.unknown())]).optional(),
   })
-  .passthrough()
+  .loose()
 
 export async function migrate(
   options: MigrationOptions = {},
