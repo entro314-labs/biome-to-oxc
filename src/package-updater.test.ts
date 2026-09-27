@@ -316,6 +316,50 @@ describe('updatePackageJson', () => {
   })
 })
 
+describe('updatePackageJson Oxc tool versions', () => {
+  it.each([
+    { name: 'adds a missing tool', existing: undefined, action: 'added', kept: false },
+    { name: 'raises an older range', existing: '^1.50.0', action: 'updated', kept: false },
+    { name: 'keeps a newer range', existing: '^99.0.0', action: 'already-present', kept: true },
+    {
+      name: 'keeps a catalog reference',
+      existing: 'catalog:',
+      action: 'already-present',
+      kept: true,
+    },
+    { name: 'keeps a dist-tag', existing: 'latest', action: 'already-present', kept: true },
+  ])('$name', async ({ existing, action, kept }) => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      devDependencies: existing === undefined ? {} : { oxlint: existing },
+    })
+    const expected = await getExpectedToolVersions()
+
+    const summary = await updatePackageJson(dir, new CollectingReporter(), false)
+    const pkg = await readPackageJson(packagePath)
+
+    expect(pkg.devDependencies.oxlint).toBe(kept ? existing : expected.oxlint)
+    expect(summary.devDependencies.find((change) => change.name === 'oxlint')?.action).toBe(action)
+  })
+
+  it('does not add a devDependency for a tool the project installs as a dependency', async () => {
+    const { dir, packagePath } = await setupPackageJson({
+      name: 'fixture',
+      dependencies: { oxfmt: '^99.0.0' },
+    })
+
+    await updatePackageJson(dir, new CollectingReporter(), false)
+
+    const content = JSON.parse(await readFile(packagePath, 'utf-8')) as {
+      dependencies: Record<string, string>
+      devDependencies: Record<string, string>
+    }
+
+    expect(content.dependencies.oxfmt).toBe('^99.0.0')
+    expect(content.devDependencies.oxfmt).toBeUndefined()
+  })
+})
+
 describe('updatePackageJson executable parsing', () => {
   const runnerCases = [
     { name: 'bare', script: 'biome check .', expected: 'oxlint . && oxfmt --check .' },

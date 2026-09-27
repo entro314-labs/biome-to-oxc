@@ -171,18 +171,16 @@ export async function updatePackageJson(
       }
     }
 
-    packageJson.devDependencies ??= {}
-
     modified =
       ensureDevDependency(
-        packageJson.devDependencies,
+        packageJson,
         'oxlint',
         recommendedVersions.oxlint,
         summary.devDependencies,
       ) || modified
     modified =
       ensureDevDependency(
-        packageJson.devDependencies,
+        packageJson,
         'oxfmt',
         recommendedVersions.oxfmt,
         summary.devDependencies,
@@ -191,7 +189,7 @@ export async function updatePackageJson(
     if (needsTypeAwareDependency) {
       modified =
         ensureDevDependency(
-          packageJson.devDependencies,
+          packageJson,
           'oxlint-tsgolint',
           recommendedVersions['oxlint-tsgolint'],
           summary.devDependencies,
@@ -586,27 +584,60 @@ function removeBiomeDependency(
   return modified
 }
 
+/**
+ * Makes sure an Oxc tool is installed at least at the version this migration targets.
+ *
+ * An existing entry is only raised when it is a plain semver range whose minimum is older
+ * than the target. A newer range, a `catalog:`/`workspace:` protocol or a dist-tag is the
+ * project's own choice, and an entry under `dependencies` already installs the tool, so
+ * those are left alone rather than downgraded, broken, or duplicated.
+ */
 function ensureDevDependency(
-  dependencies: Record<string, string>,
+  packageJson: PackageJson,
   name: string,
   version: string,
   changes: PackageDevDependencyChange[],
 ): boolean {
+  const dependencies =
+    [packageJson.devDependencies, packageJson.dependencies].find(
+      (candidate) => candidate?.[name] !== undefined,
+    ) ?? (packageJson.devDependencies ??= {})
   const existing = dependencies[name]
 
-  if (!existing) {
+  if (existing === undefined) {
     dependencies[name] = version
     changes.push({ name, action: 'added', to: version })
     return true
   }
 
-  if (existing !== version) {
-    dependencies[name] = version
-    changes.push({ name, action: 'updated', from: existing, to: version })
-    return true
+  if (!isOlderSemverRange(existing, version)) {
+    changes.push({ name, action: 'already-present', to: existing })
+    return false
   }
 
-  changes.push({ name, action: 'already-present', to: existing })
+  dependencies[name] = version
+  changes.push({ name, action: 'updated', from: existing, to: version })
+  return true
+}
+
+const SEMVER_RANGE_PATTERN = /^(?:\^|~|>=)?(\d+)\.(\d+)\.(\d+)/u
+
+function isOlderSemverRange(existing: string, target: string): boolean {
+  const existingVersion = SEMVER_RANGE_PATTERN.exec(existing.trim())
+  const targetVersion = SEMVER_RANGE_PATTERN.exec(target.trim())
+
+  if (!existingVersion || !targetVersion) {
+    return false
+  }
+
+  for (let index = 1; index <= 3; index++) {
+    const difference = Number(existingVersion[index]) - Number(targetVersion[index])
+
+    if (difference !== 0) {
+      return difference < 0
+    }
+  }
+
   return false
 }
 
