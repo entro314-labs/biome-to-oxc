@@ -33,7 +33,7 @@ describe('rule-mapper parity expansion', () => {
       noForEach: 'unicorn/no-array-for-each',
       noGlobalEval: 'no-eval',
       noIdenticalTestTitle: 'jest/no-identical-title',
-      noImplicitBoolean: 'no-implicit-coercion',
+      noImplicitBoolean: 'react/jsx-boolean-value',
       noImpliedEval: 'no-implied-eval',
       noInteractiveElementToNoninteractiveRole:
         'jsx-a11y/no-interactive-element-to-noninteractive-role',
@@ -89,7 +89,6 @@ describe('rule-mapper parity expansion', () => {
       useReactFunctionComponents: 'react/prefer-function-component',
       useRegexLiterals: 'prefer-regex-literals',
       useSemanticElements: 'jsx-a11y/prefer-tag-over-role',
-      useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
       useTemplate: 'prefer-template',
       useTestHooksOnTop: 'jest/prefer-hooks-on-top',
       useUnicodeRegex: 'require-unicode-regexp',
@@ -624,7 +623,6 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
       noJsRestrictedProperties: 'no-restricted-properties',
       noNegationInEqualityCheck: 'unicorn/no-negation-in-equality-check',
       noUnsafeTypeAssertion: 'typescript/no-unsafe-type-assertion',
-      noUselessContinue: 'no-continue',
       noUselessElse: 'no-else-return',
       noUselessUndefinedInitialization: 'unicorn/no-useless-undefined',
       useConsistentObjectDefinitions: 'object-shorthand',
@@ -1108,6 +1106,48 @@ describe('rule-mapper handling of type-aware Oxlint targets', () => {
 
       expect(rules).toEqual(expected)
       expect(reporter.getWarnings()).toEqual([])
+    },
+  )
+})
+
+describe('rule-mapper retargeting of Biome rules mapped to unrelated Oxlint rules', () => {
+  it.each([
+    {
+      biomeRule: 'noImplicitBoolean',
+      group: 'style',
+      expected: { 'react/jsx-boolean-value': ['error', 'always'] },
+    },
+    {
+      biomeRule: 'useConsistentCurlyBraces',
+      group: 'style',
+      expected: { 'react/jsx-curly-brace-presence': 'error' },
+    },
+  ])(
+    'maps $biomeRule to the Oxlint rule that checks the same construct',
+    ({ biomeRule, group, expected }) => {
+      const reporter = new CollectingReporter()
+
+      const { rules } = extractRulesFromBiomeConfig({ [group]: { [biomeRule]: 'error' } }, reporter)
+
+      expect(rules).toEqual(expected)
+    },
+  )
+
+  it.each(['noUselessContinue', 'noUnnecessaryContinue', 'useSimplifiedLogicExpression'])(
+    'reports %s as having no Oxlint equivalent instead of emitting an unrelated rule',
+    (biomeRule) => {
+      const reporter = new CollectingReporter()
+
+      const { rules, sourceRulesSkipped } = extractRulesFromBiomeConfig(
+        { complexity: { [biomeRule]: 'error' } },
+        reporter,
+      )
+
+      expect(rules).toEqual({})
+      expect([...sourceRulesSkipped]).toEqual([biomeRule])
+      expect(reporter.getLosses()).toEqual([
+        `No Oxlint equivalent found for Biome rule: ${biomeRule}`,
+      ])
     },
   )
 })

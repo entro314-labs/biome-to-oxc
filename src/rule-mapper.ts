@@ -81,6 +81,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noUnresolvedImports was mapped to import/named, which reports named imports a JavaScript module does not export but skips TypeScript files entirely and does not report import paths that cannot be resolved.',
   noUnsafeIframeSandbox:
     'Biome rule noUnsafeIframeSandbox was mapped to react/iframe-missing-sandbox, which reports `allow-scripts` combined with `allow-same-origin` only when the sandbox value is a plain string attribute, not a `{"..."}` or template-literal expression; it also reports iframes with no or an invalid sandbox attribute, which Biome leaves to useIframeSandbox.',
+  useConsistentCurlyBraces:
+    'Biome rule useConsistentCurlyBraces was mapped to react/jsx-curly-brace-presence, which reports unnecessary braces around string literals in JSX props and children but not a JSX element passed as a prop value without braces (`foo=<Bar />`).',
   useExplicitType:
     'Biome rule useExplicitType was mapped to typescript/explicit-function-return-type, which requires return types on functions and methods but not types on variables or parameters.',
   useStaticResponseMethods:
@@ -190,7 +192,6 @@ export const UNVERIFIED_BIOME_RULE_NAMES = [
   'noConsoleLog', // -> noConsole
   'noInvalidNewBuiltin', // -> noInvalidBuiltinInstantiation
   'noNewSymbol', // -> noInvalidBuiltinInstantiation
-  'noUnnecessaryContinue', // -> noUselessContinue
   // Still in Biome's nursery upstream, so not in the released schema yet.
   'useFind', // duplicates useArrayFind
   // Not found in any Biome release; retained because each duplicates a mapped current rule.
@@ -335,7 +336,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noImplicitCoercions: 'no-implicit-coercion',
   noInnerDeclarations: 'no-inner-declarations',
   noInlineStyles: 'react/forbid-dom-props',
-  noImplicitBoolean: 'no-implicit-coercion',
+  noImplicitBoolean: 'react/jsx-boolean-value',
   noImpliedEval: 'no-implied-eval',
   noIncrementDecrement: 'no-plusplus',
   noInferrableTypes: 'typescript/no-inferrable-types',
@@ -427,7 +428,6 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnusedExpressions: 'no-unused-expressions',
   noUnusedFunctionParameters: 'no-unused-vars',
   noUnusedImports: 'no-unused-vars',
-  noUnnecessaryContinue: 'no-continue',
   noUnmodifiedLoopCondition: 'no-unmodified-loop-condition',
   noUnnecessaryConditions: 'typescript/no-unnecessary-condition',
   noUnnecessaryTemplateExpression: 'typescript/no-unnecessary-template-expression',
@@ -447,7 +447,6 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnusedVariables: 'no-unused-vars',
   noUnwantedPolyfillio: 'nextjs/no-unwanted-polyfillio',
   noUselessCatch: 'no-useless-catch',
-  noUselessContinue: 'no-continue',
   noUselessCatchBinding: 'unicorn/prefer-optional-catch-binding',
   noUselessConstructor: 'no-useless-constructor',
   noUselessElse: 'no-else-return',
@@ -506,7 +505,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useConsistentArrayType: 'typescript/array-type',
   useConsistentArrowReturn: 'arrow-body-style',
   useConsistentBuiltinInstantiation: 'no-new-wrappers',
-  useConsistentCurlyBraces: 'curly',
+  useConsistentCurlyBraces: 'react/jsx-curly-brace-presence',
   useConsistentEnumValueType: 'typescript/no-mixed-enums',
   useConsistentFunctionStyle: 'func-style',
   useConsistentMethodSignatures: 'typescript/method-signature-style',
@@ -594,7 +593,6 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useShorthandAssign: 'operator-assignment',
   useShorthandFunctionType: 'typescript/prefer-function-type',
   useSingleVarDeclarator: 'one-var',
-  useSimplifiedLogicExpression: 'unicorn/prefer-logical-operator-over-ternary',
   useSpread: 'prefer-spread',
   useSpreadOverApply: 'prefer-spread',
   useStaticResponseMethods: 'unicorn/prefer-response-static-json',
@@ -716,6 +714,11 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   if (biomeName === 'useSingleVarDeclarator') {
     // Biome always requires one declarator per statement; Oxlint's `one-var` needs the mode.
     return [severity, 'never']
+  }
+
+  if (biomeName === 'noImplicitBoolean') {
+    // Biome requires an explicit value on boolean JSX attributes; `always` is that mode.
+    return [severity, 'always']
   }
 
   if (biomeName === 'noInlineStyles') {

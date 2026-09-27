@@ -367,6 +367,24 @@ describe('source-versus-target lint diagnostics', () => {
         'src/error.js': 'export function h() {\n  throw new Error("boom")\n}\n',
       },
     },
+    {
+      name: 'reports boolean JSX attributes written without a value',
+      rules: { style: { noImplicitBoolean: 'error' } },
+      files: {
+        'src/implicit.jsx': 'export const A = () => <input disabled />\n',
+        'src/explicit.jsx': 'export const B = () => <input disabled={true} />\n',
+      },
+    },
+    {
+      name: 'reports unnecessary JSX curly braces rather than missing statement braces',
+      rules: { style: { useConsistentCurlyBraces: 'error' } },
+      files: {
+        'src/child.jsx': "export const A = () => <p>{'Hello'}</p>\n",
+        'src/prop.jsx': "export const B = () => <p title={'Hello'} />\n",
+        'src/plain.jsx': 'export const C = () => <p title="Hello">Hello</p>\n',
+        'src/if.js': 'export function f(a) {\n  if (a) return 1\n  return 2\n}\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 
