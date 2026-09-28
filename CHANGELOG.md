@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.6.1] - 2026-09-28
+
 ### Fixed
 
 - A Biome rule the config turns `off` no longer counts as a semantic loss when its Oxlint counterpart covers only part of it, needs type-aware linting, or does not exist, and its options are no longer reported as unmigrated. The rule produced no diagnostics in Biome, so nothing is lost; the Oxlint rule is still emitted as `off` so it overrides any category preset.
@@ -418,7 +420,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.0...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.1...HEAD
+[3.6.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.3.0...v3.4.0
