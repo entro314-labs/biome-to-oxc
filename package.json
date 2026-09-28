@@ -65,13 +65,13 @@
     "oxlint": "^1.85.0",
     "oxlint-tsgolint": "^7.0.2003",
     "publint": "^0.3.24",
-    "tsdown": "rc",
+    "tsdown": "0.23.0",
     "typescript": "next",
     "vitest": "^5.0.2"
   },
   "engines": {
-    "node": ">=24.19.0",
-    "pnpm": ">=11.25.0"
+    "node": ">=24.21.0",
+    "pnpm": ">=11.28.0"
   },
-  "packageManager": "pnpm@11.25.0"
+  "packageManager": "pnpm@11.28.0"
 }
