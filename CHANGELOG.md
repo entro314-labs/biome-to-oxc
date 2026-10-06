@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-10-06
+
 ### Added
 
 - Mappings for five Biome rules added in Biome 2.5.15, each verified by running both binaries over the same fixture. `usePromiseRejectErrors` → `prefer-promise-reject-errors` reports what the Biome rule reports, including an empty `Promise.reject()`. `noReactObjectTypeAsDefaultProp` → `react/no-object-type-as-default-prop` is reported as a semantic loss: it reports the same array, object, function, class, regex, `new` and JSX defaults, but not a `Symbol()` default. `noSelfImport` → `import/no-self-import` is reported as a semantic loss too: it reports static `import` and `export … from` statements that resolve to their own file, but not the `require()` calls and dynamic `import()` expressions Biome also reports. The other two are type-aware (tsgolint) rules, so a migration without `--type-aware` reports them as not running: `noMeaninglessVoidOperator` → `typescript/no-meaningless-void-operator` is also a semantic loss with type-aware linting on, because it reports `void` on a value typed `void` or `undefined` but not on other non-call operands such as `void 1`; `useStrictBooleanExpressions` → `typescript/strict-boolean-expressions` reported every line the Biome rule reported across conditions, negation, logical operands and assertion arguments, apart from a value whose type is a conditional type over an unconstrained type parameter, and additionally reports nullable enums, values typed `null` or implicitly `any`, and array predicate callbacks that return a nullable value.
@@ -436,7 +438,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.1...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.0...HEAD
+[3.7.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.1...v3.7.0
 [3.6.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.4.0...v3.5.0
