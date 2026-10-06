@@ -46,6 +46,20 @@ describe('js-plugin-scaffolder fallback guidance', () => {
     expect(suggestions.some((line) => line.includes('unknownRule'))).toBe(false)
   })
 
+  it('points at the closest native rules for Biome rules that have no equivalent', () => {
+    const suggestions = buildUnsupportedRuleFallbackSuggestions(['noDeprecatedImports', 'noForIn'])
+
+    expect(suggestions).toContain('  - Native alternatives: typescript/no-deprecated')
+    expect(suggestions).toContain(
+      '  - Native alternatives: guard-for-in, typescript/no-for-in-array',
+    )
+    // Neither is an equivalent, so no JS plugin is suggested and the note says what differs.
+    expect(
+      recommendJsPluginSpecifiersForUnsupportedRules(['noDeprecatedImports', 'noForIn']),
+    ).toEqual([])
+    expect(suggestions.filter((line) => line.startsWith('  - Note:'))).toHaveLength(2)
+  })
+
   it('carries no fallback guidance for Biome rules that now map to a native Oxlint rule', () => {
     expect(buildUnsupportedRuleFallbackSuggestions(getMappedBiomeRuleNames())).toEqual([])
   })

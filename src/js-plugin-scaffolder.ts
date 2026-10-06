@@ -28,6 +28,16 @@ const RESERVED_JS_PLUGIN_NAMES = new Set([
 ])
 
 const UNSUPPORTED_BIOME_RULE_GUIDANCE: Record<string, UnsupportedRuleGuidance> = {
+  noDeprecatedImports: {
+    nativeAlternatives: ['typescript/no-deprecated'],
+    notes:
+      'Not a drop-in replacement: typescript/no-deprecated is type-aware and reports each use of a deprecated symbol, wherever it was declared, rather than the import statement, so an imported but unused deprecated symbol is not reported.',
+  },
+  noForIn: {
+    nativeAlternatives: ['guard-for-in', 'typescript/no-for-in-array'],
+    notes:
+      'Neither forbids every for-in loop: guard-for-in reports the ones whose body is not wrapped in an own-property check, and the type-aware typescript/no-for-in-array reports only loops over arrays.',
+  },
   noReExportAll: {
     nativeAlternatives: ['import/no-cycle', 'import/no-self-import'],
     jsPluginSpecifiers: ['eslint-plugin-import'],
