@@ -32,7 +32,9 @@ Current capabilities:
 ✅ **Preserves Representable Setup**
 
 - Ignore patterns, override file globs, and override exclusions
-- Negated `includes` exceptions (`!pattern`), translated into `ignorePatterns` for both tools
+- Negated `includes` exceptions (`!pattern`), translated into `ignorePatterns` for both tools, and
+  patterns that re-include files after an exception, carried over as `!` entries (or, in an
+  override, as a second override for the re-included files)
 - `.biomeignore` patterns migrated into the Oxlint **and** Oxfmt `ignorePatterns`. Biome 2.x does
   not read `.biomeignore` itself, so this deliberately narrows scope; the migration says so
 - Linter configuration overrides

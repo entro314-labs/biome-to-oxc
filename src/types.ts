@@ -18,7 +18,10 @@ export interface BiomeConfig {
 export interface BiomeFilesConfig {
   include?: string[]
   includes?: string[]
-  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  /**
+   * Exclusions split out of `includes` during normalization, in source order: an exception
+   * (`!pattern`) as `pattern`, and a pattern re-included after one as `!pattern`.
+   */
   exclude?: string[]
   ignore?: string[]
   ignoreUnknown?: boolean
@@ -37,7 +40,10 @@ export interface BiomeLinterConfig {
   enabled?: boolean
   include?: string[]
   includes?: string[]
-  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  /**
+   * Exclusions split out of `includes` during normalization, in source order: an exception
+   * (`!pattern`) as `pattern`, and a pattern re-included after one as `!pattern`.
+   */
   exclude?: string[]
   ignore?: string[]
   rules?: BiomeLinterRules
@@ -101,7 +107,10 @@ export interface BiomeFormatterConfig {
   enabled?: boolean
   include?: string[]
   includes?: string[]
-  /** Negated `includes` entries (`!pattern`), split out during normalization. */
+  /**
+   * Exclusions split out of `includes` during normalization, in source order: an exception
+   * (`!pattern`) as `pattern`, and a pattern re-included after one as `!pattern`.
+   */
   exclude?: string[]
   ignore?: string[]
   formatWithErrors?: boolean

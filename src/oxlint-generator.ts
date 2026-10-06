@@ -1,4 +1,5 @@
 import { extractRulesFromBiomeConfig } from './rule-mapper.js'
+import { joinExclusions } from './schema-normalizer.js'
 import type {
   BiomeConfig,
   OxlintBuiltinPlugin,
@@ -125,6 +126,16 @@ function warnAboutUnrepresentableIncludes(biomeConfig: BiomeConfig, reporter: Re
       `Biome files/linter positive include selection (${positiveSelectors.join(', ')}) cannot be represented in an Oxlint config; Oxlint will lint every file not covered by ignorePatterns, which is a wider set. Pass equivalent paths to the Oxlint CLI before replacing Biome.`,
     )
   }
+
+  const reincludes = joinExclusions(biomeConfig.files?.exclude, biomeConfig.linter?.exclude)
+    .filter((pattern) => pattern.startsWith('!'))
+    .map((pattern) => pattern.slice(1))
+
+  if (reincludes.length > 0) {
+    reporter.warn(
+      `Biome re-includes ${reincludes.join(', ')} after a negated pattern, which was migrated as "!" entries in the Oxlint ignorePatterns. Oxlint lifts the exclusion for every file such an entry matches, while Biome does not re-include a file below a directory it excluded, so a re-include that had no effect in Biome now does.`,
+    )
+  }
 }
 
 function addImportGraphRecipe(oxlintConfig: OxlintConfig, maxDepth: number): void {
@@ -207,12 +218,12 @@ function mapIgnorePatterns(
   additionalIgnorePatterns: string[],
 ): void {
   const ignorePatterns: string[] = [
+    // Negated `includes` exceptions are exclusions, so they map onto ignorePatterns. They go
+    // first so a `!` re-include among them only lifts the exceptions it follows.
+    ...joinExclusions(biomeConfig.files?.exclude, biomeConfig.linter?.exclude),
     ...additionalIgnorePatterns,
     ...(biomeConfig.files?.ignore ?? []),
     ...(biomeConfig.linter?.ignore ?? []),
-    // Negated `includes` exceptions are exclusions, so they map onto ignorePatterns.
-    ...(biomeConfig.files?.exclude ?? []),
-    ...(biomeConfig.linter?.exclude ?? []),
   ]
 
   if (ignorePatterns.length > 0) {

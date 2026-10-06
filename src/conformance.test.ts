@@ -206,6 +206,27 @@ describe('source-versus-target formatter scope', () => {
     expect(report.losses).toEqual([])
   })
 
+  it('re-includes a file listed after a negated pattern the same way Biome does', async () => {
+    const dir = await setupConformanceFixture(
+      { files: { includes: ['**', '!build/**', 'build/keep.ts', 'build/nested/keep.ts'] } },
+      {
+        'build/keep.ts': 'const d={x:1,y:2}\n',
+        'build/nested/keep.ts': 'const e={x:1,y:2}\n',
+      },
+    )
+
+    const biomeScope = await biomeFormatScope(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtScope = await oxfmtFormatScope(dir)
+
+    expect(sourceFilesOnly(biomeScope)).toContain('build/keep.ts')
+    expect(sourceFilesOnly(biomeScope)).not.toContain('build/generated.ts')
+    // Neither tool re-includes a file below a directory the exception removed.
+    expect(sourceFilesOnly(biomeScope)).not.toContain('build/nested/keep.ts')
+    expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+    expect(report.losses).toEqual([])
+  })
+
   it('applies .biomeignore, which Biome 2.x itself ignores, as a deliberate narrowing', async () => {
     const dir = await setupConformanceFixture({}, { '.biomeignore': 'build/**\n' })
 
@@ -342,6 +363,40 @@ describe('Biome override precedence', () => {
     // Because the models agree, an overlap is not a semantic loss.
     expect(report.losses).toEqual([])
     expect(report.success).toBe(true)
+  })
+
+  it('applies an override to a file it re-includes after a negated pattern', async () => {
+    const source = 'export const value = { alpha: 1, beta: 2, gamma: 3, delta: 4, epsilon: 5 };\n'
+    const paths = ['src/main.ts', 'src/gen/skip.ts', 'src/gen/keep.ts']
+    const dir = await setupConformanceFixture(
+      {
+        overrides: [
+          {
+            includes: ['src/**', '!src/gen/**', 'src/gen/keep.ts'],
+            formatter: { lineWidth: 40 },
+          },
+        ],
+      },
+      Object.fromEntries(paths.map((path) => [path, source])),
+    )
+    const formatAll = async (binary: string, args: string[]): Promise<string[]> => {
+      await writeFixtureFiles(dir, Object.fromEntries(paths.map((path) => [path, source])))
+      await run(binary, [...args, ...paths], dir)
+      return Promise.all(paths.map((path) => readFile(join(dir, path), 'utf-8')))
+    }
+
+    const biomeFormatted = await formatAll(BIOME_BIN, ['format', '--write'])
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtFormatted = await formatAll(OXFMT_BIN, ['--config', '.oxfmtrc.jsonc'])
+
+    // The narrow width wraps the override's files and leaves the excluded one on one line.
+    expect(biomeFormatted.map((text) => text.trimEnd().split('\n').length > 1)).toEqual([
+      true,
+      false,
+      true,
+    ])
+    expect(oxfmtFormatted).toEqual(biomeFormatted)
+    expect(report.losses).toEqual([])
   })
 })
 
@@ -488,6 +543,30 @@ describe('source-versus-target lint diagnostics', () => {
 
     expect(report.errors).toEqual([])
     expect(biomeLines.length).toBeGreaterThan(0)
+    expect(oxlintLines).toEqual(biomeLines)
+  })
+
+  it('lints a file re-included after a negated pattern', async () => {
+    const dir = await setupConformanceFixture(
+      {
+        files: { includes: ['**', '!src/gen/**', 'src/gen/keep.js'] },
+        linter: { rules: { recommended: false, suspicious: { noDebugger: 'error' } } },
+        formatter: { enabled: false },
+        assist: { enabled: false },
+      },
+      {
+        'src/main.js': 'debugger\n',
+        'src/gen/skip.js': 'debugger\n',
+        'src/gen/keep.js': 'debugger\n',
+      },
+    )
+
+    const biomeLines = await biomeLintLines(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxlintLines = await oxlintLintLines(dir)
+
+    expect(report.losses).toEqual([])
+    expect(biomeLines).toEqual(['src/gen/keep.js:1', 'src/main.js:1'])
     expect(oxlintLines).toEqual(biomeLines)
   })
 })

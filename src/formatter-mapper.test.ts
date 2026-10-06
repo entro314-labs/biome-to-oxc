@@ -208,6 +208,17 @@ describe('generateOxfmtConfig', () => {
     expect(config.ignorePatterns).toEqual(['**/*'])
   })
 
+  it('keeps a disabled formatter disabled for a file the config re-includes', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig(
+      { formatter: { enabled: false }, files: { exclude: ['build/**', '!build/keep.ts'] } },
+      reporter,
+    )
+
+    // `**/*` has to come last: a `!` entry lifts every earlier pattern it matches.
+    expect(config.ignorePatterns).toEqual(['build/**', '!build/keep.ts', '**/*'])
+  })
+
   it('keeps language-specific shared options scoped to language overrides', () => {
     const reporter = new CollectingReporter()
     const config = generateOxfmtConfig(

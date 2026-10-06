@@ -1,4 +1,5 @@
 import { generateOxfmtOverrides, mapBiomeExpandToObjectWrap } from './oxfmt-overrides.js'
+import { joinExclusions } from './schema-normalizer.js'
 import type {
   BiomeAssistAction,
   BiomeAssistConfig,
@@ -437,13 +438,13 @@ function mapIgnorePatterns(
   additionalIgnorePatterns: string[],
 ): void {
   const ignorePatterns: string[] = [
+    // Negated `includes` exceptions are exclusions, so they map onto ignorePatterns. They go
+    // first so a `!` re-include among them only lifts the exceptions it follows.
+    ...joinExclusions(biomeConfig.files?.exclude, biomeConfig.formatter?.exclude),
     ...(oxfmtConfig.ignorePatterns ?? []),
     ...additionalIgnorePatterns,
     ...(biomeConfig.files?.ignore ?? []),
     ...(biomeConfig.formatter?.ignore ?? []),
-    // Negated `includes` exceptions are exclusions, so they map onto ignorePatterns.
-    ...(biomeConfig.files?.exclude ?? []),
-    ...(biomeConfig.formatter?.exclude ?? []),
   ]
 
   if (ignorePatterns.length > 0) {

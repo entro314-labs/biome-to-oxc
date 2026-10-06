@@ -29,6 +29,25 @@ describe('generateOxlintConfig ignore pattern mapping', () => {
     ])
   })
 
+  it('emits re-includes ahead of the other ignore sources and warns how Oxlint reads them', () => {
+    const reporter = new CollectingReporter()
+    const biomeConfig: BiomeConfig = {
+      files: { exclude: ['build/**', '!build/keep.ts'] },
+      linter: { exclude: ['gen/**'] },
+    }
+
+    const { config } = generateOxlintConfig(biomeConfig, reporter, {
+      biomeIgnorePatterns: ['legacy/**'],
+    })
+
+    // A `!` entry lifts every earlier pattern it matches, so it must not follow `legacy/**`.
+    expect(config.ignorePatterns).toEqual(['build/**', '!build/keep.ts', 'gen/**', 'legacy/**'])
+    expect(reporter.getLosses()).toEqual([])
+    expect(
+      reporter.getWarnings().filter((warning) => warning.includes('build/keep.ts')),
+    ).toHaveLength(1)
+  })
+
   it('does not emit ignorePatterns when nothing is configured', () => {
     const reporter = new CollectingReporter()
     const { config } = generateOxlintConfig({}, reporter)
