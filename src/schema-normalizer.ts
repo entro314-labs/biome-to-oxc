@@ -21,8 +21,9 @@ interface SelectionSource {
  *
  * Biome 2.x `includes` mixes both: a bare pattern selects files, `!pattern` excludes
  * them again, and `!!pattern` force-ignores a path at the scanner level. The patterns
- * apply in order, so a bare pattern after an exception re-includes what it matches. The
- * legacy `include` field carries positive selectors only.
+ * apply in order, so a bare pattern after an exception re-includes what it matches, and a
+ * pattern ending in `/` matches nothing. The legacy `include` field carries positive
+ * selectors only.
  */
 export function normalizeIncludeFields(
   obj: SelectionSource,
@@ -52,6 +53,23 @@ function splitIncludes(
   const exclude: string[] = []
 
   for (const pattern of includes) {
+    // Biome 2 matches a pattern ending in `/` against no path, while `ignorePatterns` reads
+    // one as a directory, so carrying it over would exclude files Biome still processes.
+    const matchesNothing = pattern.endsWith('/')
+
+    if (matchesNothing && pattern.startsWith('!')) {
+      reporter.warn(
+        `Biome exception "${pattern}" in ${fieldName} ends with "/" and matches no file in Biome, so it excludes nothing and no ignore pattern was migrated for it. If the directory was meant to be excluded, add "${pattern.replace(/^!+/u, '')}**" to the Oxlint and Oxfmt ignorePatterns.`,
+      )
+      continue
+    }
+
+    if (matchesNothing) {
+      reporter.warn(
+        `Biome pattern "${pattern}" in ${fieldName} ends with "/" and matches no file in Biome, so it selects nothing.`,
+      )
+    }
+
     if (pattern.startsWith('!!')) {
       // Force-ignore removes a path from Biome's scanner entirely. Oxc has no
       // scanner-level equivalent, so the closest representation is a plain ignore.
@@ -67,9 +85,10 @@ function splitIncludes(
       continue
     }
 
+    // Kept even when it matches nothing, so the positive selection is still reported.
     include.push(pattern)
 
-    if (exclude.length > 0) {
+    if (exclude.length > 0 && !matchesNothing) {
       exclude.push(`!${pattern}`)
     }
   }

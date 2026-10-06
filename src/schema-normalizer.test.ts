@@ -91,6 +91,54 @@ describe('normalizeBiomeConfig re-includes after a negated pattern', () => {
   })
 })
 
+describe('normalizeBiomeConfig patterns ending in a slash', () => {
+  it('migrates no exclusion for an exception Biome matches against nothing', () => {
+    const reporter = new CollectingReporter()
+
+    const { files } = normalizeBiomeConfig(
+      { files: { includes: ['**', '!out/', '!!tmp/', '!dist'] } },
+      reporter,
+    )
+
+    expect(files?.exclude).toEqual(['dist'])
+    // Nothing was force-ignored either, so there is no force-ignore loss to report.
+    expect(reporter.getLosses()).toEqual([])
+    expect(reporter.getWarnings()).toHaveLength(2)
+    expect(reporter.getWarnings()[0]).toContain('"!out/" in files')
+    expect(reporter.getWarnings()[0]).toContain('add "out/**"')
+    expect(reporter.getWarnings()[1]).toContain('"!!tmp/" in files')
+    expect(reporter.getWarnings()[1]).toContain('add "tmp/**"')
+  })
+
+  it('migrates no re-include for a positive pattern Biome matches against nothing', () => {
+    const reporter = new CollectingReporter()
+
+    const { files, overrides } = normalizeBiomeConfig(
+      {
+        files: { includes: ['**', '!out', 'out/'] },
+        overrides: [{ includes: ['src/**', '!src/gen/**', 'src/gen/'] }],
+      },
+      reporter,
+    )
+
+    expect(files?.exclude).toEqual(['out'])
+    expect(overrides).toEqual([
+      { include: ['src/**', 'src/gen/'], exclude: ['src/gen/**'], includes: undefined },
+    ])
+    expect(reporter.getWarnings()).toHaveLength(2)
+  })
+
+  it('keeps a leading positive pattern, so the selection is still reported', () => {
+    const reporter = new CollectingReporter()
+
+    const { files } = normalizeBiomeConfig({ files: { includes: ['src/'] } }, reporter)
+
+    expect(files?.include).toEqual(['src/'])
+    expect(reporter.getWarnings()).toHaveLength(1)
+    expect(reporter.getWarnings()[0]).toContain('"src/" in files')
+  })
+})
+
 describe('joinExclusions', () => {
   it('puts the list carrying a re-include first, so it cannot lift the other list', () => {
     expect(joinExclusions(['dist'], ['gen/**', '!gen/keep.ts'])).toEqual([

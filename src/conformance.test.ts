@@ -227,6 +227,22 @@ describe('source-versus-target formatter scope', () => {
     expect(report.losses).toEqual([])
   })
 
+  it('keeps formatting a directory named by an exception that ends in a slash', async () => {
+    const dir = await setupConformanceFixture({
+      files: { includes: ['**', '!build/', '!**/*.test.ts'] },
+    })
+
+    const biomeScope = await biomeFormatScope(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtScope = await oxfmtFormatScope(dir)
+
+    // Biome matches `build/` against no path, so the exception excludes nothing.
+    expect(sourceFilesOnly(biomeScope)).toContain('build/generated.ts')
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/app.test.ts')
+    expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+    expect(report.losses).toEqual([])
+  })
+
   it('applies .biomeignore, which Biome 2.x itself ignores, as a deliberate narrowing', async () => {
     const dir = await setupConformanceFixture({}, { '.biomeignore': 'build/**\n' })
 
