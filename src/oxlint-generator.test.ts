@@ -29,7 +29,7 @@ describe('generateOxlintConfig ignore pattern mapping', () => {
     ])
   })
 
-  it('emits re-includes ahead of the other ignore sources and warns how Oxlint reads them', () => {
+  it('emits re-includes ahead of the other ignore sources', () => {
     const reporter = new CollectingReporter()
     const biomeConfig: BiomeConfig = {
       files: { exclude: ['build/**', '!build/keep.ts'] },
@@ -43,8 +43,17 @@ describe('generateOxlintConfig ignore pattern mapping', () => {
     // A `!` entry lifts every earlier pattern it matches, so it must not follow `legacy/**`.
     expect(config.ignorePatterns).toEqual(['build/**', '!build/keep.ts', 'gen/**', 'legacy/**'])
     expect(reporter.getLosses()).toEqual([])
+    // A re-include without a glob in its directories reaches what Biome reaches.
+    expect(reporter.getWarnings().some((warning) => warning.includes('build/keep.ts'))).toBe(false)
+  })
+
+  it('warns about a re-include whose glob spans directories Biome may not reach', () => {
+    const reporter = new CollectingReporter()
+
+    generateOxlintConfig({ files: { exclude: ['lib/**', '!lib/**/keep.ts'] } }, reporter)
+
     expect(
-      reporter.getWarnings().filter((warning) => warning.includes('build/keep.ts')),
+      reporter.getWarnings().filter((warning) => warning.includes('lib/**/keep.ts')),
     ).toHaveLength(1)
   })
 

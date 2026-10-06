@@ -1,5 +1,5 @@
 import { extractRulesFromBiomeConfig } from './rule-mapper.js'
-import { joinExclusions } from './schema-normalizer.js'
+import { hasDirectoryGlob, joinExclusions } from './schema-normalizer.js'
 import type {
   BiomeConfig,
   OxlintBuiltinPlugin,
@@ -127,13 +127,15 @@ function warnAboutUnrepresentableIncludes(biomeConfig: BiomeConfig, reporter: Re
     )
   }
 
+  // A re-include with a literal directory path was dropped during normalization when Biome
+  // could not reach it, so only a glob that spans directories can still reach further.
   const reincludes = joinExclusions(biomeConfig.files?.exclude, biomeConfig.linter?.exclude)
-    .filter((pattern) => pattern.startsWith('!'))
+    .filter((pattern) => pattern.startsWith('!') && hasDirectoryGlob(pattern))
     .map((pattern) => pattern.slice(1))
 
   if (reincludes.length > 0) {
     reporter.warn(
-      `Biome re-includes ${reincludes.join(', ')} after a negated pattern, which was migrated as "!" entries in the Oxlint ignorePatterns. Oxlint lifts the exclusion for every file such an entry matches, while Biome does not re-include a file below a directory it excluded, so a re-include that had no effect in Biome now does.`,
+      `Biome re-includes ${reincludes.join(', ')} after a negated pattern, which was migrated as "!" entries in the Oxlint ignorePatterns. Oxlint lifts the exclusion for every file such an entry matches, while Biome does not look inside a directory an earlier exception excluded, so Oxlint may lint files below one that Biome skipped.`,
     )
   }
 }

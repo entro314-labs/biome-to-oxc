@@ -17,6 +17,83 @@ describe('normalizeBiomeConfig re-includes after a negated pattern', () => {
     expect(reporter.getLosses()).toEqual([])
   })
 
+  it('drops a re-include below a directory an earlier exception still excludes', () => {
+    const reporter = new CollectingReporter()
+
+    const { files } = normalizeBiomeConfig(
+      {
+        files: {
+          includes: [
+            '**',
+            '!build/**',
+            'build/keep.ts',
+            'build/sub/keep.ts',
+            '!lib',
+            'lib/keep.ts',
+            '!out/**',
+            'out/sub',
+            'out/sub/keep.ts',
+          ],
+        },
+      },
+      reporter,
+    )
+
+    // Biome stops at an excluded directory, so neither file below one is ever reached.
+    // `out/sub` re-includes the directory itself, which makes `out/sub/keep.ts` reachable.
+    expect(files?.exclude).toEqual([
+      'build/**',
+      '!build/keep.ts',
+      '/lib',
+      'out/**',
+      '!out/sub',
+      '!out/sub/keep.ts',
+    ])
+    expect(reporter.getLosses()).toEqual([])
+    expect(reporter.getWarnings()).toHaveLength(2)
+    expect(reporter.getWarnings()[0]).toContain('"build/sub/keep.ts" in files')
+    expect(reporter.getWarnings()[0]).toContain('"build/sub"')
+    expect(reporter.getWarnings()[1]).toContain('"lib/keep.ts" in files')
+  })
+
+  it('keeps a glob re-include that reaches some of its files', () => {
+    const reporter = new CollectingReporter()
+
+    const { files } = normalizeBiomeConfig(
+      { files: { includes: ['**', '!lib/**', 'lib/**/keep.ts'] } },
+      reporter,
+    )
+
+    expect(files?.exclude).toEqual(['lib/**', '!lib/**/keep.ts'])
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('lists only the leading patterns as the positive selection', () => {
+    const reporter = new CollectingReporter()
+
+    const { files } = normalizeBiomeConfig(
+      { files: { includes: ['src/**', '!src/gen/**', 'src/gen/keep.ts'] } },
+      reporter,
+    )
+
+    expect(files?.include).toEqual(['src/**'])
+    expect(files?.exclude).toEqual(['src/gen/**', '!src/gen/keep.ts'])
+  })
+
+  it('splits an override even when a leading pattern is repeated as a re-include', () => {
+    const reporter = new CollectingReporter()
+
+    const { overrides } = normalizeBiomeConfig(
+      { overrides: [{ includes: ['src/**', '!src/gen/**', 'src/**'] }] },
+      reporter,
+    )
+
+    expect(overrides).toEqual([
+      { include: ['src/**'], exclude: ['src/gen/**'], includes: undefined },
+      { include: ['src/**'], exclude: undefined, includes: undefined },
+    ])
+  })
+
   it('leaves the canonical match-all plus exceptions form as plain exclusions', () => {
     const reporter = new CollectingReporter()
 
@@ -123,7 +200,7 @@ describe('normalizeBiomeConfig patterns ending in a slash', () => {
 
     expect(files?.exclude).toEqual(['out/**'])
     expect(overrides).toEqual([
-      { include: ['src/**', 'src/gen/'], exclude: ['src/gen/**'], includes: undefined },
+      { include: ['src/**'], exclude: ['src/gen/**'], includes: undefined },
     ])
     expect(reporter.getWarnings()).toHaveLength(2)
   })

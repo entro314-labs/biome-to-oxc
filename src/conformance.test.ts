@@ -597,26 +597,55 @@ describe('source-versus-target lint diagnostics', () => {
     expect(oxlintLines).toEqual(biomeLines)
   })
 
-  it('warns that Oxlint re-includes a file below an excluded directory, which Biome does not', async () => {
+  it('does not re-include a file below a directory an exception still excludes', async () => {
     const dir = await setupConformanceFixture(
       {
-        files: { includes: ['**', '!src/gen/**', 'src/gen/nested/keep.js'] },
+        files: { includes: ['**', '!src/gen/**', 'src/gen/nested/keep.js', 'src/gen/keep.js'] },
         linter: { rules: { recommended: false, suspicious: { noDebugger: 'error' } } },
         formatter: { enabled: false },
         assist: { enabled: false },
       },
-      { 'src/main.js': 'debugger\n', 'src/gen/nested/keep.js': 'debugger\n' },
+      {
+        'src/main.js': 'debugger\n',
+        'src/gen/keep.js': 'debugger\n',
+        'src/gen/nested/keep.js': 'debugger\n',
+      },
     )
 
     const biomeLines = await biomeLintLines(dir)
     const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
     const oxlintLines = await oxlintLintLines(dir)
 
-    // A known difference, pinned so a change in either tool shows up here: `src/gen/nested`
-    // is itself excluded, so Biome never reaches the file the later pattern names.
-    expect(biomeLines).toEqual(['src/main.js:1'])
-    expect(oxlintLines).toEqual(['src/gen/nested/keep.js:1', 'src/main.js:1'])
-    expect(report.warnings.some((warning) => warning.includes('src/gen/nested/keep.js'))).toBe(true)
+    // `src/gen/nested` is itself excluded, so Biome never reaches the file below it.
+    expect(biomeLines).toEqual(['src/gen/keep.js:1', 'src/main.js:1'])
+    expect(oxlintLines).toEqual(biomeLines)
+    expect(report.losses).toEqual([])
+  })
+
+  it('warns that Oxlint re-includes more through a glob that spans an excluded directory', async () => {
+    const dir = await setupConformanceFixture(
+      {
+        files: { includes: ['**', '!src/gen/**', 'src/gen/**/keep.js'] },
+        linter: { rules: { recommended: false, suspicious: { noDebugger: 'error' } } },
+        formatter: { enabled: false },
+        assist: { enabled: false },
+      },
+      {
+        'src/main.js': 'debugger\n',
+        'src/gen/keep.js': 'debugger\n',
+        'src/gen/nested/keep.js': 'debugger\n',
+      },
+    )
+
+    const biomeLines = await biomeLintLines(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxlintLines = await oxlintLintLines(dir)
+
+    // A known difference, pinned so a change in either tool shows up here: which directories
+    // the glob crosses is only known per file, so the pattern is kept and Oxlint reaches more.
+    expect(biomeLines).toEqual(['src/gen/keep.js:1', 'src/main.js:1'])
+    expect(oxlintLines).toEqual(['src/gen/keep.js:1', 'src/gen/nested/keep.js:1', 'src/main.js:1'])
+    expect(report.warnings.some((warning) => warning.includes('src/gen/**/keep.js'))).toBe(true)
   })
 
   it('excludes a pattern without a slash at the project root only', async () => {

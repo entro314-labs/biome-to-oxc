@@ -1,7 +1,9 @@
+import { posix } from 'node:path'
+
 import type { BiomeConfig, BiomeOverride, Reporter } from './types.js'
 
 export interface NormalizedSelection {
-  /** Positive selectors that narrow which files a tool processes. */
+  /** Positive selectors ahead of the first exception, which narrow which files are processed. */
   include: string[] | undefined
   /**
    * Exclusions in source order, read the way `ignorePatterns` reads them: a negated
@@ -132,13 +134,28 @@ function splitIncludes(
 
     const anchored = unmatchable ? pattern : anchorAtRoot(pattern.replace(/^\.\//u, ''), target)
 
-    // A top-level selection is only ever reported, so it keeps the spelling the config used.
-    // One that matches nothing is kept too, so the positive selection is still reported.
-    include.push(target === 'override' ? anchored : pattern)
-
-    if (exclude.length > 0 && !unmatchable) {
-      exclude.push(`!${anchored}`)
+    if (exclude.length === 0) {
+      // A top-level selection is only ever reported, so it keeps the spelling the config used.
+      // One that matches nothing is kept too, so the positive selection is still reported.
+      include.push(target === 'override' ? anchored : pattern)
+      continue
     }
+
+    if (unmatchable) {
+      continue
+    }
+
+    // Overrides match file paths only, so only the top-level selection walks directories.
+    const blockedBy = target === 'ignorePatterns' ? findExcludedAncestor(anchored, exclude) : null
+
+    if (blockedBy) {
+      reporter.warn(
+        `Biome pattern "${pattern}" in ${fieldName} re-includes nothing: an earlier exception still excludes the directory "${blockedBy}", and Biome does not look inside an excluded directory, so nothing was migrated for it. Re-include "${blockedBy}" first if its files were meant to be processed.`,
+      )
+      continue
+    }
+
+    exclude.push(`!${anchored}`)
   }
 
   return {
@@ -163,6 +180,47 @@ function withoutMatchAllSelection(selection: NormalizedSelection): NormalizedSel
 
 function isReinclude(pattern: string): boolean {
   return pattern.startsWith('!')
+}
+
+const GLOB_SEGMENT = /[*?[{]/u
+
+/** Whether a glob can match files at more than one directory depth or in several directories. */
+export function hasDirectoryGlob(pattern: string): boolean {
+  return pattern
+    .replace(/^!/u, '')
+    .split('/')
+    .slice(0, -1)
+    .some((segment) => GLOB_SEGMENT.test(segment))
+}
+
+/** A pattern as a project-relative glob, without the `!` or the root anchor it was given. */
+function globBody(pattern: string): string {
+  return pattern.replace(/^!/u, '').replace(/^\.?\//u, '')
+}
+
+/**
+ * The directory that stops Biome from reaching anything `pattern` names, if there is one.
+ *
+ * Biome walks the project and skips a directory whose last matching `includes` pattern is
+ * an exception, so a re-include of a file below one has no effect. Only the directories in
+ * the pattern's literal prefix are checked: those the pattern itself needs to be walked.
+ */
+function findExcludedAncestor(pattern: string, ordered: string[]): string | null {
+  const segments = globBody(pattern).split('/').slice(0, -1)
+  const literalDepth = segments.findIndex((segment) => GLOB_SEGMENT.test(segment))
+  const directories = segments
+    .slice(0, literalDepth === -1 ? segments.length : literalDepth)
+    .map((_, index, literal) => literal.slice(0, index + 1).join('/'))
+
+  for (const directory of directories) {
+    const lastMatch = ordered.findLast((entry) => posix.matchesGlob(directory, globBody(entry)))
+
+    if (lastMatch !== undefined && !isReinclude(lastMatch)) {
+      return directory
+    }
+  }
+
+  return null
 }
 
 /**
@@ -218,8 +276,7 @@ function splitReincludes(selection: NormalizedSelection): NormalizedSelection[] 
     const exceptions = ordered.slice(index).filter((pattern) => !isReinclude(pattern))
     return exceptions.length > 0 ? exceptions : undefined
   }
-  const reincluded = new Set(ordered.filter(isReinclude).map((pattern) => pattern.slice(1)))
-  const leading = selection.include?.filter((pattern) => !reincluded.has(pattern)) ?? []
+  const leading = selection.include ?? []
   const selections: NormalizedSelection[] =
     leading.length > 0 ? [{ include: leading, exclude: exceptionsFrom(0) }] : []
 
