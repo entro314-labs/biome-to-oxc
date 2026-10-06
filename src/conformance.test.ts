@@ -446,6 +446,39 @@ describe('source-versus-target lint diagnostics', () => {
           'export class B {\n  y = 1\n  private z = 2\n  get w() {\n    return this.z\n  }\n}\n',
       },
     },
+    {
+      name: 'reports static self-imports and self re-exports',
+      rules: { nursery: { noSelfImport: 'error' } },
+      files: {
+        'src/self.js': 'import self from "./self.js"\nexport default self\n',
+        'src/bare.ts': 'import bare from "./bare"\nexport default bare\n',
+        'src/reexport.js': 'export * from "./reexport.js"\n',
+        'src/other.js': 'import self from "./self.js"\nexport default self\n',
+      },
+    },
+    {
+      name: 'reports array, object and function default props in React components',
+      rules: { nursery: { noReactObjectTypeAsDefaultProp: 'error' } },
+      files: {
+        'src/array.jsx': 'export function A({ items = [] }) {\n  return <p>{items}</p>\n}\n',
+        'src/object.jsx': 'export const B = ({ config = {} }) => <p>{config.a}</p>\n',
+        'src/function.jsx':
+          'export const C = ({ onClick = () => {} }) => <button onClick={onClick} />\n',
+        'src/stable.jsx':
+          'const EMPTY = []\nexport const D = ({ items = EMPTY, count = 0 }) => <p>{items}{count}</p>\n',
+      },
+    },
+    {
+      name: 'reports Promise rejections with a non-Error reason',
+      rules: { nursery: { usePromiseRejectErrors: 'error' } },
+      files: {
+        'src/static.js': 'export const a = Promise.reject("failed")\n',
+        'src/empty.js': 'export const b = Promise.reject()\n',
+        'src/executor.js': 'export const c = new Promise((resolve, reject) => reject(42))\n',
+        'src/error.js':
+          'export const d = Promise.reject(new Error("failed"))\nexport const e = (err) => Promise.reject(err)\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 

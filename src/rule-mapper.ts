@@ -79,8 +79,14 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noBarrelFile was mapped to oxc/no-barrel-file, which only counts `export *` re-exports and reports a file once it re-exports more modules than its threshold (100 by default); Biome reports any file that re-exports, including through named `export { ... } from`.',
   noExcessiveCognitiveComplexity:
     'Biome rule noExcessiveCognitiveComplexity was mapped to complexity, which scores cyclomatic complexity rather than cognitive complexity; the threshold carries over, but the two scores differ, so a different set of functions is reported.',
+  noMeaninglessVoidOperator:
+    'Biome rule noMeaninglessVoidOperator was mapped to typescript/no-meaningless-void-operator, which reports `void` applied to a value whose type is `void` or `undefined` but not `void` applied to any other non-call operand, such as `void 1` or `void value`.',
   noInlineStyles:
     'Biome rule noInlineStyles was mapped to react/forbid-dom-props, which reports the `style` prop on JSX DOM elements but not `style` passed through React.createElement() or written in HTML, Vue, Svelte or Astro templates.',
+  noSelfImport:
+    'Biome rule noSelfImport was mapped to import/no-self-import, which reports static `import` and `export ... from` statements that resolve to their own file but not `require()` calls or dynamic `import()` expressions that do.',
+  noReactObjectTypeAsDefaultProp:
+    'Biome rule noReactObjectTypeAsDefaultProp was mapped to react/no-object-type-as-default-prop, which reports array, object, function, class, regex, `new` and JSX default prop values but not a `Symbol()` default.',
   noReactPropAssignments:
     'Biome rule noReactPropAssignments was mapped to the React Compiler rule react/immutability, which reports prop mutation alongside other mutations of values React treats as immutable.',
   noUnresolvedImports:
@@ -365,6 +371,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noLabelVar: 'no-label-var',
   noLoopFunc: 'no-loop-func',
   noMagicNumbers: 'no-magic-numbers',
+  noMeaninglessVoidOperator: 'typescript/no-meaningless-void-operator',
   noMisleadingCharacterClass: 'no-misleading-character-class',
   noMisleadingInstantiator: 'typescript/no-misused-new',
   noMisrefactoredShorthandAssign: 'oxc/misrefactored-assign-op',
@@ -398,6 +405,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noProto: 'no-proto',
   noPrototypeBuiltins: 'no-prototype-builtins',
   noRedeclare: 'no-redeclare',
+  noReactObjectTypeAsDefaultProp: 'react/no-object-type-as-default-prop',
   noReactPropAssignments: 'react/immutability',
   noRedundantAlt: 'jsx-a11y/img-redundant-alt',
   noRedundantRoles: 'jsx-a11y/no-redundant-roles',
@@ -418,6 +426,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noScriptUrl: 'no-script-url',
   noSelfCompare: 'no-self-compare',
   noSelfAssign: 'no-self-assign',
+  noSelfImport: 'import/no-self-import',
   noSetterReturn: 'no-setter-return',
   noShadow: 'no-shadow',
   noShadowRestrictedNames: 'no-shadow-restricted-names',
@@ -590,6 +599,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useObjectSpread: 'prefer-object-spread',
   useOptionalChain: 'typescript/prefer-optional-chain',
   useParseIntRadix: 'radix',
+  usePromiseRejectErrors: 'prefer-promise-reject-errors',
   useReadonlyClassProperties: 'typescript/prefer-readonly',
   useReactFunctionComponentDefinition: 'react/function-component-definition',
   useReactCompiler: REACT_COMPILER_RULES,
@@ -606,6 +616,10 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useSpread: 'prefer-spread',
   useSpreadOverApply: 'prefer-spread',
   useStaticResponseMethods: 'unicorn/prefer-response-static-json',
+  // Superset: strict-boolean-expressions also reports nullable enums, values typed `null` or
+  // implicitly `any`, and array predicate callbacks that return a nullable value. The one case
+  // seen the other way round is a conditional type over an unconstrained type parameter.
+  useStrictBooleanExpressions: 'typescript/strict-boolean-expressions',
   useStringStartsEndsWith: 'typescript/prefer-string-starts-ends-with',
   useSymbolDescription: 'symbol-description',
   useTemplate: 'prefer-template',

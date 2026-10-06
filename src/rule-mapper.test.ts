@@ -958,6 +958,80 @@ describe('rule-mapper coverage for rules added by Biome 2.5.12-2.5.14', () => {
   })
 })
 
+describe('rule-mapper coverage for rules added by Biome 2.5.15', () => {
+  it('maps usePromiseRejectErrors onto the Oxlint rule that reports the same lines', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules, sourceRulesSkipped } = extractRulesFromBiomeConfig(
+      { nursery: { usePromiseRejectErrors: 'warn' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'prefer-promise-reject-errors': 'warn' })
+    expect(sourceRulesSkipped).toEqual(new Set())
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('maps noReactObjectTypeAsDefaultProp with a note on the default the Oxlint rule allows', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { nursery: { noReactObjectTypeAsDefaultProp: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'react/no-object-type-as-default-prop': 'error' })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('Symbol()')
+  })
+
+  it('maps noSelfImport with a note on the import forms the Oxlint rule does not follow', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig({ nursery: { noSelfImport: 'error' } }, reporter)
+
+    expect(rules).toEqual({ 'import/no-self-import': 'error' })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('require()')
+  })
+
+  it('maps the new type-domain rules onto their type-aware Oxlint counterparts', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        noMeaninglessVoidOperator: 'warn',
+        useStrictBooleanExpressions: 'error',
+      },
+    }
+
+    const { rules, sourceRulesSkipped } = extractRulesFromBiomeConfig(linterRules, reporter, {
+      typeAware: true,
+    })
+
+    expect(rules).toEqual({
+      'typescript/no-meaningless-void-operator': 'warn',
+      'typescript/strict-boolean-expressions': 'error',
+    })
+    expect(sourceRulesSkipped).toEqual(new Set())
+    // Only the void rule narrows: tsgolint leaves non-call operands such as `void 1` alone.
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('void 1')
+  })
+
+  it('reports the new type-domain rules as not running when type-aware linting is off', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { nursery: { useStrictBooleanExpressions: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'typescript/strict-boolean-expressions': 'error' })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('--type-aware')
+  })
+})
+
 describe('rule-mapper coverage for Biome rules with existing partial Oxlint counterparts', () => {
   it('maps noInlineStyles onto forbid-dom-props for the style prop and reports the narrowing', () => {
     const reporter = new CollectingReporter()
