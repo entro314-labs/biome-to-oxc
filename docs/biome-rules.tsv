@@ -10,6 +10,7 @@ noAriaHiddenOnFocusable	a11y
 noAriaUnsupportedElements	a11y
 noArrayIndexKey	suspicious
 noAssignInExpressions	suspicious
+noAstroConflictingSetDirectives	nursery
 noAstroSetHtmlDirective	nursery
 noAsyncPromiseExecutor	suspicious
 noAutofocus	a11y
@@ -159,10 +160,12 @@ noLabelWithoutControl	a11y
 noLeakedRender	suspicious
 noLoopFunc	nursery
 noMagicNumbers	style
+noMeaninglessVoidOperator	nursery
 noMisleadingCharacterClass	suspicious
 noMisleadingInstantiator	suspicious
 noMisleadingReturnType	nursery
 noMisplacedAssertion	suspicious
+noMisplacedListElements	nursery
 noMisrefactoredShorthandAssign	suspicious
 noMissingVarFunction	correctness
 noMisusedPromises	nursery
@@ -213,6 +216,7 @@ noReactForwardRef	suspicious
 noReactNativeDeepImports	nursery
 noReactNativeLiteralColors	nursery
 noReactNativeRawText	nursery
+noReactObjectTypeAsDefaultProp	nursery
 noReactPropAssignments	correctness
 noReactSpecificProps	suspicious
 noReactStringRefs	nursery
@@ -234,6 +238,7 @@ noScriptUrl	security
 noSecrets	security
 noSelfAssign	correctness
 noSelfCompare	suspicious
+noSelfImport	nursery
 noSetterReturn	correctness
 noShadow	suspicious
 noShadowRestrictedNames	suspicious
@@ -249,12 +254,14 @@ noSubstr	style
 noSuspiciousSemicolonInJsx	suspicious
 noSvelteAtDebugTags	nursery
 noSvelteAtHtmlTags	nursery
+noSvelteExportLet	nursery
 noSvelteLegacyConst	nursery
 noSvelteUnnecessaryStateWrap	nursery
 noSvgWithoutTitle	a11y
 noSwitchDeclarations	correctness
 noSyncScripts	performance
 noTailwindArbitraryValue	nursery
+noTailwindRawColors	nursery
 noTemplateCurlyInString	suspicious
 noTernary	style
 noThenProperty	suspicious
@@ -445,6 +452,7 @@ useKeyWithMouseEvents	a11y
 useLayeredStyles	nursery
 useLiteralEnumMembers	style
 useLiteralKeys	complexity
+useLogicalProperties	nursery
 useLoneAnonymousOperation	correctness
 useLoneExecutableDefinition	style
 useMathMinMax	nursery
@@ -466,6 +474,7 @@ useObjectSpread	style
 useOptionalChain	complexity
 useParseIntRadix	correctness
 usePlaywrightValidDescribeCallback	nursery
+usePromiseRejectErrors	nursery
 useQwikClasslist	correctness
 useQwikLoaderLocation	nursery
 useQwikMethodUsage	correctness
@@ -495,8 +504,10 @@ useSolidForComponent	performance
 useSortedClasses	nursery
 useSpreadOverApply	style
 useStaticResponseMethods	suspicious
+useStrictBooleanExpressions	nursery
 useStrictMode	suspicious
 useStringStartsEndsWith	nursery
+useSvelteKitRuneImports	nursery
 useSvelteRequireEachKey	nursery
 useSymbolDescription	style
 useTailwindShorthandClasses	nursery

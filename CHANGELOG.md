@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Toolchain refreshed to Oxlint 1.87.0, Oxfmt 0.72.0 and Biome 2.5.15 (oxlint-tsgolint stays at 7.0.2003), and the inventories under `docs/` regenerated from their schemas. Oxlint 1.86 added one rule, `typescript/no-generated-empty-object-type`, now listed in `docs/oxlint-rules.tsv` and `docs/oxlint-vs-tsgolint.tsv`; it is the tsgolint rule Oxlint 1.85 still rejected as unknown, so all 60 type-aware rules tsgolint implements can now be enabled, and the README and the type-aware guidance printed by the migration no longer say otherwise. Biome has no equivalent rule. Oxlint 1.87 added no rules, and the one new rule option, `react/only-export-components`' `allowCompoundComponents`, has no Biome counterpart to migrate from. Oxfmt 0.71–0.72 added no configuration options, so `docs/oxfmt-rules.tsv` is unchanged; 0.72 formats Markdown with its own formatter instead of Prettier, which needs nothing here because Markdown is already excluded as a language Biome never formatted. Biome 2.5.15 added 11 nursery rules; the five with an Oxlint counterpart are mapped (see Added), and `noAstroConflictingSetDirectives`, `noMisplacedListElements`, `noSvelteExportLet`, `noTailwindRawColors`, `useLogicalProperties` and `useSvelteKitRuneImports` stay unmapped because Oxlint has no rule for them.
+
 ## [3.6.1] - 2026-09-28
 
 ### Fixed

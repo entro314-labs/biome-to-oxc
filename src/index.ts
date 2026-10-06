@@ -555,7 +555,7 @@ async function buildSuggestions({
     suggestions.push(`  ${typeAwareCommand}`)
     suggestions.push('Type-aware mode uses the tsgolint backend.')
     suggestions.push(
-      'Type-aware linting is stable as of tsgolint v7; it implements 60 of typescript-eslint’s 62 type-aware rules, and Oxlint does not yet expose no-generated-empty-object-type, so check those three if you relied on them.',
+      'Type-aware linting is stable as of tsgolint v7; it implements 60 of typescript-eslint’s 62 type-aware rules, so check naming-convention and prefer-destructuring if you relied on them.',
     )
     suggestions.push(
       'TypeScript compatibility caveat: migrate deprecated tsconfig options if needed (typescript-go / TS7+ behavior).',
