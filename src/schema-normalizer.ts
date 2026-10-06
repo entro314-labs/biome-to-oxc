@@ -16,6 +16,39 @@ interface SelectionSource {
   includes?: string[]
 }
 
+/** Where a selection's patterns end up: top-level `ignorePatterns`, or an override's globs. */
+type PatternTarget = 'ignorePatterns' | 'override'
+
+/**
+ * Biome 2 anchors every `includes` pattern at the config root, so `dist` and `*.gen.ts` only
+ * match there. Oxlint and Oxfmt match a pattern without a `/` at any depth, and anchor one
+ * with a leading `/` in `ignorePatterns` but with `./` in an override's `files` and
+ * `excludeFiles`, where a leading `/` matches nothing.
+ */
+function anchorAtRoot(pattern: string, target: PatternTarget): string {
+  if (pattern.includes('/') || pattern === '**') {
+    return pattern
+  }
+
+  return `${target === 'ignorePatterns' ? '/' : './'}${pattern}`
+}
+
+/** Why Biome 2 matches `pattern` against no path, if it does. */
+function findUnmatchableReason(pattern: string): string | undefined {
+  const body = pattern.replace(/^!{1,2}/u, '')
+
+  if (body.endsWith('/')) {
+    return 'ends with "/"'
+  }
+
+  if (body.startsWith('/')) {
+    return 'starts with "/"'
+  }
+
+  // Biome drops a leading `./` from a positive pattern only.
+  return body !== pattern && body.startsWith('./') ? 'starts with "./"' : undefined
+}
+
 /**
  * Splits a Biome selection into positive selectors and negated exceptions.
  *
@@ -29,6 +62,7 @@ export function normalizeIncludeFields(
   obj: SelectionSource,
   fieldName: string,
   reporter: Reporter,
+  target: PatternTarget = 'ignorePatterns',
 ): NormalizedSelection {
   if (obj.include && obj.includes) {
     reporter.warn(
@@ -38,7 +72,7 @@ export function normalizeIncludeFields(
   }
 
   if (obj.includes) {
-    return splitIncludes(obj.includes, fieldName, reporter)
+    return splitIncludes(obj.includes, fieldName, reporter, target)
   }
 
   return { include: obj.include, exclude: undefined }
@@ -48,32 +82,43 @@ function splitIncludes(
   includes: string[],
   fieldName: string,
   reporter: Reporter,
+  target: PatternTarget,
 ): NormalizedSelection {
   const include: string[] = []
   const exclude: string[] = []
 
   for (const pattern of includes) {
-    // Biome 2 matches a pattern ending in `/` against no path, while `ignorePatterns` reads
-    // one as a directory, so carrying it over would exclude files Biome still processes.
-    const matchesNothing = pattern.endsWith('/')
+    // Carrying over a pattern Biome matches against no path would exclude, or select, files
+    // Biome treats differently: `ignorePatterns` reads `out/` and `/out` as the directory.
+    const unmatchable = findUnmatchableReason(pattern)
 
-    if (matchesNothing && pattern.startsWith('!')) {
+    if (unmatchable && pattern.startsWith('!')) {
+      const body = pattern.replace(/^!{1,2}/u, '')
+      const intended = anchorAtRoot(
+        `${body.replace(/^\.?\//u, '')}${body.endsWith('/') ? '**' : ''}`,
+        target,
+      )
+      const destination =
+        target === 'ignorePatterns'
+          ? 'the Oxlint and Oxfmt ignorePatterns'
+          : 'the excludeFiles of the migrated override'
+
       reporter.warn(
-        `Biome exception "${pattern}" in ${fieldName} ends with "/" and matches no file in Biome, so it excludes nothing and no ignore pattern was migrated for it. If the directory was meant to be excluded, add "${pattern.replace(/^!+/u, '')}**" to the Oxlint and Oxfmt ignorePatterns.`,
+        `Biome exception "${pattern}" in ${fieldName} ${unmatchable} and matches no file in Biome, so it excludes nothing and nothing was migrated for it. If the path was meant to be excluded, add "${intended}" to ${destination}.`,
       )
       continue
     }
 
-    if (matchesNothing) {
+    if (unmatchable) {
       reporter.warn(
-        `Biome pattern "${pattern}" in ${fieldName} ends with "/" and matches no file in Biome, so it selects nothing.`,
+        `Biome pattern "${pattern}" in ${fieldName} ${unmatchable} and matches no file in Biome, so it selects nothing.`,
       )
     }
 
     if (pattern.startsWith('!!')) {
       // Force-ignore removes a path from Biome's scanner entirely. Oxc has no
       // scanner-level equivalent, so the closest representation is a plain ignore.
-      exclude.push(pattern.slice(2))
+      exclude.push(anchorAtRoot(pattern.slice(2), target))
       reporter.loss(
         `Biome force-ignore pattern "${pattern}" in ${fieldName} was migrated as a plain ignore; Oxc has no scanner-level force-ignore, so files reachable through other tooling paths may still be processed.`,
       )
@@ -81,15 +126,18 @@ function splitIncludes(
     }
 
     if (pattern.startsWith('!')) {
-      exclude.push(pattern.slice(1))
+      exclude.push(anchorAtRoot(pattern.slice(1), target))
       continue
     }
 
-    // Kept even when it matches nothing, so the positive selection is still reported.
-    include.push(pattern)
+    const anchored = unmatchable ? pattern : anchorAtRoot(pattern.replace(/^\.\//u, ''), target)
 
-    if (exclude.length > 0 && !matchesNothing) {
-      exclude.push(`!${pattern}`)
+    // A top-level selection is only ever reported, so it keeps the spelling the config used.
+    // One that matches nothing is kept too, so the positive selection is still reported.
+    include.push(target === 'override' ? anchored : pattern)
+
+    if (exclude.length > 0 && !unmatchable) {
+      exclude.push(`!${anchored}`)
     }
   }
 
@@ -232,7 +280,12 @@ export function normalizeBiomeConfig(config: BiomeConfig, reporter: Reporter): B
     const overrides: BiomeOverride[] = []
 
     for (const [index, override] of normalized.overrides.entries()) {
-      const selection = normalizeIncludeFields(override, `overrides[${index}]`, reporter)
+      const selection = normalizeIncludeFields(
+        override,
+        `overrides[${index}]`,
+        reporter,
+        'override',
+      )
 
       for (const { include, exclude } of splitReincludes(selection)) {
         overrides.push({ ...override, include, exclude, includes: undefined })

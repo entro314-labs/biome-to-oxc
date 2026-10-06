@@ -35,8 +35,11 @@ Current capabilities:
 - Negated `includes` exceptions (`!pattern`), translated into `ignorePatterns` for both tools, and
   patterns that re-include files after an exception, carried over as `!` entries (or, in an
   override, as a second override for the re-included files)
-- `includes` patterns ending in `/` are left out of `ignorePatterns` with a warning: Biome matches
-  them against no path, while Oxlint and Oxfmt would ignore the directory
+- Root anchoring of `includes` patterns: Biome matches `!dist` and `*.gen.ts` at the config root
+  only, so they are written as `/dist` in `ignorePatterns` and `./*.gen.ts` in an override, where
+  Oxlint and Oxfmt would otherwise match them at any depth
+- `includes` patterns Biome matches against no path — ending in `/`, starting with `/`, or an
+  exception starting with `./` — are left out with a warning instead of excluding the path
 - `.biomeignore` patterns migrated into the Oxlint **and** Oxfmt `ignorePatterns`. Biome 2.x does
   not read `.biomeignore` itself, so this deliberately narrows scope; the migration says so
 - Linter configuration overrides

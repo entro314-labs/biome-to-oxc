@@ -153,6 +153,19 @@ async function oxlintLintLines(dir: string): Promise<string[]> {
     .sort()
 }
 
+/** Formats fresh copies of `paths`, all holding `source`, and returns what each became. */
+async function formatCopies(
+  dir: string,
+  paths: string[],
+  source: string,
+  binary: string,
+  args: string[],
+): Promise<string[]> {
+  await writeFixtureFiles(dir, Object.fromEntries(paths.map((path) => [path, source])))
+  await run(binary, [...args, ...paths], dir)
+  return Promise.all(paths.map((path) => readFile(join(dir, path), 'utf-8')))
+}
+
 async function setupLintFixture(
   rules: BiomeLinterRules,
   files: Record<string, string>,
@@ -395,21 +408,43 @@ describe('Biome override precedence', () => {
       },
       Object.fromEntries(paths.map((path) => [path, source])),
     )
-    const formatAll = async (binary: string, args: string[]): Promise<string[]> => {
-      await writeFixtureFiles(dir, Object.fromEntries(paths.map((path) => [path, source])))
-      await run(binary, [...args, ...paths], dir)
-      return Promise.all(paths.map((path) => readFile(join(dir, path), 'utf-8')))
-    }
 
-    const biomeFormatted = await formatAll(BIOME_BIN, ['format', '--write'])
+    const biomeFormatted = await formatCopies(dir, paths, source, BIOME_BIN, ['format', '--write'])
     const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
-    const oxfmtFormatted = await formatAll(OXFMT_BIN, ['--config', '.oxfmtrc.jsonc'])
+    const oxfmtFormatted = await formatCopies(dir, paths, source, OXFMT_BIN, [
+      '--config',
+      '.oxfmtrc.jsonc',
+    ])
 
     // The narrow width wraps the override's files and leaves the excluded one on one line.
     expect(biomeFormatted.map((text) => text.trimEnd().split('\n').length > 1)).toEqual([
       true,
       false,
       true,
+    ])
+    expect(oxfmtFormatted).toEqual(biomeFormatted)
+    expect(report.losses).toEqual([])
+  })
+
+  it('applies an override pattern without a slash at the project root only', async () => {
+    const source = 'export const value = { alpha: 1, beta: 2, gamma: 3, delta: 4, epsilon: 5 };\n'
+    const paths = ['root.ts', 'skip.d.ts', 'src/deep.ts']
+    const dir = await setupConformanceFixture({
+      overrides: [{ includes: ['*.ts', '!*.d.ts'], formatter: { lineWidth: 40 } }],
+    })
+
+    const biomeFormatted = await formatCopies(dir, paths, source, BIOME_BIN, ['format', '--write'])
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtFormatted = await formatCopies(dir, paths, source, OXFMT_BIN, [
+      '--config',
+      '.oxfmtrc.jsonc',
+    ])
+
+    // Biome anchors `*.ts` at the root, so only the root file that is not a `.d.ts` wraps.
+    expect(biomeFormatted.map((text) => text.trimEnd().split('\n').length > 1)).toEqual([
+      true,
+      false,
+      false,
     ])
     expect(oxfmtFormatted).toEqual(biomeFormatted)
     expect(report.losses).toEqual([])
@@ -560,6 +595,52 @@ describe('source-versus-target lint diagnostics', () => {
     expect(report.errors).toEqual([])
     expect(biomeLines.length).toBeGreaterThan(0)
     expect(oxlintLines).toEqual(biomeLines)
+  })
+
+  it('excludes a pattern without a slash at the project root only', async () => {
+    const dir = await setupConformanceFixture(
+      {
+        files: { includes: ['**', '!gen', '!*.gen.js', '!/src/slash', '!./src/dot/**'] },
+        linter: { rules: { recommended: false, suspicious: { noDebugger: 'error' } } },
+        formatter: { enabled: false },
+        assist: { enabled: false },
+      },
+      {
+        'gen/skip.js': 'debugger\n',
+        'skip.gen.js': 'debugger\n',
+        'src/gen/keep.js': 'debugger\n',
+        'src/keep.gen.js': 'debugger\n',
+        // Biome matches neither exception below against anything, so both stay linted.
+        'src/slash/keep.js': 'debugger\n',
+        'src/dot/keep.js': 'debugger\n',
+      },
+    )
+    const lintedOutsideSrc = async (binary: string, args: string[]): Promise<boolean> => {
+      const { stdout } = await run(binary, args, dir)
+      return stdout.includes('skip.js') || stdout.includes('skip.gen.js')
+    }
+
+    const biomeLines = await biomeLintLines(dir)
+    const biomeLintsSkipped = await lintedOutsideSrc(BIOME_BIN, ['lint', '.', '--reporter=json'])
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxlintLines = await oxlintLintLines(dir)
+    const oxlintLintsSkipped = await lintedOutsideSrc(OXLINT_BIN, [
+      '--config',
+      '.oxlintrc.json',
+      '--format=json',
+      '.',
+    ])
+
+    expect(report.losses).toEqual([])
+    expect(biomeLines).toEqual([
+      'src/dot/keep.js:1',
+      'src/gen/keep.js:1',
+      'src/keep.gen.js:1',
+      'src/slash/keep.js:1',
+    ])
+    expect(oxlintLines).toEqual(biomeLines)
+    expect(biomeLintsSkipped).toBe(false)
+    expect(oxlintLintsSkipped).toBe(false)
   })
 
   it('lints a file re-included after a negated pattern', async () => {

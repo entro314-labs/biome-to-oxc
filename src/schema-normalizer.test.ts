@@ -20,10 +20,10 @@ describe('normalizeBiomeConfig re-includes after a negated pattern', () => {
   it('leaves the canonical match-all plus exceptions form as plain exclusions', () => {
     const reporter = new CollectingReporter()
 
-    const { files } = normalizeBiomeConfig({ files: { includes: ['**', '!dist'] } }, reporter)
+    const { files } = normalizeBiomeConfig({ files: { includes: ['**', '!dist/**'] } }, reporter)
 
     expect(files?.include).toBeUndefined()
-    expect(files?.exclude).toEqual(['dist'])
+    expect(files?.exclude).toEqual(['dist/**'])
   })
 
   it('splits an override that re-includes files into overrides excludeFiles can express', () => {
@@ -96,11 +96,11 @@ describe('normalizeBiomeConfig patterns ending in a slash', () => {
     const reporter = new CollectingReporter()
 
     const { files } = normalizeBiomeConfig(
-      { files: { includes: ['**', '!out/', '!!tmp/', '!dist'] } },
+      { files: { includes: ['**', '!out/', '!!tmp/', '!dist/**'] } },
       reporter,
     )
 
-    expect(files?.exclude).toEqual(['dist'])
+    expect(files?.exclude).toEqual(['dist/**'])
     // Nothing was force-ignored either, so there is no force-ignore loss to report.
     expect(reporter.getLosses()).toEqual([])
     expect(reporter.getWarnings()).toHaveLength(2)
@@ -115,13 +115,13 @@ describe('normalizeBiomeConfig patterns ending in a slash', () => {
 
     const { files, overrides } = normalizeBiomeConfig(
       {
-        files: { includes: ['**', '!out', 'out/'] },
+        files: { includes: ['**', '!out/**', 'out/'] },
         overrides: [{ includes: ['src/**', '!src/gen/**', 'src/gen/'] }],
       },
       reporter,
     )
 
-    expect(files?.exclude).toEqual(['out'])
+    expect(files?.exclude).toEqual(['out/**'])
     expect(overrides).toEqual([
       { include: ['src/**', 'src/gen/'], exclude: ['src/gen/**'], includes: undefined },
     ])
@@ -139,12 +139,76 @@ describe('normalizeBiomeConfig patterns ending in a slash', () => {
   })
 })
 
+describe('normalizeBiomeConfig root anchoring of includes patterns', () => {
+  it('anchors a top-level exception without a slash, which ignorePatterns matches at any depth', () => {
+    const reporter = new CollectingReporter()
+
+    const { files, linter } = normalizeBiomeConfig(
+      {
+        files: { includes: ['**', '!dist', '!*.gen.ts', '!pkg/out', '!**/tmp', 'keep.gen.ts'] },
+        linter: { includes: ['**', '!!coverage'] },
+      },
+      reporter,
+    )
+
+    expect(files?.exclude).toEqual(['/dist', '/*.gen.ts', 'pkg/out', '**/tmp', '!/keep.gen.ts'])
+    expect(linter?.exclude).toEqual(['/coverage'])
+  })
+
+  it('anchors override patterns without a slash with `./`, where a leading slash matches nothing', () => {
+    const reporter = new CollectingReporter()
+
+    const { overrides } = normalizeBiomeConfig(
+      { overrides: [{ includes: ['*.ts', 'src/**', '!*.d.ts', '!**/*.gen.ts', './*.mts'] }] },
+      reporter,
+    )
+
+    expect(overrides).toEqual([
+      { include: ['./*.ts', 'src/**'], exclude: ['./*.d.ts', '**/*.gen.ts'], includes: undefined },
+      { include: ['./*.mts'], exclude: undefined, includes: undefined },
+    ])
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
+  it('leaves the legacy include and ignore fields, which Biome 1 matched at any depth', () => {
+    const reporter = new CollectingReporter()
+
+    const { files, overrides } = normalizeBiomeConfig(
+      {
+        files: { include: ['src'], ignore: ['dist'] },
+        overrides: [{ include: ['*.ts'], ignore: ['gen'] }],
+      },
+      reporter,
+    )
+
+    expect(files).toMatchObject({ include: ['src'], ignore: ['dist'], exclude: undefined })
+    expect(overrides?.[0]).toMatchObject({ include: ['*.ts'], ignore: ['gen'], exclude: undefined })
+  })
+
+  it('migrates nothing for a pattern Biome cannot match because of how it starts', () => {
+    const reporter = new CollectingReporter()
+
+    const { files } = normalizeBiomeConfig(
+      { files: { includes: ['**', '!/gen', '!./out/**', '!build/**', '/build/keep.ts'] } },
+      reporter,
+    )
+
+    expect(files?.exclude).toEqual(['build/**'])
+    expect(reporter.getWarnings()).toHaveLength(3)
+    expect(reporter.getWarnings()[0]).toContain('"!/gen" in files starts with "/"')
+    expect(reporter.getWarnings()[0]).toContain('add "/gen"')
+    expect(reporter.getWarnings()[1]).toContain('"!./out/**" in files starts with "./"')
+    expect(reporter.getWarnings()[1]).toContain('add "out/**"')
+    expect(reporter.getWarnings()[2]).toContain('"/build/keep.ts" in files starts with "/"')
+  })
+})
+
 describe('joinExclusions', () => {
   it('puts the list carrying a re-include first, so it cannot lift the other list', () => {
-    expect(joinExclusions(['dist'], ['gen/**', '!gen/keep.ts'])).toEqual([
+    expect(joinExclusions(['dist/**'], ['gen/**', '!gen/keep.ts'])).toEqual([
       'gen/**',
       '!gen/keep.ts',
-      'dist',
+      'dist/**',
     ])
     expect(joinExclusions(['build/**', '!build/keep.ts'], ['gen/**'])).toEqual([
       'build/**',

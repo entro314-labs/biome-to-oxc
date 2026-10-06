@@ -68,7 +68,9 @@ function findPatternProblem(pattern: string): string | undefined {
     return 'escapes the config directory with "..", which Oxlint and Oxfmt reject'
   }
 
-  if (body.startsWith('/') || /^[A-Za-z]:[/\\]/u.test(body)) {
+  // A leading `/` is not an absolute path here: both tools read it as anchoring the pattern
+  // to the config directory.
+  if (/^[A-Za-z]:[/\\]/u.test(body)) {
     return 'is an absolute path, but patterns are resolved within the config directory'
   }
 

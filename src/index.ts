@@ -1,5 +1,5 @@
 import { readFile, unlink } from 'node:fs/promises'
-import { dirname, isAbsolute, posix, relative, resolve } from 'node:path'
+import { dirname, posix, relative, resolve } from 'node:path'
 
 import { z } from 'zod'
 
@@ -880,15 +880,7 @@ function countRebasablePatterns(oxlintConfig: OxlintConfig, oxfmtConfig: OxfmtCo
     ...(oxfmtConfig.overrides ?? []).flatMap((override) => [override.files, override.excludeFiles]),
   ]
 
-  return groups.reduce(
-    (total, patterns) =>
-      total + (patterns ?? []).filter((pattern) => !isAbsolute(stripNegation(pattern))).length,
-    0,
-  )
-}
-
-function stripNegation(pattern: string): string {
-  return pattern.startsWith('!') ? pattern.slice(1) : pattern
+  return groups.reduce((total, patterns) => total + (patterns ?? []).length, 0)
 }
 
 function rebasePatterns(
@@ -904,10 +896,8 @@ function rebasePatterns(
     const prefix = negated ? '!' : ''
     const body = negated ? pattern.slice(1) : pattern
 
-    if (isAbsolute(body)) {
-      return pattern
-    }
-
+    // A leading `/` anchors the pattern to the config directory, which the rebased path does
+    // by itself because it now contains a `/`.
     return `${prefix}${posix.normalize(`${projectFromOutput}/${body.replace(/^\//u, '')}`)}`
   })
 }

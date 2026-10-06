@@ -28,11 +28,20 @@ describe('validateGeneratedConfigs', () => {
   })
 
   it('rejects absolute patterns', () => {
-    const problems = validateGeneratedConfigs({ ignorePatterns: ['/etc/**'] }, {})
+    const problems = validateGeneratedConfigs({ ignorePatterns: ['C:/etc/**'] }, {})
 
     expect(problems).toEqual([
-      '.oxlintrc.json: ignorePatterns pattern "/etc/**" is an absolute path, but patterns are resolved within the config directory',
+      '.oxlintrc.json: ignorePatterns pattern "C:/etc/**" is an absolute path, but patterns are resolved within the config directory',
     ])
+  })
+
+  it('accepts a leading slash, which anchors a pattern to the config directory', () => {
+    const problems = validateGeneratedConfigs(
+      { ignorePatterns: ['/dist', '!/dist/keep.js'] },
+      { ignorePatterns: ['/*.gen.ts'] },
+    )
+
+    expect(problems).toEqual([])
   })
 
   it('checks the pattern body of negated entries', () => {

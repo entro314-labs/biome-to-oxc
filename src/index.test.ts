@@ -196,6 +196,40 @@ describe('migrate output directory handling', () => {
     expect(await readFile(packageJsonPath, 'utf-8')).toBe(originalPackage)
   })
 
+  it('rebases root-anchored patterns onto an ancestor output directory', async () => {
+    const { dir } = await setupMigrationFixture()
+    const projectDir = join(dir, 'packages', 'app')
+    await mkdir(projectDir, { recursive: true })
+
+    const biomeConfigPath = join(projectDir, 'biome.json')
+
+    await writeFile(
+      biomeConfigPath,
+      `${JSON.stringify({
+        files: { includes: ['**', '!dist', '!*.gen.ts', 'keep.gen.ts'] },
+        overrides: [{ includes: ['*.ts'], linter: { rules: { style: { noVar: 'error' } } } }],
+      })}\n`,
+      'utf-8',
+    )
+    await writeFile(join(projectDir, 'package.json'), '{"name":"fixture"}\n', 'utf-8')
+
+    const report = await migrate({ configPath: biomeConfigPath, outputDir: dir })
+
+    const oxlint = JSON.parse(await readFile(join(dir, '.oxlintrc.json'), 'utf-8')) as {
+      ignorePatterns: string[]
+      overrides: Array<{ files: string[] }>
+    }
+
+    // The project path in front already anchors each pattern, so no leading `/` or `./` is left.
+    expect(report.errors).toEqual([])
+    expect(oxlint.ignorePatterns).toEqual([
+      'packages/app/dist',
+      'packages/app/*.gen.ts',
+      '!packages/app/keep.gen.ts',
+    ])
+    expect(oxlint.overrides[0]?.files).toEqual(['packages/app/*.ts'])
+  })
+
   it('rebases globs onto an output directory that is an ancestor of the project', async () => {
     const { dir } = await setupMigrationFixture()
     const projectDir = join(dir, 'packages', 'app')
