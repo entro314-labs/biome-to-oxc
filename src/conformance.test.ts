@@ -597,6 +597,28 @@ describe('source-versus-target lint diagnostics', () => {
     expect(oxlintLines).toEqual(biomeLines)
   })
 
+  it('warns that Oxlint re-includes a file below an excluded directory, which Biome does not', async () => {
+    const dir = await setupConformanceFixture(
+      {
+        files: { includes: ['**', '!src/gen/**', 'src/gen/nested/keep.js'] },
+        linter: { rules: { recommended: false, suspicious: { noDebugger: 'error' } } },
+        formatter: { enabled: false },
+        assist: { enabled: false },
+      },
+      { 'src/main.js': 'debugger\n', 'src/gen/nested/keep.js': 'debugger\n' },
+    )
+
+    const biomeLines = await biomeLintLines(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxlintLines = await oxlintLintLines(dir)
+
+    // A known difference, pinned so a change in either tool shows up here: `src/gen/nested`
+    // is itself excluded, so Biome never reaches the file the later pattern names.
+    expect(biomeLines).toEqual(['src/main.js:1'])
+    expect(oxlintLines).toEqual(['src/gen/nested/keep.js:1', 'src/main.js:1'])
+    expect(report.warnings.some((warning) => warning.includes('src/gen/nested/keep.js'))).toBe(true)
+  })
+
   it('excludes a pattern without a slash at the project root only', async () => {
     const dir = await setupConformanceFixture(
       {
@@ -664,6 +686,49 @@ describe('source-versus-target lint diagnostics', () => {
 
     expect(report.losses).toEqual([])
     expect(biomeLines).toEqual(['src/gen/keep.js:1', 'src/main.js:1'])
+    expect(oxlintLines).toEqual(biomeLines)
+  })
+})
+
+describe('source-versus-target type-aware lint diagnostics', () => {
+  const tsconfig = `${JSON.stringify({
+    compilerOptions: { strict: true, target: 'es2022', module: 'esnext', noEmit: true },
+    include: ['src'],
+  })}\n`
+
+  it.each<LintParityCase>([
+    {
+      name: 'reports truthiness checks on nullable primitives',
+      rules: { nursery: { useStrictBooleanExpressions: 'error' } },
+      files: {
+        'src/nullable.ts':
+          'export function f(count: number | undefined, on?: boolean) {\n  if (count) return 1\n  if (on) return 2\n  return 0\n}\n',
+        'src/strict.ts':
+          'export function g(count: number, text: string, node: object | null) {\n  if (count) return 1\n  if (text) return 2\n  if (node) return 3\n  return 0\n}\n',
+      },
+    },
+    {
+      name: 'reports void applied to a call that already returns void',
+      rules: { nursery: { noMeaninglessVoidOperator: 'error' } },
+      files: {
+        'src/void.ts': 'declare function log(): void\nvoid log()\nexport {}\n',
+        'src/value.ts':
+          'declare function count(): number\nvoid count()\nvoid Promise.resolve()\nexport {}\n',
+      },
+    },
+  ])('$name', async ({ rules, files }) => {
+    const dir = await setupLintFixture(rules, { ...files, 'tsconfig.json': tsconfig })
+
+    const biomeLines = await biomeLintLines(dir)
+    const report = await migrate({
+      configPath: join(dir, 'biome.json'),
+      outputDir: dir,
+      typeAware: true,
+    })
+    const oxlintLines = await oxlintLintLines(dir)
+
+    expect(report.errors).toEqual([])
+    expect(biomeLines.length).toBeGreaterThan(0)
     expect(oxlintLines).toEqual(biomeLines)
   })
 })
