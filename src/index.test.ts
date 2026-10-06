@@ -638,9 +638,9 @@ describe('migrate --delete with package scripts that still invoke Biome', () => 
       expect(report.cleanup?.performed).toBe(deleted)
       expect(packageJson.devDependencies['@biomejs/biome']).toBe(deleted ? undefined : '^2.5.7')
 
-      if (!deleted) {
-        expect(report.cleanup?.blockedReason).toBe('package scripts still invoke Biome: lint')
-      }
+      expect(report.cleanup?.blockedReason).toBe(
+        deleted ? undefined : 'package scripts still invoke Biome: lint',
+      )
     },
   )
 })
