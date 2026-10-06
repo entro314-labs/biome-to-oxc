@@ -58,20 +58,20 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",
-    "@biomejs/biome": "^2.5.14",
-    "@types/node": "^26.6.3",
-    "@vitest/coverage-v8": "^5.0.2",
-    "oxfmt": "^0.70.0",
-    "oxlint": "^1.85.0",
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^26.6.4",
+    "@vitest/coverage-v8": "^5.0.3",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2003",
-    "publint": "^0.3.24",
+    "publint": "^0.3.25",
     "tsdown": "0.23.0",
     "typescript": "next",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   },
   "engines": {
     "node": ">=24.21.0",
-    "pnpm": ">=11.28.0"
+    "pnpm": ">=11.28.5"
   },
-  "packageManager": "pnpm@11.28.0"
+  "packageManager": "pnpm@11.28.5"
 }
