@@ -433,6 +433,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noRestrictedTypes: 'typescript/no-restricted-types',
   noReturnAssign: 'no-return-assign',
   noReturnInFinally: 'promise/no-return-in-finally',
+  // Superset: no-script-url also reports `javascript:` strings outside JSX props and
+  // React.createElement() calls, such as `location.href = 'javascript:void(0)'`.
   noScriptUrl: 'no-script-url',
   noSelfCompare: 'no-self-compare',
   noSelfAssign: 'no-self-assign',
