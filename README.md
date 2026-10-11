@@ -337,10 +337,12 @@ report exactly what the Biome rule reports; `unicorn/prefer-string-starts-ends-w
 Biome flags, so that substitution is reported as a semantic loss.
 
 Every other Biome rule that maps only to a type-aware Oxlint rule — `noFloatingPromises`,
-`noMisusedPromises`, `useOptionalChain`, `useLiteralKeys` and the rest — has no non-type-aware
-Oxlint counterpart. Oxlint skips type-aware rules unless type-aware linting is on, so a migration
-without `--type-aware` reports each of them as a semantic loss instead of emitting a rule that
-never runs.
+`noMisusedPromises`, `useOptionalChain`, `noUnnecessaryConditions` and the rest — has no
+non-type-aware Oxlint counterpart. Oxlint skips type-aware rules unless type-aware linting is on,
+so a migration without `--type-aware` reports each of them as a semantic loss instead of emitting
+a rule that never runs. `useLiteralKeys` maps to two rules: `typescript/dot-notation` for
+`a["b"]` member access, which is type-aware and reported the same way, and
+`no-useless-computed-key` for `{ ["b"]: 1 }` keys, which runs either way.
 
 ### Assist Actions
 

@@ -595,7 +595,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useKeyWithClickEvents: 'jsx-a11y/click-events-have-key-events',
   useKeyWithMouseEvents: 'jsx-a11y/mouse-events-have-key-events',
   useLiteralEnumMembers: 'typescript/prefer-literal-enum-member',
-  useLiteralKeys: 'typescript/dot-notation',
+  // dot-notation covers `a["b"]` member access and no-useless-computed-key `{ ["b"]: 1 }` keys;
+  // only the second runs without type-aware linting.
+  useLiteralKeys: ['typescript/dot-notation', 'no-useless-computed-key'],
   useMathMinMax: 'unicorn/prefer-math-min-max',
   useMaxParams: 'max-params',
   useMediaCaption: 'jsx-a11y/media-has-caption',

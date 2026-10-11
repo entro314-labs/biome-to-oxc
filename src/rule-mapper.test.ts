@@ -1173,6 +1173,7 @@ describe('rule-mapper handling of type-aware Oxlint targets', () => {
 
     expect(rules).toEqual({
       'typescript/dot-notation': 'error',
+      'no-useless-computed-key': 'error',
       'typescript/prefer-optional-chain': 'warn',
       'typescript/no-floating-promises': 'error',
     })
@@ -1421,7 +1422,11 @@ describe('rule-mapper reports Oxlint counterparts that cover only part of the Bi
 
 describe('rule-mapper does not report coverage gaps for Biome rules the config turns off', () => {
   it.each([
-    { group: 'complexity', biomeRule: 'useLiteralKeys', expected: 'typescript/dot-notation' },
+    {
+      group: 'complexity',
+      biomeRule: 'useOptionalChain',
+      expected: 'typescript/prefer-optional-chain',
+    },
     { group: 'nursery', biomeRule: 'noBarrelFile', expected: 'oxc/no-barrel-file' },
     { group: 'nursery', biomeRule: 'noInlineStyles', expected: 'react/forbid-dom-props' },
     { group: 'suspicious', biomeRule: 'noAssignInExpressions', expected: 'no-cond-assign' },

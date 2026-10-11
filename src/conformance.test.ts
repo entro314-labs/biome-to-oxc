@@ -799,6 +799,19 @@ describe('source-versus-target type-aware lint diagnostics', () => {
           'declare function count(): number\nvoid count()\nvoid Promise.resolve()\nexport {}\n',
       },
     },
+    {
+      name: 'reports computed property access and computed keys written with a literal',
+      rules: { complexity: { useLiteralKeys: 'error' } },
+      files: {
+        'src/member.ts': 'declare const a: { b: { c: number } }\nexport const x = a.b["c"]\n',
+        'src/template.ts': 'declare const a: { c: { d: number } }\nexport const y = a.c[`d`]\n',
+        'src/assign.ts': 'declare const a: { c: { d: string } }\na.c[`d`] = "s"\n',
+        'src/record.ts': 'declare const a: Record<string, number>\nexport const w = a["bc"]\n',
+        'src/key.ts': 'export const d = {\n  ["b"]: 1\n}\n',
+        'src/member-key.ts': 'export class E {\n  ["f"]() {}\n}\n',
+        'src/valid.ts': 'declare const a: Record<string, number>\nexport const z = a["b-c"]\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, { ...files, 'tsconfig.json': tsconfig })
 
