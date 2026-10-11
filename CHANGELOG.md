@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.7.1] - 2026-10-11
+
 ### Fixed
 
 - `noInvalidConstructorSuper` and `noUnreachableSuper` were mapped to each other's Oxlint rule. `noInvalidConstructorSuper` (a `super()` call in a class that extends `null` or a literal) went to `no-this-before-super`, which reported none of it, and `noUnreachableSuper` (a missing, conditional or late `super()` call) went to `constructor-super`, which missed `this` used before `super()`. `noInvalidConstructorSuper` now maps to `constructor-super` and `noUnreachableSuper` to both rules. Because `constructor-super` covers both Biome rules, enabling only one of them also reports what the other would; both are in Biome's recommended set, which enables them together. A conformance test runs both binaries over the same fixture.
@@ -447,7 +449,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.0...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.1...HEAD
+[3.7.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.1...v3.7.0
 [3.6.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.5.0...v3.6.0
