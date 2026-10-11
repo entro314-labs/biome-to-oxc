@@ -1193,6 +1193,16 @@ describe('rule-mapper retargeting of Biome rules mapped to unrelated Oxlint rule
       group: 'style',
       expected: { 'react/jsx-curly-brace-presence': 'error' },
     },
+    {
+      biomeRule: 'noInvalidConstructorSuper',
+      group: 'correctness',
+      expected: { 'constructor-super': 'error' },
+    },
+    {
+      biomeRule: 'noUnreachableSuper',
+      group: 'correctness',
+      expected: { 'constructor-super': 'error', 'no-this-before-super': 'error' },
+    },
   ])(
     'maps $biomeRule to the Oxlint rule that checks the same construct',
     ({ biomeRule, group, expected }) => {

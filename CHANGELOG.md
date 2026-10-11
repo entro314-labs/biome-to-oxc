@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `noInvalidConstructorSuper` and `noUnreachableSuper` were mapped to each other's Oxlint rule. `noInvalidConstructorSuper` (a `super()` call in a class that extends `null` or a literal) went to `no-this-before-super`, which reported none of it, and `noUnreachableSuper` (a missing, conditional or late `super()` call) went to `constructor-super`, which missed `this` used before `super()`. `noInvalidConstructorSuper` now maps to `constructor-super` and `noUnreachableSuper` to both rules. Because `constructor-super` covers both Biome rules, enabling only one of them also reports what the other would; both are in Biome's recommended set, which enables them together. A conformance test runs both binaries over the same fixture.
+
 ## [3.7.0] - 2026-10-06
 
 ### Added

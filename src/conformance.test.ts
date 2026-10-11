@@ -585,6 +585,22 @@ describe('source-versus-target lint diagnostics', () => {
           'export const d = Promise.reject(new Error("failed"))\nexport const e = (err) => Promise.reject(err)\n',
       },
     },
+    {
+      name: 'reports invalid and missing super() calls in derived class constructors',
+      rules: { correctness: { noInvalidConstructorSuper: 'error', noUnreachableSuper: 'error' } },
+      files: {
+        'src/missing.js': 'export class A extends B {\n  constructor() {}\n}\n',
+        'src/null.js':
+          'export class A extends null {\n  constructor() {\n    super()\n  }\n}\n',
+        'src/literal.js':
+          'export class A extends 5 {\n  constructor() {\n    super()\n  }\n}\n',
+        'src/this.js':
+          'export class A extends B {\n  constructor() {\n    this.a = 1\n    super()\n  }\n}\n',
+        'src/conditional.js':
+          'export class A extends B {\n  constructor(c) {\n    if (c) super()\n  }\n}\n',
+        'src/valid.js': 'export class A extends B {\n  constructor() {\n    super()\n  }\n}\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 

@@ -358,7 +358,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noInferrableTypes: 'typescript/no-inferrable-types',
   noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
   noInvalidUseBeforeDeclaration: 'no-use-before-define',
-  noInvalidConstructorSuper: 'no-this-before-super',
+  // Superset: constructor-super also reports a missing or conditional super() call, which Biome
+  // leaves to noUnreachableSuper.
+  noInvalidConstructorSuper: 'constructor-super',
   noIrregularWhitespace: 'no-irregular-whitespace',
   noInteractiveElementToNoninteractiveRole:
     'jsx-a11y/no-interactive-element-to-noninteractive-role',
@@ -451,7 +453,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUnnecessaryConditions: 'typescript/no-unnecessary-condition',
   noUnnecessaryTemplateExpression: 'typescript/no-unnecessary-template-expression',
   noUnreachable: 'no-unreachable',
-  noUnreachableSuper: 'constructor-super',
+  // Superset: constructor-super also reports super() calls in a class that extends a value that
+  // is not a constructor, which Biome leaves to noInvalidConstructorSuper.
+  noUnreachableSuper: ['constructor-super', 'no-this-before-super'],
   noUnresolvedImports: 'import/named',
   noUnsafeDeclarationMerging: 'typescript/no-unsafe-declaration-merging',
   noUnsafeTypeAssertion: 'typescript/no-unsafe-type-assertion',
