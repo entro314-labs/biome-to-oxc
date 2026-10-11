@@ -1409,7 +1409,10 @@ describe('rule-mapper reports Oxlint counterparts that cover only part of the Bi
       biomeRule: 'noStaticOnlyClass',
       severity: 'error',
       expected: {
-        'typescript/no-extraneous-class': ['error', { allowConstructorOnly: true, allowEmpty: true }],
+        'typescript/no-extraneous-class': [
+          'error',
+          { allowConstructorOnly: true, allowEmpty: true },
+        ],
       },
       note: 'static initialization block',
     },

@@ -590,10 +590,8 @@ describe('source-versus-target lint diagnostics', () => {
       rules: { correctness: { noInvalidConstructorSuper: 'error', noUnreachableSuper: 'error' } },
       files: {
         'src/missing.js': 'export class A extends B {\n  constructor() {}\n}\n',
-        'src/null.js':
-          'export class A extends null {\n  constructor() {\n    super()\n  }\n}\n',
-        'src/literal.js':
-          'export class A extends 5 {\n  constructor() {\n    super()\n  }\n}\n',
+        'src/null.js': 'export class A extends null {\n  constructor() {\n    super()\n  }\n}\n',
+        'src/literal.js': 'export class A extends 5 {\n  constructor() {\n    super()\n  }\n}\n',
         'src/this.js':
           'export class A extends B {\n  constructor() {\n    this.a = 1\n    super()\n  }\n}\n',
         'src/conditional.js':
