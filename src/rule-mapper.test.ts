@@ -1462,6 +1462,22 @@ describe('rule-mapper does not report coverage gaps for Biome rules the config t
     expect(reporter.getLosses()).toEqual([])
   })
 
+  it('emits every rule of a mapping that needs several Oxlint rules as off without a loss', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { complexity: { useLiteralKeys: 'off', noStaticOnlyClass: 'off' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({
+      'typescript/dot-notation': 'off',
+      'no-useless-computed-key': 'off',
+      'typescript/no-extraneous-class': 'off',
+    })
+    expect(reporter.getLosses()).toEqual([])
+  })
+
   it('does not report an unmapped rule the config turns off', () => {
     const reporter = new CollectingReporter()
 
