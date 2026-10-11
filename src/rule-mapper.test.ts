@@ -35,7 +35,6 @@ describe('rule-mapper parity expansion', () => {
       noImpliedEval: 'no-implied-eval',
       noInteractiveElementToNoninteractiveRole:
         'jsx-a11y/no-interactive-element-to-noninteractive-role',
-      noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
       noJsxLiterals: 'react/jsx-no-literals',
       noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
       noInvalidUseBeforeDeclaration: 'no-use-before-define',
@@ -141,7 +140,6 @@ describe('rule-mapper parity expansion', () => {
       useCollapsedElseIf: 'no-lonely-if',
       useCollapsedIf: 'unicorn/no-lonely-if',
       useConsistentArrowReturn: 'arrow-body-style',
-      useConsistentBuiltinInstantiation: 'no-new-wrappers',
       useConsistentEnumValueType: 'typescript/no-mixed-enums',
       useConsistentTypeDefinitions: 'typescript/consistent-type-definitions',
       useErrorCause: 'preserve-caught-error',
@@ -1055,6 +1053,32 @@ describe('rule-mapper coverage for Biome rules with existing partial Oxlint coun
     expect(reporter.getLosses()).toHaveLength(1)
     expect(reporter.getLosses()[0]).toContain('skips TypeScript files')
   })
+
+  it.each([
+    {
+      group: 'correctness',
+      biomeRule: 'noInvalidBuiltinInstantiation',
+      expected: { 'no-new-native-nonconstructor': 'error' },
+      note: '`Map()`',
+    },
+    {
+      group: 'style',
+      biomeRule: 'useConsistentBuiltinInstantiation',
+      expected: { 'unicorn/new-for-builtins': 'error' },
+      note: 'AggregateError',
+    },
+  ])(
+    'maps $biomeRule onto $expected and reports the narrowing',
+    ({ group, biomeRule, expected, note }) => {
+      const reporter = new CollectingReporter()
+
+      const { rules } = extractRulesFromBiomeConfig({ [group]: { [biomeRule]: 'error' } }, reporter)
+
+      expect(rules).toEqual(expected)
+      expect(reporter.getLosses()).toHaveLength(1)
+      expect(reporter.getLosses()[0]).toContain(note)
+    },
+  )
 })
 
 describe('rule-mapper resolution of Oxlint rules shared by several Biome rules', () => {

@@ -81,6 +81,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noExcessiveCognitiveComplexity was mapped to complexity, which scores cyclomatic complexity rather than cognitive complexity; the threshold carries over, but the two scores differ, so a different set of functions is reported.',
   noMeaninglessVoidOperator:
     'Biome rule noMeaninglessVoidOperator was mapped to typescript/no-meaningless-void-operator, which reports `void` applied to a value whose type is `void` or `undefined` but not `void` applied to any other non-call operand, such as `void 1` or `void value`.',
+  noInvalidBuiltinInstantiation:
+    'Biome rule noInvalidBuiltinInstantiation was mapped to no-new-native-nonconstructor, which reports `new BigInt()` and `new Symbol()` but not constructors that require `new` called without it, such as `Map()`, `Set()`, `Promise()`, `WeakMap()`, `Proxy()` or a typed array; unicorn/new-for-builtins reports those, together with the calls useConsistentBuiltinInstantiation reports.',
   noInlineStyles:
     'Biome rule noInlineStyles was mapped to react/forbid-dom-props, which reports the `style` prop on JSX DOM elements but not `style` passed through React.createElement() or written in HTML, Vue, Svelte or Astro templates.',
   noSelfImport:
@@ -95,6 +97,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noUnsafeIframeSandbox was mapped to react/iframe-missing-sandbox, which reports `allow-scripts` combined with `allow-same-origin` only when the sandbox value is a plain string attribute, not a `{"..."}` or template-literal expression; it also reports iframes with no or an invalid sandbox attribute, which Biome leaves to useIframeSandbox.',
   useConsistentCurlyBraces:
     'Biome rule useConsistentCurlyBraces was mapped to react/jsx-curly-brace-presence, which reports unnecessary braces around string literals in JSX props and children but not a JSX element passed as a prop value without braces (`foo=<Bar />`).',
+  useConsistentBuiltinInstantiation:
+    'Biome rule useConsistentBuiltinInstantiation was mapped to unicorn/new-for-builtins, which does not report `AggregateError()`, `EvalError()`, `RangeError()`, `ReferenceError()`, `SyntaxError()`, `TypeError()` or `URIError()` called without `new`.',
   useArrowFunction:
     'Biome rule useArrowFunction was mapped to prefer-arrow-callback, which reports function expressions passed as callbacks but not ones assigned to variables or properties, such as `const f = function () {}`.',
   useExplicitType:
@@ -527,7 +531,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useCollapsedIf: 'unicorn/no-lonely-if',
   useConsistentArrayType: 'typescript/array-type',
   useConsistentArrowReturn: 'arrow-body-style',
-  useConsistentBuiltinInstantiation: 'no-new-wrappers',
+  // Superset: new-for-builtins also reports `Function()`, and the calls without `new` that
+  // noInvalidBuiltinInstantiation reports, such as `Map()`.
+  useConsistentBuiltinInstantiation: 'unicorn/new-for-builtins',
   useConsistentCurlyBraces: 'react/jsx-curly-brace-presence',
   useConsistentEnumValueType: 'typescript/no-mixed-enums',
   useConsistentFunctionStyle: 'func-style',

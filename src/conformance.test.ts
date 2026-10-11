@@ -601,6 +601,30 @@ describe('source-versus-target lint diagnostics', () => {
         'src/valid.js': 'export class A extends B {\n  constructor() {\n    super()\n  }\n}\n',
       },
     },
+    {
+      name: 'reports new on builtins that cannot be constructed',
+      rules: { correctness: { noInvalidBuiltinInstantiation: 'error' } },
+      files: {
+        'src/bigint.js': 'export const a = new BigInt(1)\n',
+        'src/symbol.js': 'export const b = new Symbol("x")\n',
+        'src/valid.js': 'export const c = BigInt(1)\nexport const d = new Map()\n',
+      },
+    },
+    {
+      name: 'reports builtins instantiated inconsistently with new',
+      rules: { style: { useConsistentBuiltinInstantiation: 'error' } },
+      files: {
+        'src/date.js': 'export const a = Date()\n',
+        'src/object.js': 'export const b = Object()\n',
+        'src/array.js': 'export const c = Array(3)\n',
+        'src/error.js': 'export const d = Error("x")\n',
+        'src/regexp.js': 'export const e = RegExp("x")\n',
+        'src/promise.js': 'export const f = Promise((resolve) => resolve())\n',
+        'src/string.js': 'export const g = new String("x")\n',
+        'src/number.js': 'export const h = new Number(1)\n',
+        'src/valid.js': 'export const i = new Date()\nexport const j = String(1)\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 
