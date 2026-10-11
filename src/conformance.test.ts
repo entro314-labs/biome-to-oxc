@@ -639,6 +639,20 @@ describe('source-versus-target lint diagnostics', () => {
         'src/valid.js': 'export const g = (foo) => Object.hasOwn(foo, "bar")\n',
       },
     },
+    {
+      name: 'reports classes with only static members, including private and decorated ones',
+      rules: { complexity: { noStaticOnlyClass: 'error' } },
+      files: {
+        'src/static.ts': 'export class A {\n  static x = 1\n  static f() {}\n}\n',
+        'src/private.ts': 'export class B {\n  private static x = 1\n}\n',
+        'src/decorated.ts':
+          'declare function dec(c: unknown): void\n@dec\nexport class C {\n  static f() {}\n}\n',
+        'src/implements.ts': 'interface I {}\nexport class D implements I {\n  static f() {}\n}\n',
+        'src/plain.js': 'export class E {\n  static f() {}\n}\n',
+        'src/valid.ts':
+          'export class F {}\nexport class G {\n  constructor() {}\n}\nexport class H {\n  static f() {}\n  g() {}\n}\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 

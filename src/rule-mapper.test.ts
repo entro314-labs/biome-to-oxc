@@ -451,7 +451,6 @@ describe('rule-mapper parity expansion', () => {
       noMisusedPromises: 'typescript/no-misused-promises',
       noParametersOnlyUsedInRecursion: 'oxc/only-used-in-recursion',
       noRestrictedTypes: 'typescript/no-restricted-types',
-      noStaticOnlyClass: 'unicorn/no-static-only-class',
       noUnusedExpressions: 'no-unused-expressions',
       noUnwantedPolyfillio: 'nextjs/no-unwanted-polyfillio',
       noYodaExpression: 'yoda',
@@ -1405,6 +1404,14 @@ describe('rule-mapper reports Oxlint counterparts that cover only part of the Bi
       severity: 'error',
       expected: { 'unicorn/no-useless-switch-case': 'error' },
       note: 'trailing `default`',
+    },
+    {
+      biomeRule: 'noStaticOnlyClass',
+      severity: 'error',
+      expected: {
+        'typescript/no-extraneous-class': ['error', { allowConstructorOnly: true, allowEmpty: true }],
+      },
+      note: 'static initialization block',
     },
   ] as const)('$biomeRule with $severity', ({ biomeRule, severity, expected, note }) => {
     const reporter = new CollectingReporter()

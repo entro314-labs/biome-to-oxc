@@ -85,6 +85,8 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noInvalidBuiltinInstantiation was mapped to no-new-native-nonconstructor, which reports `new BigInt()` and `new Symbol()` but not constructors that require `new` called without it, such as `Map()`, `Set()`, `Promise()`, `WeakMap()`, `Proxy()` or a typed array; unicorn/new-for-builtins reports those, together with the calls useConsistentBuiltinInstantiation reports.',
   noInlineStyles:
     'Biome rule noInlineStyles was mapped to react/forbid-dom-props, which reports the `style` prop on JSX DOM elements but not `style` passed through React.createElement() or written in HTML, Vue, Svelte or Astro templates.',
+  noStaticOnlyClass:
+    'Biome rule noStaticOnlyClass was mapped to typescript/no-extraneous-class, which reports classes with only static members but not a class whose only member is a static initialization block.',
   noSelfImport:
     'Biome rule noSelfImport was mapped to import/no-self-import, which reports static `import` and `export ... from` statements that resolve to their own file but not `require()` calls or dynamic `import()` expressions that do.',
   noReactObjectTypeAsDefaultProp:
@@ -440,7 +442,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noShadowRestrictedNames: 'no-shadow-restricted-names',
   noSkippedTests: ['jest/no-disabled-tests', 'vitest/no-disabled-tests'],
   noSparseArray: 'no-sparse-arrays',
-  noStaticOnlyClass: 'unicorn/no-static-only-class',
+  noStaticOnlyClass: 'typescript/no-extraneous-class',
   noSyncScripts: 'nextjs/no-sync-scripts',
   noSwitchDeclarations: 'no-case-declarations',
   noStaticElementInteractions: 'jsx-a11y/no-static-element-interactions',
@@ -819,6 +821,11 @@ function mapBiomeRuleOptionsToOxlintSeverity(
   if (biomeName === 'noImplicitBoolean') {
     // Biome requires an explicit value on boolean JSX attributes; `always` is that mode.
     return [severity, 'always']
+  }
+
+  if (biomeName === 'noStaticOnlyClass') {
+    // no-extraneous-class also reports empty and constructor-only classes, which Biome allows.
+    return [severity, { allowConstructorOnly: true, allowEmpty: true }]
   }
 
   if (biomeName === 'noInlineStyles') {
