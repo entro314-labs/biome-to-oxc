@@ -409,7 +409,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noPositiveTabindex: 'jsx-a11y/tabindex-no-positive',
   noProcessEnv: 'node/no-process-env',
   noProto: 'no-proto',
-  noPrototypeBuiltins: 'no-prototype-builtins',
+  // prefer-object-has-own covers the `Object.prototype.hasOwnProperty.call()` form Biome also
+  // reports.
+  noPrototypeBuiltins: ['no-prototype-builtins', 'prefer-object-has-own'],
   noRedeclare: 'no-redeclare',
   noReactObjectTypeAsDefaultProp: 'react/no-object-type-as-default-prop',
   noReactPropAssignments: 'react/immutability',

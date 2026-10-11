@@ -184,6 +184,18 @@ describe('rule-mapper parity expansion', () => {
     expect(reporter.getWarnings()).toEqual([])
   })
 
+  it('emits every Oxlint rule needed to replace Biome noPrototypeBuiltins', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { suspicious: { noPrototypeBuiltins: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'no-prototype-builtins': 'error', 'prefer-object-has-own': 'error' })
+    expect(reporter.getWarnings()).toEqual([])
+  })
+
   it('preserves supported options for current source-equivalent rules', () => {
     const reporter = new CollectingReporter()
     const linterRules: BiomeLinterRules = {

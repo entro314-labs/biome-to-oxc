@@ -625,6 +625,20 @@ describe('source-versus-target lint diagnostics', () => {
         'src/valid.js': 'export const i = new Date()\nexport const j = String(1)\n',
       },
     },
+    {
+      name: 'reports Object.prototype builtins called on the object or through the prototype',
+      rules: { suspicious: { noPrototypeBuiltins: 'error' } },
+      files: {
+        'src/own.js': 'export const a = (foo) => foo.hasOwnProperty("bar")\n',
+        'src/proto.js': 'export const b = (foo, bar) => foo.isPrototypeOf(bar)\n',
+        'src/enum.js': 'export const c = (foo) => foo.propertyIsEnumerable("bar")\n',
+        'src/static.js': 'export const d = (foo) => Object.hasOwnProperty.call(foo, "bar")\n',
+        'src/call.js':
+          'export const e = (foo) => Object.prototype.hasOwnProperty.call(foo, "bar")\n',
+        'src/literal.js': 'export const f = (foo) => ({}).hasOwnProperty.call(foo, "bar")\n',
+        'src/valid.js': 'export const g = (foo) => Object.hasOwn(foo, "bar")\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 
