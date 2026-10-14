@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - Toolchain refreshed to Oxlint 1.88.0 and Oxfmt 0.73.0 (Biome stays at 2.5.15 and oxlint-tsgolint at 7.0.2004), and the inventories under `docs/` regenerated from their schemas. Oxlint 1.88 added no rules, so `docs/oxlint-rules.tsv`, `docs/oxlint-vs-tsgolint.tsv` and `docs/tsgolint-rules.tsv` are unchanged. Its one new rule option, `unicorn/prefer-query-selector`'s `allowWithVariables`, needs nothing: Biome's `useDomQuerySelector` reports calls with variable arguments too, which is what the option's default does. Oxfmt 0.73 added two top-level options, `astro` (formatting of `.astro` files, with `allowShorthand`, `compressHTML` and `skipFrontmatter`) and `associations` (formatting matched files as a named language); both are listed in `docs/oxfmt-rules.tsv` with their nested fields, which the inventory script now also reads. Biome has no setting that assigns a language to a path, so `associations` has nothing to migrate from.
 
+### Fixed
+
+- The Prettier guidance printed with `--prettier` no longer gives steps that fail. It said `oxfmt --migrate=prettier` generates `.oxfmtrc.jsonc`, but Oxfmt writes `.oxfmtrc.json` and exits with "Oxfmt config file already exists" when an Oxfmt config is present, which the migration has just written; the guidance now says to move the generated config aside, run the command, and merge the two. Since Oxfmt 0.73 the command also rejects YAML, JSON5 and TOML Prettier configs and reads `.prettierrc` as JSON, so a detected `.prettierrc.yaml`, `.prettierrc.yml` or `.prettierrc.json5` is named for conversion to JSON, and a `.prettierrc` comes with a note to convert it if it is YAML.
+
 ## [3.7.1] - 2026-10-11
 
 ### Fixed
