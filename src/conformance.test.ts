@@ -101,6 +101,13 @@ const UNFORMATTED_SOURCES = {
   'build/generated.ts': 'const c={x:1,y:2}\n',
 }
 
+/** HTML in each extension Oxfmt formats as HTML; Biome formats only `.html`, and only on request. */
+const UNFORMATTED_HTML = {
+  'src/page.html': '<div   class="x"><p>hi</p>   </div>\n',
+  'src/page.htm': '<div   class="x"><p>hi</p>   </div>\n',
+  'src/page.xhtml': '<div   class="x"><p>hi</p>   </div>\n',
+}
+
 async function setupConformanceFixture(
   biomeConfig: object,
   extraFiles: Record<string, string> = {},
@@ -282,6 +289,33 @@ describe('source-versus-target formatter scope', () => {
 
     expect(sourceFilesOnly(biomeScope)).not.toContain('src/schema.graphql')
     expect(sourceFilesOnly(biomeScope)).not.toContain('src/fragment.gql')
+    expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+  })
+
+  it('leaves HTML files alone, as Biome does by default', async () => {
+    const dir = await setupConformanceFixture({}, UNFORMATTED_HTML)
+
+    const biomeScope = await biomeFormatScope(dir)
+    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtScope = await oxfmtFormatScope(dir)
+
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/page.html')
+    expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+  })
+
+  it('formats .html files, and only those, when Biome enables its HTML formatter', async () => {
+    const dir = await setupConformanceFixture(
+      { html: { formatter: { enabled: true } } },
+      UNFORMATTED_HTML,
+    )
+
+    const biomeScope = await biomeFormatScope(dir)
+    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtScope = await oxfmtFormatScope(dir)
+
+    // Biome reads .htm and .xhtml as unknown files even with the HTML formatter on.
+    expect(sourceFilesOnly(biomeScope)).toContain('src/page.html')
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/page.htm')
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
   })
 

@@ -73,9 +73,15 @@ const JAVASCRIPT_FORMATTER_KEYS = new Set([
 
 /**
  * File types Oxfmt formats that Biome does not, so a faithful migration must exclude
- * them rather than silently widen the set of formatted files.
+ * them rather than silently widen the set of formatted files. Oxfmt formats `.htm` and
+ * `.xhtml` as HTML; Biome treats them as unknown files even with its HTML formatter on.
  */
-const OXFMT_ONLY_IGNORE_PATTERNS = ['**/*.{yaml,yml}', '**/*.toml', '**/*.{md,mdx}'] as const
+const OXFMT_ONLY_IGNORE_PATTERNS = [
+  '**/*.{yaml,yml}',
+  '**/*.toml',
+  '**/*.{md,mdx}',
+  '**/*.{htm,xhtml}',
+] as const
 
 /**
  * The two Biome assist actions Oxfmt implements. Every other `assist.actions.source` entry
@@ -167,7 +173,10 @@ export function generateOxfmtConfig(
  * directory rather than to the Biome project root, so they must not take part in the
  * rebase decision.
  */
-export function excludeOxfmtOnlyLanguages(oxfmtConfig: OxfmtConfig): void {
+export function excludeOxfmtOnlyLanguages(
+  oxfmtConfig: OxfmtConfig,
+  biomeConfig: BiomeConfig,
+): void {
   const existingPatterns = oxfmtConfig.ignorePatterns ?? []
 
   // Everything is already ignored, so per-language patterns would only add noise.
@@ -175,7 +184,12 @@ export function excludeOxfmtOnlyLanguages(oxfmtConfig: OxfmtConfig): void {
     return
   }
 
-  oxfmtConfig.ignorePatterns = [...new Set([...existingPatterns, ...OXFMT_ONLY_IGNORE_PATTERNS])]
+  // Biome's HTML formatter is off unless the config turns it on; Oxfmt's is always on.
+  const htmlPatterns = biomeHtmlFormatterEnabled(biomeConfig) ? [] : ['**/*.html']
+
+  oxfmtConfig.ignorePatterns = [
+    ...new Set([...existingPatterns, ...OXFMT_ONLY_IGNORE_PATTERNS, ...htmlPatterns]),
+  ]
 }
 
 /**
@@ -271,6 +285,17 @@ function mapDisabledLanguageFormatters(biomeConfig: BiomeConfig, oxfmtConfig: Ox
       ...new Set([...(oxfmtConfig.ignorePatterns ?? []), ...disabledPatterns]),
     ]
   }
+}
+
+function biomeHtmlFormatterEnabled(biomeConfig: BiomeConfig): boolean {
+  const formatter = biomeConfig.html?.formatter
+
+  return (
+    typeof formatter === 'object' &&
+    formatter !== null &&
+    'enabled' in formatter &&
+    formatter.enabled === true
+  )
 }
 
 function warnAboutUnsupportedFormatterKeys(

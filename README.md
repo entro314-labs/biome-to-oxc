@@ -49,7 +49,8 @@ Current capabilities:
   `no-implied-eval` depend on it)
 - Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
-- The set of formatted files: Oxfmt-only formats (YAML, TOML, Markdown) are excluded, and
+- The set of formatted files: Oxfmt-only formats (YAML, TOML, Markdown, `.htm`/`.xhtml`, and
+  `.html` unless Biome's HTML formatter is on) are excluded, and
   `sortPackageJson` is pinned off unless the Biome config turns the matching assist action on, so
   migrating never reformats files Biome left alone
 - Assist actions: `organizeImports` and `useSortedPackageJson` become the Oxfmt options that

@@ -247,12 +247,12 @@ async function runMigration(
 
   if (rebaseOutcome.status === 'nested-without-patterns') {
     reporter.loss(
-      `The generated configs live below the Biome project root, so their ignorePatterns resolve within ${outputDir} rather than ${projectDir}. The YAML/TOML/Markdown exclusions that keep Oxfmt from formatting files Biome never touched only cover that subtree.`,
+      `The generated configs live below the Biome project root, so their ignorePatterns resolve within ${outputDir} rather than ${projectDir}. The YAML/TOML/Markdown/HTML exclusions that keep Oxfmt from formatting files Biome never touched only cover that subtree.`,
     )
   }
 
   // Applied after rebasing: these patterns are relative to the config's own directory.
-  excludeOxfmtOnlyLanguages(oxfmtConfig)
+  excludeOxfmtOnlyLanguages(oxfmtConfig, biomeConfig)
   reportUnformattedFrameworkFiles(
     biomeConfig,
     oxfmtConfig,
