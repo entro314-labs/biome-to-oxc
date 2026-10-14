@@ -18,6 +18,7 @@ const EXPLICIT_OXFMT_OPTION_KEYS = [
   'htmlWhitespaceSensitivity',
   'proseWrap',
   'vueIndentScriptAndStyle',
+  'astro',
   'jsdoc',
   'sortImports',
   'sortPackageJson',
@@ -175,6 +176,78 @@ export function excludeOxfmtOnlyLanguages(oxfmtConfig: OxfmtConfig): void {
   }
 
   oxfmtConfig.ignorePatterns = [...new Set([...existingPatterns, ...OXFMT_ONLY_IGNORE_PATTERNS])]
+}
+
+/**
+ * Frameworks whose files Biome formats in part (the script section, through its JavaScript
+ * formatter) but Oxfmt formats only behind an option that needs a package Oxfmt does not
+ * bundle. Enabling the option unasked would make every Oxfmt run fail in a project without
+ * that package, so the migration reports the gap instead.
+ */
+const OPT_IN_FRAMEWORK_FORMATTERS = [
+  {
+    option: 'astro',
+    dependency: 'astro',
+    extension: '.astro',
+    biomeFormats: 'frontmatter',
+    // Astro depends on the compiler, but Oxfmt cannot resolve it through a strict
+    // (pnpm) node_modules layout unless the project declares it.
+    requirement: '@astrojs/compiler-rs is a direct dependency of the project',
+  },
+  {
+    option: 'svelte',
+    dependency: 'svelte',
+    extension: '.svelte',
+    biomeFormats: '<script> blocks',
+    requirement: 'svelte is installed',
+  },
+] as const
+
+/**
+ * Reports the `.astro` and `.svelte` files Biome formats but the generated Oxfmt config
+ * leaves unformatted. A framework counts as used when the project depends on it or the
+ * Biome `includes` name its extension.
+ *
+ * Applied to the final config: an ignore pattern for the extension, or the whole tree,
+ * means Biome did not format those files either.
+ */
+export function reportUnformattedFrameworkFiles(
+  biomeConfig: BiomeConfig,
+  oxfmtConfig: OxfmtConfig,
+  projectDependencies: ReadonlySet<string>,
+  reporter: Reporter,
+): void {
+  const ignorePatterns = oxfmtConfig.ignorePatterns ?? []
+
+  if (biomeConfig.javascript?.formatter?.enabled === false || ignorePatterns.includes('**/*')) {
+    return
+  }
+
+  const includes = [
+    ...(biomeConfig.files?.include ?? []),
+    ...(biomeConfig.files?.includes ?? []),
+    ...(biomeConfig.formatter?.include ?? []),
+    ...(biomeConfig.formatter?.includes ?? []),
+  ]
+
+  for (const framework of OPT_IN_FRAMEWORK_FORMATTERS) {
+    const optionValue = oxfmtConfig[framework.option]
+    const used =
+      projectDependencies.has(framework.dependency) ||
+      includes.some((pattern) => pattern.includes(framework.extension))
+
+    if (
+      !used ||
+      (optionValue !== undefined && optionValue !== false) ||
+      ignorePatterns.some((pattern) => pattern.endsWith(framework.extension))
+    ) {
+      continue
+    }
+
+    reporter.loss(
+      `Biome formats the ${framework.biomeFormats} of ${framework.extension} files, but Oxfmt leaves ${framework.extension} files unformatted unless the Oxfmt config sets "${framework.option}": true and ${framework.requirement}; Oxfmt then formats the whole file, markup included.`,
+    )
+  }
 }
 
 function mapDisabledLanguageFormatters(biomeConfig: BiomeConfig, oxfmtConfig: OxfmtConfig): void {

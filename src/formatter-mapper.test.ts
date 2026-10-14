@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { generateOxfmtConfig } from './formatter-mapper.js'
+import { generateOxfmtConfig, reportUnformattedFrameworkFiles } from './formatter-mapper.js'
 import { CollectingReporter } from './reporter.js'
+import { normalizeBiomeConfig } from './schema-normalizer.js'
 
 describe('generateOxfmtConfig', () => {
   it('does not enable package sorting by default for an empty biome config', () => {
@@ -323,6 +324,17 @@ describe('generateOxfmtConfig', () => {
     })
   })
 
+  it('passes through explicitly configured Astro formatter options', () => {
+    const reporter = new CollectingReporter()
+
+    const config = generateOxfmtConfig(
+      { formatter: { astro: { compressHTML: 'html', skipFrontmatter: true } } },
+      reporter,
+    )
+
+    expect(config.astro).toEqual({ compressHTML: 'html', skipFrontmatter: true })
+  })
+
   it('passes through explicitly configured JSDoc formatter options', () => {
     const reporter = new CollectingReporter()
 
@@ -403,5 +415,63 @@ describe('generateOxfmtConfig for Biome formatter options with new Oxfmt equival
       'Biome formatter option "delimiterSpacing" has no Oxfmt equivalent and was not migrated.',
       'Biome formatter option "useEditorconfig" has no Oxfmt equivalent and was not migrated.',
     ])
+  })
+})
+
+describe('reportUnformattedFrameworkFiles', () => {
+  it('reports .astro and .svelte files Biome formats but the generated config leaves alone', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig({}, reporter)
+
+    reportUnformattedFrameworkFiles({}, config, new Set(['astro', 'svelte']), reporter)
+
+    expect(reporter.getLosses()).toEqual([
+      'Biome formats the frontmatter of .astro files, but Oxfmt leaves .astro files unformatted unless the Oxfmt config sets "astro": true and @astrojs/compiler-rs is a direct dependency of the project; Oxfmt then formats the whole file, markup included.',
+      'Biome formats the <script> blocks of .svelte files, but Oxfmt leaves .svelte files unformatted unless the Oxfmt config sets "svelte": true and svelte is installed; Oxfmt then formats the whole file, markup included.',
+    ])
+  })
+
+  it('detects the framework from formatter includes when the dependency is not declared', () => {
+    const reporter = new CollectingReporter()
+    const biomeConfig = { files: { includes: ['src/**/*.svelte'] } }
+    const config = generateOxfmtConfig(biomeConfig, reporter)
+
+    reportUnformattedFrameworkFiles(biomeConfig, config, new Set(), reporter)
+
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('.svelte files')
+  })
+
+  it('reports nothing when the project uses neither framework', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig({}, reporter)
+
+    reportUnformattedFrameworkFiles({}, config, new Set(['react', 'vue']), reporter)
+
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('reports nothing when the formatter option is already passed through', () => {
+    const reporter = new CollectingReporter()
+    const biomeConfig = { formatter: { astro: true, svelte: { indentScriptAndStyle: false } } }
+    const config = generateOxfmtConfig(biomeConfig, reporter)
+
+    reportUnformattedFrameworkFiles(biomeConfig, config, new Set(['astro', 'svelte']), reporter)
+
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it.each([
+    ['the formatter is disabled', { formatter: { enabled: false } }],
+    ['the JavaScript formatter is disabled', { javascript: { formatter: { enabled: false } } }],
+    ['the files are excluded', { files: { includes: ['**', '!**/*.astro', '!**/*.svelte'] } }],
+  ])('reports nothing when %s, since Biome formatted none of those files', (_, biomeConfig) => {
+    const reporter = new CollectingReporter()
+    const normalized = normalizeBiomeConfig(biomeConfig, reporter)
+    const config = generateOxfmtConfig(normalized, reporter)
+
+    reportUnformattedFrameworkFiles(normalized, config, new Set(['astro', 'svelte']), reporter)
+
+    expect(reporter.getLosses()).toEqual([])
   })
 })

@@ -447,6 +447,10 @@ npx oxlint --type-aware --type-check
   targeted typescript-eslint rules are currently implemented (`naming-convention` and
   `prefer-destructuring` are not), and Oxlint 1.86 and later can enable all 60
 - CSS, JSON and GraphQL formatter overrides are mapped but may need manual review
+- Biome formats the frontmatter of `.astro` files and the `<script>` blocks of `.svelte` files;
+  Oxfmt formats them only with `"astro": true` (and `@astrojs/compiler-rs` as a direct dependency)
+  or `"svelte": true` (and `svelte` installed), and then formats the whole file. The migration does
+  not turn these on, and reports a semantic loss when the project depends on Astro or Svelte
 - Prettier plugin support is not available in Oxfmt
 - Assist actions are migrated only when the Biome config names them explicitly; actions enabled
   through `recommended` or a preset are reported rather than derived

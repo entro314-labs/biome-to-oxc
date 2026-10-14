@@ -11,7 +11,11 @@ import {
   generateESLintBridgeSuggestions,
   generateESLintFormatterBridgeSuggestions,
 } from './eslint-detector.js'
-import { excludeOxfmtOnlyLanguages, generateOxfmtConfig } from './formatter-mapper.js'
+import {
+  excludeOxfmtOnlyLanguages,
+  generateOxfmtConfig,
+  reportUnformattedFrameworkFiles,
+} from './formatter-mapper.js'
 import {
   copyFileIfExists,
   findClosestPackageJson,
@@ -60,6 +64,13 @@ class MigrationStepFailedError extends Error {}
 const WorkspacePackageJsonSchema = z
   .object({
     workspaces: z.union([z.array(z.string()), z.record(z.string(), z.unknown())]).optional(),
+  })
+  .loose()
+const DependencyManifestSchema = z
+  .object({
+    dependencies: z.record(z.string(), z.string()).optional(),
+    devDependencies: z.record(z.string(), z.string()).optional(),
+    peerDependencies: z.record(z.string(), z.string()).optional(),
   })
   .loose()
 
@@ -242,6 +253,12 @@ async function runMigration(
 
   // Applied after rebasing: these patterns are relative to the config's own directory.
   excludeOxfmtOnlyLanguages(oxfmtConfig)
+  reportUnformattedFrameworkFiles(
+    biomeConfig,
+    oxfmtConfig,
+    await readDeclaredDependencyNames(packageJsonPath, reporter),
+    reporter,
+  )
 
   const configProblems = validateGeneratedConfigs(oxlintConfig, oxfmtConfig)
 
@@ -708,6 +725,35 @@ function buildCleanupOutcome({
 /** Scripts that still run Biome need its config, so it cannot be deleted from under them. */
 function biomeStillInvoked(summary: PackageUpdateSummary | undefined): boolean {
   return (summary?.scriptsStillUsingBiome.length ?? 0) > 0
+}
+
+/** Names of the packages the manifest declares, or none when there is no manifest. */
+async function readDeclaredDependencyNames(
+  packageJsonPath: string,
+  reporter: Reporter,
+): Promise<Set<string>> {
+  if (!(await pathExists(packageJsonPath))) {
+    return new Set()
+  }
+
+  try {
+    const manifest = await readJsonFile(
+      packageJsonPath,
+      DependencyManifestSchema,
+      `package manifest at ${packageJsonPath}`,
+    )
+    return new Set(
+      [manifest.dependencies, manifest.devDependencies, manifest.peerDependencies].flatMap(
+        (dependencies) => Object.keys(dependencies ?? {}),
+      ),
+    )
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    reporter.warn(
+      `Could not read the project's dependencies (${message}), so .astro and .svelte files are only detected from the Biome includes.`,
+    )
+    return new Set()
+  }
 }
 
 async function detectWorkspaceMonorepo(projectDir: string): Promise<boolean> {

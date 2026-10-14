@@ -375,6 +375,15 @@ export interface OxfmtConfig {
         separateTagGroups?: boolean
       }
 
+  // Astro options
+  astro?:
+    | boolean
+    | {
+        allowShorthand?: boolean
+        compressHTML?: 'jsx' | 'html' | 'none'
+        skipFrontmatter?: boolean
+      }
+
   // Svelte options
   svelte?:
     | boolean

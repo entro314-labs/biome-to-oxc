@@ -603,6 +603,32 @@ describe('migrate semantic-loss safeguards', () => {
     expect(packageJson.devDependencies['@biomejs/biome']).toBe('^2.5.7')
   })
 
+  it('keeps the Biome setup when the project has .astro files Oxfmt would stop formatting', async () => {
+    const { biomeConfigPath, dir, packageJsonPath } = await setupMigrationFixture()
+
+    await writeFile(
+      packageJsonPath,
+      `${JSON.stringify({
+        name: 'fixture',
+        dependencies: { astro: '^6.0.0' },
+        devDependencies: { '@biomejs/biome': '^2.5.7' },
+      })}\n`,
+      'utf-8',
+    )
+
+    const report = await migrate({
+      configPath: biomeConfigPath,
+      outputDir: dir,
+      delete: true,
+      updateScripts: true,
+    })
+
+    expect(report.success).toBe(false)
+    expect(report.losses.some((loss) => loss.includes('"astro": true'))).toBe(true)
+    expect(report.cleanup).toMatchObject({ requested: true, performed: false })
+    expect(await pathExists(biomeConfigPath)).toBe(true)
+  })
+
   it('completes cleanup when the conversion is lossless', async () => {
     const { biomeConfigPath, biomeIgnorePath, dir, packageJsonPath } = await setupMigrationFixture()
 
