@@ -109,6 +109,50 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule noUselessSwitchCase was mapped to unicorn/no-useless-switch-case, which reports a case that falls through into a trailing `default` but not one next to a `default` placed earlier in the switch.',
   useStaticResponseMethods:
     'Biome rule useStaticResponseMethods was mapped to unicorn/prefer-response-static-json, which reports `new Response(JSON.stringify(...))` but not the `new Response(null, { status, headers: { Location } })` form Biome rewrites to Response.redirect().',
+  noUselessUndefinedInitialization:
+    'Biome rule noUselessUndefinedInitialization was mapped to unicorn/no-useless-undefined, which reports `let` declarations initialised to `undefined` but not `var` ones, such as `var a = undefined`.',
+  noAwaitInPromiseMethods:
+    'Biome rule noAwaitInPromiseMethods was mapped to unicorn/no-await-in-promise-methods, which reports an array element that is an `await` expression but not an `await` nested inside one, such as `cond ? await p : q` or `(await fetch(url)).json()`.',
+  noBufferConstructor:
+    'Biome rule noBufferConstructor was mapped to unicorn/no-new-buffer, which reports `new Buffer()` on the global Buffer but not `Buffer()` called without `new`, a Buffer imported from `node:buffer`, or `new buffer.Buffer()`.',
+  noChainedComparison:
+    'Biome rule noChainedComparison was mapped to oxc/bad-comparison-sequence, which reports `a == b != c` but not the same chain with the first comparison in parentheses, such as `(a == b) != c`.',
+  noDoubleComparison:
+    'Biome rule noDoubleComparison was mapped to oxc/double-comparisons, which reports pairs such as `x === y || x < y` and `x <= y && x >= y` but not a comparison joined with an inequality, such as `x <= y && x !== y`.',
+  noExcessiveNestedBlocks:
+    'Biome rule noExcessiveNestedBlocks was mapped to max-depth, which reports deeply nested blocks in JavaScript and TypeScript; Biome also reports deeply nested CSS rules, which Oxlint does not lint.',
+  noMissingThrow:
+    'Biome rule noMissingThrow was mapped to oxc/missing-throw, which reports an unthrown `new Error()` statement in a function declaration but not one in an arrow function body.',
+  noNumberArgumentOutOfRange:
+    'Biome rule noNumberArgumentOutOfRange was mapped to oxc/number-arg-out-of-range, which reports radix and precision arguments outside the allowed range, such as `toString(1)` or `toPrecision(0)`, but not a negative toFixed() argument, such as `value.toFixed(-1)`.',
+  noPathConcat:
+    'Biome rule noPathConcat was mapped to node/no-path-concat, which reports string concatenation with `__dirname` and `__filename` but not with `import.meta.dirname`, `import.meta.filename` or `import.meta.url`.',
+  noUninvokedArrayCallback:
+    'Biome rule noUninvokedArrayCallback was mapped to oxc/uninvoked-array-callback, which reports callbacks on `new Array(n)` but not on `Array(n)` called without `new`.',
+  noUselessAwait:
+    'Biome rule noUselessAwait was mapped to unicorn/no-unnecessary-await, which reports `await` on literals and other non-promise expressions but not on an array literal, such as `await [a(), b()]`.',
+  noUselessLengthCheck:
+    'Biome rule noUselessLengthCheck was mapped to unicorn/no-useless-length-check, which reports length checks joined to some() and every() calls but not a length check that only guards a `for...of` loop over the same array.',
+  noUselessSpread:
+    'Biome rule noUselessSpread was mapped to unicorn/no-useless-spread, which reports spreading array and object literals but not an object literal spread as an Object.assign() source, such as `Object.assign(target, { ...source })`, or arguments spread into the Set constructor, such as `new Set(...items)`.',
+  noVueAsyncComputed:
+    'Biome rule noVueAsyncComputed was mapped to vue/no-async-in-computed-properties, which reports `await`, promises and async functions in computed properties but not timer calls such as setTimeout().',
+  noVueDeprecatedDeleteSet:
+    'Biome rule noVueDeprecatedDeleteSet was mapped to vue/no-deprecated-delete-set, which reports `this.$set()` and `this.$delete()` but not `Vue.set()`, `Vue.delete()`, or `set` and `del` imported from `vue`.',
+  useBigintLiterals:
+    'Biome rule useBigintLiterals was mapped to unicorn/prefer-bigint-literals, which reports BigInt() called with a non-negative literal but not with a negative one, such as `BigInt(-1)`.',
+  useCalledWith:
+    'Biome rule useCalledWith was mapped to prefer-called-with, which reports `toHaveBeenCalled()` and `toBeCalled()` but not `toHaveBeenCalledOnce()`.',
+  useCapitalizedConstructors:
+    'Biome rule useCapitalizedConstructors was mapped to new-cap, which exempts the names of built-in constructors such as `String` even when a local function shadows them.',
+  useConsistentUnicodeBom:
+    'Biome rule useConsistentUnicodeBom was mapped to unicode-bom, which checks JavaScript and TypeScript files; Biome also checks CSS, JSON, GraphQL, HTML and Markdown files, which Oxlint does not lint.',
+  useObjectFromEntries:
+    'Biome rule useObjectFromEntries was mapped to unicorn/prefer-object-from-entries, which reports reduce() calls that build an object from pairs but not a `for...of` loop that does.',
+  useSetSize:
+    'Biome rule useSetSize was mapped to unicorn/prefer-set-size, which reports the spread of a Set it sees constructed, such as `[...new Set(x)].length`, but not the spread of a parameter typed as a Set.',
+  useVueValidNextTick:
+    'Biome rule useVueValidNextTick was mapped to vue/valid-next-tick, which reports nextTick misuse inside a Vue component options object but not in `<script setup>` or other module-level code.',
 }
 
 /**
@@ -165,6 +209,8 @@ const TYPE_AWARE_OXLINT_RULES = new Set([
   'typescript/no-unsafe-argument',
   'typescript/no-unsafe-assignment',
   'typescript/no-unsafe-call',
+  'typescript/no-unsafe-class-instance-assignment',
+  'typescript/no-unsafe-enum-assignment',
   'typescript/no-unsafe-enum-comparison',
   'typescript/no-unsafe-member-access',
   'typescript/no-unsafe-return',
@@ -265,13 +311,22 @@ export interface RuleExtractionResult {
 
 const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noAccessKey: 'jsx-a11y/no-access-key',
+  noAccidentalBitwiseOperators: 'oxc/bad-bitwise-operator',
   noAdjacentSpacesInRegex: 'no-regex-spaces',
   noAmbiguousAnchorText: 'jsx-a11y/anchor-ambiguous-text',
   noArguments: 'prefer-rest-params',
+  noArgumentsCallerOrCallee: 'no-caller',
   noAriaHiddenOnFocusable: 'jsx-a11y/no-aria-hidden-on-focusable',
   noAriaUnsupportedElements: 'jsx-a11y/aria-unsupported-elements',
   noAccumulatingSpread: 'oxc/no-accumulating-spread',
   noAlert: 'no-alert',
+  noArrayMethodsOnArguments: 'oxc/bad-array-method-on-arguments',
+  noAwaitInPromiseMethods: 'unicorn/no-await-in-promise-methods',
+  noBufferConstructor: 'unicorn/no-new-buffer',
+  noChainedComparison: 'oxc/bad-comparison-sequence',
+  // Superset: no-console-spaces also reports an argument padded with more than one space or a
+  // tab, and an argument that is only a space, which Biome allows.
+  noConsoleSpaces: 'unicorn/no-console-spaces',
   noConstantBinaryExpressions: 'no-constant-binary-expression',
   noApproximativeNumericConstant: 'oxc/approx-constant',
   noBarrelFile: 'oxc/no-barrel-file',
@@ -297,6 +352,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noConfusingVoidType: 'typescript/no-invalid-void-type',
   noConsole: 'no-console',
   noConsoleLog: 'no-console',
+  noConstantComparisons: 'oxc/const-comparisons',
   noConstAssign: 'no-const-assign',
   noConstEnum: 'oxc/no-const-enum',
   noConstantCondition: 'no-constant-condition',
@@ -306,9 +362,11 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noControlCharactersInRegex: 'no-control-regex',
   noDangerouslySetInnerHtml: 'react/no-danger',
   noDangerouslySetInnerHtmlWithChildren: 'react/no-danger-with-children',
+  noDanglingUnderscore: 'no-underscore-dangle',
   noDebugger: 'no-debugger',
   noDefaultExport: 'import/no-default-export',
   noDistractingElements: 'jsx-a11y/no-distracting-elements',
+  noDoubleComparison: 'oxc/double-comparisons',
   noDoubleEquals: 'eqeqeq',
   noDuplicateCase: 'no-duplicate-case',
   noDuplicateElseIf: 'no-dupe-else-if',
@@ -321,17 +379,23 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noDocumentImportInPage: 'nextjs/no-document-import-in-page',
   noDoneCallback: 'jest/no-done-callback',
   noDivRegex: 'no-div-regex',
+  noDuplicateTypeConstituents: 'typescript/no-duplicate-type-constituents',
+  noDynamicDelete: 'typescript/no-dynamic-delete',
+  noDynamicRequire: 'import/no-dynamic-require',
   noEmptyBlockStatements: ['no-empty', 'no-empty-function', 'no-empty-static-block'],
   noEmptyCharacterClassInRegex: 'no-empty-character-class',
   noEmptyInterface: 'typescript/no-empty-interface',
   noEmptyPattern: 'no-empty-pattern',
   noEmptySource: 'unicorn/no-empty-file',
   noEqualsToNull: 'no-eq-null',
+  noErasingOperation: 'oxc/erasing-op',
   noExcessiveClassesPerFile: 'max-classes-per-file',
   noExcessiveCognitiveComplexity: 'complexity',
   noExcessiveLinesPerFile: 'max-lines',
   noExcessiveLinesPerFunction: 'max-lines-per-function',
+  noExcessiveNestedBlocks: 'max-depth',
   noExcessiveNestedCallbacks: 'max-nested-callbacks',
+  noExcessiveStatementsPerFunction: 'max-statements',
   noExplicitAny: 'typescript/no-explicit-any',
   noExtendNative: 'no-extend-native',
   noExtraBooleanCast: 'no-extra-boolean-cast',
@@ -363,6 +427,8 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noIncrementDecrement: 'no-plusplus',
   noInferrableTypes: 'typescript/no-inferrable-types',
   noInvalidBuiltinInstantiation: 'no-new-native-nonconstructor',
+  noInvalidFetchOptions: 'unicorn/no-invalid-fetch-options',
+  noInvalidRemoveEventListener: 'unicorn/no-invalid-remove-event-listener',
   noInvalidUseBeforeDeclaration: 'no-use-before-define',
   // Superset: constructor-super also reports a missing or conditional super() call, which Biome
   // leaves to noUnreachableSuper.
@@ -378,17 +444,23 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noLabelWithoutControl: 'jsx-a11y/label-has-associated-control',
   noLabelVar: 'no-label-var',
   noLoopFunc: 'no-loop-func',
+  noMagicArrayFlatDepth: 'unicorn/no-magic-array-flat-depth',
   noMagicNumbers: 'no-magic-numbers',
+  noMapSpread: 'oxc/no-map-spread',
   noMeaninglessVoidOperator: 'typescript/no-meaningless-void-operator',
   noMisleadingCharacterClass: 'no-misleading-character-class',
   noMisleadingInstantiator: 'typescript/no-misused-new',
   noMisrefactoredShorthandAssign: 'oxc/misrefactored-assign-op',
+  noMissingThrow: 'oxc/missing-throw',
   noMisusedPromises: 'typescript/no-misused-promises',
+  noMisusedSpread: 'typescript/no-misused-spread',
   noMultiAssign: 'no-multi-assign',
   noMultilineString: 'no-multi-str',
   noMultiStr: 'no-multi-str',
   noNegationElse: 'no-negated-condition',
   noNegationInEqualityCheck: 'unicorn/no-negation-in-equality-check',
+  noNewArray: 'unicorn/no-new-array',
+  noNewRequire: 'node/no-new-require',
   noNewSymbol: 'no-new-native-nonconstructor',
   noNodejsModules: 'import/no-nodejs-modules',
   noNamespace: 'typescript/no-namespace',
@@ -404,16 +476,28 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noNonNullAssertedOptionalChain: 'typescript/no-non-null-asserted-optional-chain',
   noNonNullAssertion: 'typescript/no-non-null-assertion',
   noNonoctalDecimalEscape: 'no-nonoctal-decimal-escape',
+  noNull: 'unicorn/no-null',
+  // Superset: number-arg-out-of-range also reports toExponential() arguments above 20, which
+  // ES2018 raised to 100 and Biome allows.
+  noNumberArgumentOutOfRange: 'oxc/number-arg-out-of-range',
+  noObjectConstructor: 'no-object-constructor',
+  noObjectLiteralComparison: 'oxc/bad-object-literal-comparison',
   noParametersOnlyUsedInRecursion: 'oxc/only-used-in-recursion',
   noParameterAssign: 'no-param-reassign',
   noParameterProperties: 'typescript/parameter-properties',
+  noPathConcat: 'node/no-path-concat',
   noPrecisionLoss: 'no-loss-of-precision',
   noPositiveTabindex: 'jsx-a11y/tabindex-no-positive',
   noProcessEnv: 'node/no-process-env',
+  noProcessExit: 'unicorn/no-process-exit',
+  noPromiseExecutorReturn: 'no-promise-executor-return',
   noProto: 'no-proto',
   // prefer-object-has-own covers the `Object.prototype.hasOwnProperty.call()` form Biome also
   // reports.
   noPrototypeBuiltins: ['no-prototype-builtins', 'prefer-object-has-own'],
+  noReactDirectStateMutation: 'react/no-direct-mutation-state',
+  // Superset: no-redeclare also reports a type alias and a value that share a name, such as
+  // `type G = 1; const G = 1`, which TypeScript allows.
   noRedeclare: 'no-redeclare',
   noReactObjectTypeAsDefaultProp: 'react/no-object-type-as-default-prop',
   noReactPropAssignments: 'react/immutability',
@@ -426,6 +510,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noExportsInTest: 'jest/no-export',
   noIdenticalTestTitle: ['jest/no-identical-title', 'vitest/no-identical-title'],
   noMisplacedAssertion: ['jest/no-standalone-expect', 'vitest/no-standalone-expect'],
+  noRedundantTypeConstituents: 'typescript/no-redundant-type-constituents',
   noRenderReturnValue: 'react/no-render-return-value',
   noRestrictedGlobals: 'no-restricted-globals',
   noRestrictedElements: 'react/forbid-elements',
@@ -442,9 +527,14 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noSetterReturn: 'no-setter-return',
   noShadow: 'no-shadow',
   noShadowRestrictedNames: 'no-shadow-restricted-names',
+  // Superset: branches-sharing-code also reports identical trailing statements that use a
+  // declaration local to each branch, which Biome leaves alone because they cannot be moved out.
+  noSharedBranchCode: 'oxc/branches-sharing-code',
+  noSinglePromiseInPromiseMethods: 'unicorn/no-single-promise-in-promise-methods',
   noSkippedTests: ['jest/no-disabled-tests', 'vitest/no-disabled-tests'],
   noSparseArray: 'no-sparse-arrays',
   noStaticOnlyClass: 'typescript/no-extraneous-class',
+  noSyncMethods: 'node/no-sync',
   noSyncScripts: 'nextjs/no-sync-scripts',
   noSwitchDeclarations: 'no-case-declarations',
   noStaticElementInteractions: 'jsx-a11y/no-static-element-interactions',
@@ -452,9 +542,26 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noTemplateCurlyInString: 'no-template-curly-in-string',
   noTernary: 'no-ternary',
   noThenProperty: 'unicorn/no-thenable',
+  noTripleSlashReference: 'typescript/triple-slash-reference',
   noUndeclaredVariables: 'no-undef',
+  // Superset: uninvoked-array-callback also reports findIndex() on `new Array(n)`, which Biome
+  // allows because findIndex() visits the holes.
+  noUninvokedArrayCallback: 'oxc/uninvoked-array-callback',
   noUnknownAttribute: 'react/no-unknown-property',
   noUnassignedVariables: 'no-unassigned-vars',
+  noUnreadableIife: 'unicorn/no-unreadable-iife',
+  noUnresolvedDefaultImport: 'import/default',
+  noUnsafeReturn: 'typescript/no-unsafe-return',
+  noUnsafeUnaryMinus: 'typescript/no-unsafe-unary-minus',
+  noUselessAssignment: 'no-useless-assignment',
+  noUselessAwait: 'unicorn/no-unnecessary-await',
+  noUselessCall: 'no-useless-call',
+  noUselessDateGetTime: 'unicorn/consistent-date-clone',
+  noUselessFallbackInSpread: 'unicorn/no-useless-fallback-in-spread',
+  noUselessLengthCheck: 'unicorn/no-useless-length-check',
+  noUselessParameterPropertyAssignment: 'typescript/no-unnecessary-parameter-property-assignment',
+  noUselessQualifier: 'typescript/no-unnecessary-qualifier',
+  noUselessSpread: 'unicorn/no-useless-spread',
   noUselessThisAlias: 'typescript/no-this-alias',
   noUnusedExpressions: 'no-unused-expressions',
   noUnusedFunctionParameters: 'no-unused-vars',
@@ -496,6 +603,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noUselessTernary: 'no-unneeded-ternary',
   noTsIgnore: 'typescript/ban-ts-comment',
   noUselessSwitchCase: 'unicorn/no-useless-switch-case',
+  noUselessTypeAssertion: 'typescript/no-unnecessary-type-assertion',
   noUselessTypeConstraint: 'typescript/no-unnecessary-type-constraint',
   noUselessTypeConversion: 'typescript/no-unnecessary-type-conversion',
   noUselessUndefined: 'unicorn/no-useless-undefined',
@@ -503,17 +611,36 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noVoid: 'no-void',
   noVar: 'no-var',
   noVoidElementsWithChildren: 'react/void-dom-elements-no-children',
+  noVueAsyncComputed: 'vue/no-async-in-computed-properties',
+  noVueComputedPropertiesInData: 'vue/no-computed-properties-in-data',
   noVueDataObjectDeclaration: [
     'vue/no-deprecated-data-object-declaration',
     'vue/no-shared-component-data',
   ],
   noVueArrowFuncInWatch: 'vue/no-arrow-functions-in-watch',
+  noVueDeprecatedConfigKeyCodes: 'vue/no-deprecated-vue-config-keycodes',
+  noVueDeprecatedDeleteSet: 'vue/no-deprecated-delete-set',
+  noVueDeprecatedDestroyedLifecycle: 'vue/no-deprecated-destroyed-lifecycle',
+  noVueDeprecatedEventsApi: 'vue/no-deprecated-events-api',
+  noVueDeprecatedModelDefinition: 'vue/no-deprecated-model-definition',
+  noVueDeprecatedPropsDefaultThis: 'vue/no-deprecated-props-default-this',
   noVueDuplicateKeys: 'vue/no-dupe-keys',
+  noVueExcessiveProps: 'vue/max-props',
+  noVueExportInScriptSetup: 'vue/no-export-in-script-setup',
+  noVueExposeAfterAwait: 'vue/no-expose-after-await',
   noVueImportCompilerMacros: 'vue/no-import-compiler-macros',
+  noVueLifecycleAfterAwait: 'vue/no-lifecycle-after-await',
+  noVueMultipleSlotArgs: 'vue/no-multiple-slot-args',
+  noVueRequiredPropWithDefault: 'vue/no-required-prop-with-default',
   noVueReservedKeys: 'vue/no-reserved-keys',
   noVueReservedProps: 'vue/no-reserved-props',
+  noVueSideEffectsInComputed: 'vue/no-side-effects-in-computed-properties',
+  noVueThisInBeforeRouteEnter: 'vue/no-this-in-before-route-enter',
+  noVueWatchAfterAwait: 'vue/no-watch-after-await',
   noWith: 'no-with',
   noYodaExpression: 'yoda',
+  noZeroFractions: 'unicorn/no-zero-fractions',
+  useAccessorPairs: 'accessor-pairs',
   useAltText: 'jsx-a11y/alt-text',
   useAdjacentOverloadSignatures: 'typescript/adjacent-overload-signatures',
   useAnchorContent: 'jsx-a11y/anchor-has-content',
@@ -524,6 +651,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useArraySortCompare: 'typescript/require-array-sort-compare',
   useAriaActivedescendantWithTabindex: 'jsx-a11y/aria-activedescendant-has-tabindex',
   useAwaitThenable: 'typescript/await-thenable',
+  useBigintLiterals: 'unicorn/prefer-bigint-literals',
   useButtonType: 'react/button-has-type',
   useAriaPropTypes: 'jsx-a11y/aria-proptypes',
   useAriaPropsForRole: 'jsx-a11y/role-has-required-aria-props',
@@ -532,6 +660,9 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useAtIndex: 'unicorn/prefer-at',
   useAwait: 'require-await',
   useBlockStatements: 'curly',
+  useCalledWith: ['jest/prefer-called-with', 'vitest/prefer-called-with'],
+  useCapitalizedConstructors: 'new-cap',
+  useCatchErrorName: 'unicorn/catch-error-name',
   useComponentExportOnlyModules: 'react/only-export-components',
   useCollapsedElseIf: 'no-lonely-if',
   useCollapsedIf: 'unicorn/no-lonely-if',
@@ -548,6 +679,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useConsistentMemberAccessibility: 'typescript/explicit-member-accessibility',
   useConsistentObjectDefinitions: 'object-shorthand',
   useConsistentTestIt: ['jest/consistent-test-it', 'vitest/consistent-test-it'],
+  useConsistentUnicodeBom: 'unicode-bom',
   useConst: 'prefer-const',
   useControlLabel: 'jsx-a11y/control-has-associated-label',
   useDateNow: 'unicorn/prefer-date-now',
@@ -561,8 +693,16 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useErrorCause: 'preserve-caught-error',
   useErrorMessage: 'unicorn/error-message',
   useExpect: ['jest/expect-expect', 'vitest/expect-expect'],
+  useExpectToContain: ['jest/prefer-to-contain', 'vitest/prefer-to-contain'],
+  useExpectToHaveBeenCalled: 'jest/prefer-to-have-been-called',
+  useExpectToHaveBeenCalledTimes: [
+    'jest/prefer-to-have-been-called-times',
+    'vitest/prefer-to-have-been-called-times',
+  ],
   useExplicitLengthCheck: 'unicorn/explicit-length-check',
   useExplicitReturnType: 'typescript/explicit-function-return-type',
+  // Superset: explicit-function-return-type also reports an untyped function inside an object
+  // that a function with a declared return type returns, which Biome treats as typed.
   useExplicitType: 'typescript/explicit-function-return-type',
   useExponentiationOperator: 'prefer-exponentiation-operator',
   useExportsLast: 'import/exports-last',
@@ -576,6 +716,10 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useFocusableInteractive: 'jsx-a11y/interactive-supports-focus',
   useForOf: 'typescript/prefer-for-of',
   useGetterReturn: 'getter-return',
+  useGlobalRegexInMatchAll: 'oxc/bad-match-all-arg',
+  useGlobalRegexInReplaceAll: 'oxc/bad-replace-all-arg',
+  // Superset: prefer-global-this also reports Web Worker APIs read through `self`, such as
+  // `self.postMessage()`, which Biome allows.
   useGlobalThis: 'unicorn/prefer-global-this',
   useGoogleFontDisplay: 'nextjs/google-font-display',
   useGoogleFontPreconnect: 'nextjs/google-font-preconnect',
@@ -602,18 +746,26 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   // dot-notation covers `a["b"]` member access and no-useless-computed-key `{ ["b"]: 1 }` keys;
   // only the second runs without type-aware linting.
   useLiteralKeys: ['typescript/dot-notation', 'no-useless-computed-key'],
+  useLowercaseTestTitle: ['jest/prefer-lowercase-title', 'vitest/prefer-lowercase-title'],
+  useMatchingFunctionName: 'func-name-matching',
   useMathMinMax: 'unicorn/prefer-math-min-max',
+  useMathTrunc: 'unicorn/prefer-math-trunc',
   useMaxParams: 'max-params',
   useMediaCaption: 'jsx-a11y/media-has-caption',
   useModernMathApis: 'unicorn/prefer-modern-math-apis',
   useNamedCaptureGroup: 'prefer-named-capture-group',
+  useNamedFunction: 'func-names',
   useNamespaceKeyword: 'typescript/prefer-namespace-keyword',
+  useNextScriptForGoogleAnalytics: 'nextjs/next-script-for-ga',
   useNodejsImportProtocol: 'unicorn/prefer-node-protocol',
   useNullishCoalescing: 'typescript/prefer-nullish-coalescing',
   useNumberNamespace: 'unicorn/prefer-number-properties',
   useNumberToFixedDigitsArgument: 'unicorn/require-number-to-fixed-digits-argument',
   useNumericLiterals: 'prefer-numeric-literals',
   useNumericSeparators: 'unicorn/numeric-separators-style',
+  // Superset: prefer-object-from-entries also reports a reduce() seeded with
+  // `Object.create(null)`, whose prototype Object.fromEntries() cannot reproduce.
+  useObjectFromEntries: 'unicorn/prefer-object-from-entries',
   useObjectSpread: 'prefer-object-spread',
   useOptionalChain: 'typescript/prefer-optional-chain',
   useParseIntRadix: 'radix',
@@ -628,11 +780,13 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useRegexpTest: 'unicorn/prefer-regexp-test',
   useSemanticElements: 'jsx-a11y/prefer-tag-over-role',
   useSelfClosingElements: 'react/self-closing-comp',
+  useSetSize: 'unicorn/prefer-set-size',
   useShorthandAssign: 'operator-assignment',
   useShorthandFunctionType: 'typescript/prefer-function-type',
   useSingleVarDeclarator: 'one-var',
   useSpread: 'prefer-spread',
   useSpreadOverApply: 'prefer-spread',
+  useSpyOn: ['jest/prefer-spy-on', 'vitest/prefer-spy-on'],
   useStaticResponseMethods: 'unicorn/prefer-response-static-json',
   // Superset: strict-boolean-expressions also reports nullable enums, values typed `null` or
   // implicitly `any`, and array predicate callbacks that return a nullable value. The one case
@@ -646,6 +800,7 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useThisInClassMethods: 'class-methods-use-this',
   useThrowNewError: 'unicorn/throw-new-error',
   useThrowOnlyError: 'typescript/only-throw-error',
+  useTopLevelRequire: 'node/global-require',
   useTrimStartEnd: 'unicorn/prefer-string-trim-start-end',
   useUnicodeRegex: 'require-unicode-regexp',
   useUnifiedTypeSignatures: 'typescript/unified-signatures',
@@ -654,8 +809,11 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   useValidAriaProps: 'jsx-a11y/aria-props',
   useValidAriaValues: 'jsx-a11y/aria-proptypes',
   useValidAutocomplete: 'jsx-a11y/autocomplete-valid',
+  useValidCharacterComparison: 'oxc/bad-char-at-comparison',
   useValidForDirection: 'for-direction',
   useValidLang: 'jsx-a11y/lang',
+  // Superset: namespace also reports computed string member access, such as `ns['missing']`.
+  useValidNamespaceImports: 'import/namespace',
   // Superset: valid-title also reports titles that repeat the test function's name as a
   // prefix (`it('it should ...')`), which Biome does not.
   useValidTestTitle: ['jest/valid-title', 'vitest/valid-title'],
@@ -664,9 +822,55 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   // Superset: prefer-import-from-vue reports every named import from `@vue/shared`, while Biome
   // skips the names `vue` does not re-export.
   useVueBaseImport: 'vue/prefer-import-from-vue',
+  useVueComputedPropertyReturn: 'vue/return-in-computed-property',
+  useVueConsistentDefineEmitsDeclaration: 'vue/define-emits-declaration',
   useVueConsistentDefinePropsDeclaration: 'vue/define-props-declaration',
+  useVueConsistentPropNameCasing: 'vue/prop-name-casing',
+  // Biome reports nothing for this rule unless `html.experimentalFullSupportEnabled` is on;
+  // Oxlint always checks.
+  useVueDefaultExport: 'vue/require-default-export',
+  useVueDefaultProp: 'vue/require-default-prop',
+  useVueDefinePropsDestructuring: 'vue/define-props-destructuring',
+  useVueEmitsValidatorReturn: 'vue/return-in-emits-validator',
   useVueNextTickPromise: 'vue/next-tick-style',
+  useVuePropTypeConstructor: 'vue/require-prop-type-constructor',
+  useVueRenderReturn: 'vue/require-render-return',
+  useVueSlotsAsFunctions: 'vue/require-slots-as-functions',
+  useVueTypedProps: 'vue/require-prop-types',
+  // Superset: require-typed-ref also reports an untyped `ref()` that is asserted with
+  // `as Ref<...>` or passed straight to a typed parameter.
+  useVueTypedRef: 'vue/require-typed-ref',
+  useVueValidDefineEmits: 'vue/valid-define-emits',
+  useVueValidDefineOptions: 'vue/valid-define-options',
+  // Biome reports nothing for this rule unless `html.experimentalFullSupportEnabled` is on;
+  // Oxlint always checks.
+  useVueValidDefineProps: 'vue/valid-define-props',
+  useVueValidNextTick: 'vue/valid-next-tick',
   useYield: 'require-yield',
+}
+
+/**
+ * Rule options that carry over with at most a new name, keyed by Biome rule and then by Biome
+ * option. Each pair was checked against the Oxlint rule's schema, and the defaults on both
+ * sides match, so an option the Biome config leaves out needs no counterpart either.
+ * noExcessiveNestedBlocks' `ignoreAtRules` only applies to CSS, which Oxlint does not lint.
+ */
+const RENAMED_RULE_OPTIONS: Record<string, Record<string, string>> = {
+  noDuplicateTypeConstituents: {
+    ignoreIntersections: 'ignoreIntersections',
+    ignoreUnions: 'ignoreUnions',
+  },
+  noDynamicRequire: { checkDynamicImports: 'esmodule' },
+  noExcessiveNestedBlocks: { max: 'max' },
+  noExcessiveStatementsPerFunction: {
+    ignoreTopLevelFunctions: 'ignoreTopLevelFunctions',
+    max: 'max',
+  },
+  noMapSpread: { ignoreArgs: 'ignoreArgs', ignoreRereads: 'ignoreRereads' },
+  noSyncMethods: { allowAtRootLevel: 'allowAtRootLevel', ignore: 'ignores' },
+  noVueAsyncComputed: { ignoreObjects: 'ignoredObjectNames' },
+  useCatchErrorName: { ignore: 'ignore', name: 'name' },
+  useLowercaseTestTitle: { allowedPrefixes: 'allowedPrefixes' },
 }
 
 const WARNED_UNMAPPED_RULES_BY_REPORTER = new WeakMap<Reporter, Set<string>>()
@@ -875,8 +1079,97 @@ function mapBiomeRuleOptionsToOxlintSeverity(
     return severity
   }
 
+  if (biomeName === 'noMisusedPromises') {
+    // Biome reports any union that contains a promise when it is used as a condition, such as
+    // `Promise<void> | undefined`; Oxlint only does so with `flagUnions: "all"`.
+    return [severity, { checksConditionals: { flagUnions: 'all' } }]
+  }
+
+  if (biomeName === 'noVueExcessiveProps') {
+    // Biome allows 10 props by default; Oxlint vue/max-props allows 1.
+    const maxProps = options && isNonNegativeInteger(options.maxProps) ? options.maxProps : 10
+    return [severity, { maxProps }]
+  }
+
   if (!options) {
     return severity
+  }
+
+  const renamedOptions = RENAMED_RULE_OPTIONS[biomeName]
+  if (renamedOptions) {
+    const oxlintOptions: Record<string, unknown> = {}
+
+    for (const [biomeKey, oxlintKey] of Object.entries(renamedOptions)) {
+      const value = options[biomeKey]
+      if (
+        typeof value === 'boolean' ||
+        isNonNegativeInteger(value) ||
+        typeof value === 'string' ||
+        (Array.isArray(value) && value.every((item) => typeof item === 'string'))
+      ) {
+        oxlintOptions[oxlintKey] = value
+      }
+    }
+
+    return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
+  }
+
+  if (biomeName === 'noTripleSlashReference') {
+    const oxlintOptions: Record<string, unknown> = {}
+
+    for (const key of ['lib', 'path', 'types'] as const) {
+      const value = options[key]
+      if (value === 'always' || value === 'never') {
+        oxlintOptions[key] = value
+      } else if (key === 'types' && value === 'preferImport') {
+        oxlintOptions[key] = 'prefer-import'
+      }
+    }
+
+    return Object.keys(oxlintOptions).length > 0 ? [severity, oxlintOptions] : severity
+  }
+
+  if (biomeName === 'useConsistentUnicodeBom') {
+    const { bom } = options
+    return bom === 'always' || bom === 'never' ? [severity, bom] : severity
+  }
+
+  if (biomeName === 'useObjectFromEntries') {
+    // Biome's `functions` adds to the lodash functions it always reports; Oxlint's replaces them.
+    const { functions } = options
+    return Array.isArray(functions) &&
+      functions.length > 0 &&
+      functions.every((value) => typeof value === 'string')
+      ? [severity, { functions: ['_.fromPairs', 'lodash.fromPairs', ...functions] }]
+      : severity
+  }
+
+  if (biomeName === 'useVueConsistentDefineEmitsDeclaration') {
+    const style =
+      options.style === 'type'
+        ? 'type-based'
+        : options.style === 'typeLiteral'
+          ? 'type-literal'
+          : options.style === 'runtime'
+            ? 'runtime'
+            : null
+    return style ? [severity, style] : severity
+  }
+
+  if (biomeName === 'useVueConsistentPropNameCasing') {
+    const casing = options.casing === 'snake_case' ? 'snake_case' : 'camelCase'
+    const { ignore } = options
+
+    if (!Array.isArray(ignore) || !ignore.every((value) => typeof value === 'string')) {
+      return casing === 'camelCase' ? severity : [severity, casing]
+    }
+
+    // Biome ignores exact prop names; Oxlint's `ignoreProps` takes regular expressions.
+    return [
+      severity,
+      casing,
+      { ignoreProps: ignore.map((name) => `^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) },
+    ]
   }
 
   if (biomeName === 'noAmbiguousAnchorText') {

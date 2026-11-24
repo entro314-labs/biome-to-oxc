@@ -630,7 +630,6 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
       noNegationInEqualityCheck: 'unicorn/no-negation-in-equality-check',
       noUnsafeTypeAssertion: 'typescript/no-unsafe-type-assertion',
       noUselessElse: 'no-else-return',
-      noUselessUndefinedInitialization: 'unicorn/no-useless-undefined',
       useConsistentObjectDefinitions: 'object-shorthand',
       useExplicitReturnType: 'typescript/explicit-function-return-type',
       useImportExtensions: 'import/extensions',
@@ -1038,6 +1037,257 @@ describe('rule-mapper coverage for rules added by Biome 2.5.15', () => {
     expect(rules).toEqual({ 'typescript/strict-boolean-expressions': 'error' })
     expect(reporter.getLosses()).toHaveLength(1)
     expect(reporter.getLosses()[0]).toContain('--type-aware')
+  })
+})
+
+describe('rule-mapper coverage for rules added by Biome 2.6', () => {
+  // Each pair flagged the same documented Biome examples in both binaries (Biome 2.6.8,
+  // Oxlint 1.95.0), or only more of them where a comment on the mapping says so.
+  const equivalents: Record<string, string | string[]> = {
+    noAccidentalBitwiseOperators: 'oxc/bad-bitwise-operator',
+    noArgumentsCallerOrCallee: 'no-caller',
+    noArrayMethodsOnArguments: 'oxc/bad-array-method-on-arguments',
+    noConsoleSpaces: 'unicorn/no-console-spaces',
+    noConstantComparisons: 'oxc/const-comparisons',
+    noDanglingUnderscore: 'no-underscore-dangle',
+    noDuplicateTypeConstituents: 'typescript/no-duplicate-type-constituents',
+    noDynamicDelete: 'typescript/no-dynamic-delete',
+    noDynamicRequire: 'import/no-dynamic-require',
+    noErasingOperation: 'oxc/erasing-op',
+    noExcessiveStatementsPerFunction: 'max-statements',
+    noInvalidFetchOptions: 'unicorn/no-invalid-fetch-options',
+    noInvalidRemoveEventListener: 'unicorn/no-invalid-remove-event-listener',
+    noMagicArrayFlatDepth: 'unicorn/no-magic-array-flat-depth',
+    noMapSpread: 'oxc/no-map-spread',
+    noMisusedSpread: 'typescript/no-misused-spread',
+    noNewArray: 'unicorn/no-new-array',
+    noNewRequire: 'node/no-new-require',
+    noNull: 'unicorn/no-null',
+    noObjectConstructor: 'no-object-constructor',
+    noObjectLiteralComparison: 'oxc/bad-object-literal-comparison',
+    noProcessExit: 'unicorn/no-process-exit',
+    noPromiseExecutorReturn: 'no-promise-executor-return',
+    noReactDirectStateMutation: 'react/no-direct-mutation-state',
+    noRedundantTypeConstituents: 'typescript/no-redundant-type-constituents',
+    noSharedBranchCode: 'oxc/branches-sharing-code',
+    noSinglePromiseInPromiseMethods: 'unicorn/no-single-promise-in-promise-methods',
+    noSyncMethods: 'node/no-sync',
+    noTripleSlashReference: 'typescript/triple-slash-reference',
+    noUnreadableIife: 'unicorn/no-unreadable-iife',
+    noUnresolvedDefaultImport: 'import/default',
+    noUnsafeReturn: 'typescript/no-unsafe-return',
+    noUnsafeUnaryMinus: 'typescript/no-unsafe-unary-minus',
+    noUselessAssignment: 'no-useless-assignment',
+    noUselessCall: 'no-useless-call',
+    noUselessDateGetTime: 'unicorn/consistent-date-clone',
+    noUselessFallbackInSpread: 'unicorn/no-useless-fallback-in-spread',
+    noUselessParameterPropertyAssignment: 'typescript/no-unnecessary-parameter-property-assignment',
+    noUselessQualifier: 'typescript/no-unnecessary-qualifier',
+    noUselessTypeAssertion: 'typescript/no-unnecessary-type-assertion',
+    noVueComputedPropertiesInData: 'vue/no-computed-properties-in-data',
+    noVueDeprecatedConfigKeyCodes: 'vue/no-deprecated-vue-config-keycodes',
+    noVueDeprecatedDestroyedLifecycle: 'vue/no-deprecated-destroyed-lifecycle',
+    noVueDeprecatedEventsApi: 'vue/no-deprecated-events-api',
+    noVueDeprecatedModelDefinition: 'vue/no-deprecated-model-definition',
+    noVueDeprecatedPropsDefaultThis: 'vue/no-deprecated-props-default-this',
+    noVueExcessiveProps: 'vue/max-props',
+    noVueExportInScriptSetup: 'vue/no-export-in-script-setup',
+    noVueExposeAfterAwait: 'vue/no-expose-after-await',
+    noVueLifecycleAfterAwait: 'vue/no-lifecycle-after-await',
+    noVueMultipleSlotArgs: 'vue/no-multiple-slot-args',
+    noVueRequiredPropWithDefault: 'vue/no-required-prop-with-default',
+    noVueSideEffectsInComputed: 'vue/no-side-effects-in-computed-properties',
+    noVueThisInBeforeRouteEnter: 'vue/no-this-in-before-route-enter',
+    noVueWatchAfterAwait: 'vue/no-watch-after-await',
+    noZeroFractions: 'unicorn/no-zero-fractions',
+    useAccessorPairs: 'accessor-pairs',
+    useCatchErrorName: 'unicorn/catch-error-name',
+    useExpectToContain: ['jest/prefer-to-contain', 'vitest/prefer-to-contain'],
+    useExpectToHaveBeenCalled: 'jest/prefer-to-have-been-called',
+    useExpectToHaveBeenCalledTimes: [
+      'jest/prefer-to-have-been-called-times',
+      'vitest/prefer-to-have-been-called-times',
+    ],
+    useGlobalRegexInMatchAll: 'oxc/bad-match-all-arg',
+    useGlobalRegexInReplaceAll: 'oxc/bad-replace-all-arg',
+    useLowercaseTestTitle: ['jest/prefer-lowercase-title', 'vitest/prefer-lowercase-title'],
+    useMatchingFunctionName: 'func-name-matching',
+    useMathTrunc: 'unicorn/prefer-math-trunc',
+    useNamedFunction: 'func-names',
+    useNextScriptForGoogleAnalytics: 'nextjs/next-script-for-ga',
+    useSpyOn: ['jest/prefer-spy-on', 'vitest/prefer-spy-on'],
+    useTopLevelRequire: 'node/global-require',
+    useValidCharacterComparison: 'oxc/bad-char-at-comparison',
+    useValidNamespaceImports: 'import/namespace',
+    useVueComputedPropertyReturn: 'vue/return-in-computed-property',
+    useVueConsistentDefineEmitsDeclaration: 'vue/define-emits-declaration',
+    useVueConsistentPropNameCasing: 'vue/prop-name-casing',
+    useVueDefaultExport: 'vue/require-default-export',
+    useVueDefaultProp: 'vue/require-default-prop',
+    useVueDefinePropsDestructuring: 'vue/define-props-destructuring',
+    useVueEmitsValidatorReturn: 'vue/return-in-emits-validator',
+    useVuePropTypeConstructor: 'vue/require-prop-type-constructor',
+    useVueRenderReturn: 'vue/require-render-return',
+    useVueSlotsAsFunctions: 'vue/require-slots-as-functions',
+    useVueTypedProps: 'vue/require-prop-types',
+    useVueTypedRef: 'vue/require-typed-ref',
+    useVueValidDefineEmits: 'vue/valid-define-emits',
+    useVueValidDefineOptions: 'vue/valid-define-options',
+    useVueValidDefineProps: 'vue/valid-define-props',
+  }
+
+  it.each(Object.entries(equivalents))(
+    'maps %s to the Oxlint rule that reports the same examples',
+    (biomeRule, expected) => {
+      const reporter = new CollectingReporter()
+
+      const { rules, sourceRulesSkipped } = extractRulesFromBiomeConfig(
+        { nursery: { [biomeRule]: 'error' } },
+        reporter,
+        { typeAware: true },
+      )
+
+      const expectedRules = Array.isArray(expected) ? expected : [expected]
+      expect(Object.keys(rules).sort()).toEqual([...expectedRules].sort())
+      expect(sourceRulesSkipped).toEqual(new Set())
+      expect(reporter.getLosses()).toEqual([])
+    },
+  )
+
+  const partial: Record<string, [oxlintRule: string, missing: string]> = {
+    noAwaitInPromiseMethods: ['unicorn/no-await-in-promise-methods', 'cond ? await p : q'],
+    noBufferConstructor: ['unicorn/no-new-buffer', 'Buffer()'],
+    noChainedComparison: ['oxc/bad-comparison-sequence', '(a == b) != c'],
+    noDoubleComparison: ['oxc/double-comparisons', 'x <= y && x !== y'],
+    noExcessiveNestedBlocks: ['max-depth', 'CSS'],
+    noMissingThrow: ['oxc/missing-throw', 'arrow function'],
+    noNumberArgumentOutOfRange: ['oxc/number-arg-out-of-range', 'toFixed(-1)'],
+    noPathConcat: ['node/no-path-concat', 'import.meta.dirname'],
+    noUninvokedArrayCallback: ['oxc/uninvoked-array-callback', 'Array(n)'],
+    noUselessAwait: ['unicorn/no-unnecessary-await', 'await [a(), b()]'],
+    noUselessLengthCheck: ['unicorn/no-useless-length-check', 'for...of'],
+    noUselessSpread: ['unicorn/no-useless-spread', 'Object.assign(target, { ...source })'],
+    noVueAsyncComputed: ['vue/no-async-in-computed-properties', 'setTimeout()'],
+    noVueDeprecatedDeleteSet: ['vue/no-deprecated-delete-set', 'Vue.set()'],
+    useBigintLiterals: ['unicorn/prefer-bigint-literals', 'BigInt(-1)'],
+    useCalledWith: ['jest/prefer-called-with', 'toHaveBeenCalledOnce()'],
+    useCapitalizedConstructors: ['new-cap', 'String'],
+    useConsistentUnicodeBom: ['unicode-bom', 'Markdown'],
+    useObjectFromEntries: ['unicorn/prefer-object-from-entries', 'for...of'],
+    useSetSize: ['unicorn/prefer-set-size', 'parameter typed as a Set'],
+    useVueValidNextTick: ['vue/valid-next-tick', '<script setup>'],
+  }
+
+  it.each(Object.entries(partial))(
+    'reports what the Oxlint counterpart of %s does not check',
+    (biomeRule, [oxlintRule, missing]) => {
+      const reporter = new CollectingReporter()
+
+      const { rules } = extractRulesFromBiomeConfig({ nursery: { [biomeRule]: 'warn' } }, reporter)
+
+      expect(Object.keys(rules)).toContain(oxlintRule)
+      expect(reporter.getLosses()).toHaveLength(1)
+      expect(reporter.getLosses()[0]).toContain(missing)
+    },
+  )
+
+  it('carries the Biome 2.6 rule options over under their Oxlint names', () => {
+    const reporter = new CollectingReporter()
+    const linterRules: BiomeLinterRules = {
+      nursery: {
+        noDuplicateTypeConstituents: { level: 'error', options: { ignoreUnions: true } },
+        noDynamicRequire: { level: 'error', options: { checkDynamicImports: true } },
+        noExcessiveNestedBlocks: { level: 'error', options: { max: 3, ignoreAtRules: ['media'] } },
+        noExcessiveStatementsPerFunction: {
+          level: 'error',
+          options: { max: 20, ignoreTopLevelFunctions: true },
+        },
+        noMapSpread: { level: 'error', options: { ignoreArgs: false } },
+        noSyncMethods: {
+          level: 'error',
+          options: { allowAtRootLevel: true, ignore: ['readFileSync'] },
+        },
+        noTripleSlashReference: {
+          level: 'error',
+          options: { lib: 'never', path: 'always', types: 'preferImport' },
+        },
+        noVueAsyncComputed: { level: 'error', options: { ignoreObjects: ['z'] } },
+        useCatchErrorName: { level: 'error', options: { name: 'err', ignore: ['^_'] } },
+        useConsistentUnicodeBom: { level: 'error', options: { bom: 'always' } },
+        useLowercaseTestTitle: { level: 'error', options: { allowedPrefixes: ['GET'] } },
+        useObjectFromEntries: { level: 'error', options: { functions: ['utils.fromPairs'] } },
+        useVueConsistentDefineEmitsDeclaration: {
+          level: 'error',
+          options: { style: 'typeLiteral' },
+        },
+        useVueConsistentPropNameCasing: {
+          level: 'error',
+          options: { casing: 'snake_case', ignore: ['data-id'] },
+        },
+      },
+    }
+
+    const { rules } = extractRulesFromBiomeConfig(linterRules, reporter, { typeAware: true })
+
+    expect(rules).toMatchObject({
+      'typescript/no-duplicate-type-constituents': ['error', { ignoreUnions: true }],
+      'import/no-dynamic-require': ['error', { esmodule: true }],
+      'max-depth': ['error', { max: 3 }],
+      'max-statements': ['error', { max: 20, ignoreTopLevelFunctions: true }],
+      'oxc/no-map-spread': ['error', { ignoreArgs: false }],
+      'node/no-sync': ['error', { allowAtRootLevel: true, ignores: ['readFileSync'] }],
+      'typescript/triple-slash-reference': [
+        'error',
+        { lib: 'never', path: 'always', types: 'prefer-import' },
+      ],
+      'vue/no-async-in-computed-properties': ['error', { ignoredObjectNames: ['z'] }],
+      'unicorn/catch-error-name': ['error', { name: 'err', ignore: ['^_'] }],
+      'unicode-bom': ['error', 'always'],
+      'jest/prefer-lowercase-title': ['error', { allowedPrefixes: ['GET'] }],
+      'unicorn/prefer-object-from-entries': [
+        'error',
+        { functions: ['_.fromPairs', 'lodash.fromPairs', 'utils.fromPairs'] },
+      ],
+      'vue/define-emits-declaration': ['error', 'type-literal'],
+      // Oxlint matches `ignoreProps` as regular expressions, so the names are anchored.
+      'vue/prop-name-casing': ['error', 'snake_case', { ignoreProps: ['^data-id$'] }],
+    })
+    expect(
+      reporter.getLosses().filter((loss) => loss.includes('do not have a verified Oxlint mapping')),
+    ).toEqual([])
+  })
+
+  it('keeps the Biome defaults where the Oxlint rule defaults differ', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      {
+        nursery: {
+          noMisusedPromises: 'error',
+          noVueExcessiveProps: 'warn',
+        },
+      },
+      reporter,
+      { typeAware: true },
+    )
+
+    expect(rules).toEqual({
+      'typescript/no-misused-promises': ['error', { checksConditionals: { flagUnions: 'all' } }],
+      'vue/max-props': ['warn', { maxProps: 10 }],
+    })
+  })
+
+  it('reports that unicorn/no-useless-undefined no longer checks var declarations', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { complexity: { noUselessUndefinedInitialization: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({ 'unicorn/no-useless-undefined': 'error' })
+    expect(reporter.getLosses()).toHaveLength(1)
+    expect(reporter.getLosses()[0]).toContain('var a = undefined')
   })
 })
 

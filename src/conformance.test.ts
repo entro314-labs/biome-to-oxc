@@ -362,9 +362,59 @@ describe('generated configs load in the real target tools', () => {
 
     // A config-load failure is reported on stderr; lint/format findings are not.
     expect(oxlintRun.stderr).not.toContain('Failed to parse')
+    expect(oxlintRun.stdout).not.toContain('Failed to parse')
     expect(oxlintRun.stdout).not.toContain('invalid config file')
     expect(oxfmtRun.stderr).not.toContain('Failed to parse configuration')
     expect(oxfmtRun.stdout).not.toContain('Failed to parse configuration')
+  })
+
+  it('produces an Oxlint config that accepts every translated Biome 2.6 rule option', async () => {
+    const dir = await setupConformanceFixture({
+      linter: {
+        rules: {
+          nursery: {
+            noDuplicateTypeConstituents: { level: 'error', options: { ignoreUnions: true } },
+            noDynamicRequire: { level: 'error', options: { checkDynamicImports: true } },
+            noExcessiveNestedBlocks: { level: 'error', options: { max: 3 } },
+            noExcessiveStatementsPerFunction: {
+              level: 'error',
+              options: { max: 20, ignoreTopLevelFunctions: true },
+            },
+            noMapSpread: { level: 'error', options: { ignoreArgs: false } },
+            noMisusedPromises: 'error',
+            noSyncMethods: { level: 'error', options: { allowAtRootLevel: true, ignore: ['a'] } },
+            noTripleSlashReference: { level: 'error', options: { types: 'preferImport' } },
+            noVueAsyncComputed: { level: 'error', options: { ignoreObjects: ['z'] } },
+            noVueExcessiveProps: { level: 'error', options: { maxProps: 4 } },
+            useCatchErrorName: { level: 'error', options: { name: 'err', ignore: ['^_'] } },
+            useConsistentUnicodeBom: { level: 'error', options: { bom: 'never' } },
+            useLowercaseTestTitle: { level: 'error', options: { allowedPrefixes: ['GET'] } },
+            useObjectFromEntries: { level: 'error', options: { functions: ['u.fromPairs'] } },
+            useVueConsistentDefineEmitsDeclaration: {
+              level: 'error',
+              options: { style: 'runtime' },
+            },
+            useVueConsistentPropNameCasing: {
+              level: 'error',
+              options: { casing: 'snake_case', ignore: ['a.b'] },
+            },
+          },
+        },
+      },
+    })
+
+    // Real Biome accepts the source config, so a config error can only come from the migration.
+    const biomeRun = await run(BIOME_BIN, ['check', '.'], dir)
+    expect(biomeRun.stderr).not.toContain('unknown key')
+    expect(biomeRun.stdout).not.toContain('Found an unknown key')
+
+    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir, typeAware: true })
+
+    const oxlintRun = await run(OXLINT_BIN, ['--config', '.oxlintrc.json', '.'], dir)
+
+    // Oxlint prints a rejected config on stdout, one `Invalid configuration` line per rule.
+    expect(oxlintRun.stdout).not.toContain('Failed to parse')
+    expect(oxlintRun.stdout).not.toContain('Invalid configuration')
   })
 })
 
@@ -685,6 +735,19 @@ describe('source-versus-target lint diagnostics', () => {
           'export class F {}\nexport class G {\n  constructor() {}\n}\nexport class H {\n  static f() {}\n  g() {}\n}\n',
       },
     },
+    {
+      name: 'keeps reporting the lodash pair functions when more are configured',
+      rules: {
+        nursery: {
+          useObjectFromEntries: { level: 'error', options: { functions: ['utils.fromPairs'] } },
+        },
+      },
+      files: {
+        'src/lodash.js': 'export const a = (pairs) => _.fromPairs(pairs)\n',
+        'src/utils.js': 'export const b = (pairs) => utils.fromPairs(pairs)\n',
+        'src/valid.js': 'export const c = (pairs) => Object.fromEntries(pairs)\n',
+      },
+    },
   ])('$name', async ({ rules, files }) => {
     const dir = await setupLintFixture(rules, files)
 
@@ -856,6 +919,16 @@ describe('source-versus-target type-aware lint diagnostics', () => {
         'src/key.ts': 'export const d = {\n  ["b"]: 1\n}\n',
         'src/member-key.ts': 'export class E {\n  ["f"]() {}\n}\n',
         'src/valid.ts': 'declare const a: Record<string, number>\nexport const z = a["b-c"]\n',
+      },
+    },
+    {
+      name: 'reports a union that contains a promise used as a condition',
+      rules: { nursery: { noMisusedPromises: 'error' } },
+      files: {
+        'src/union.ts': 'declare const p: Promise<void> | undefined\nif (p) {}\nexport {}\n',
+        'src/ternary.ts': 'declare const p: Promise<number> | string\nexport const x = p ? 1 : 2\n',
+        'src/plain.ts': 'declare const p: Promise<void>\nif (p) {}\nexport {}\n',
+        'src/valid.ts': 'declare const p: Promise<void>\nawait p\nexport {}\n',
       },
     },
   ])('$name', async ({ rules, files }) => {
