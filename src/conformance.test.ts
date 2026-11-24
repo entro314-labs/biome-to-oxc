@@ -164,7 +164,7 @@ async function biomeLintLines(dir: string): Promise<string[]> {
   return (report.diagnostics ?? [])
     .filter((diagnostic) => diagnostic.category?.startsWith('lint/'))
     .map((diagnostic) => `${diagnostic.location?.path}:${diagnostic.location?.start?.line}`)
-    .filter((line) => line.startsWith('src/'))
+    .filter((line, index, lines) => line.startsWith('src/') && lines.indexOf(line) === index)
     .sort()
 }
 
@@ -179,10 +179,14 @@ async function oxlintLintLines(dir: string): Promise<string[]> {
     diagnostics?: Array<{ filename: string; labels?: Array<{ span: { line: number } }> }>
   }
 
-  return (report.diagnostics ?? [])
-    .map((diagnostic) => `${diagnostic.filename}:${diagnostic.labels?.[0]?.span.line}`)
-    .filter((line) => line.startsWith('src/'))
-    .sort()
+  return (
+    (report.diagnostics ?? [])
+      .map((diagnostic) => `${diagnostic.filename}:${diagnostic.labels?.[0]?.span.line}`)
+      // A Biome test rule maps to both the Jest and the Vitest rule, so a line can be reported
+      // once per plugin; parity is about which lines are reported.
+      .filter((line, index, lines) => line.startsWith('src/') && lines.indexOf(line) === index)
+      .sort()
+  )
 }
 
 /** Formats fresh copies of `paths`, all holding `source`, and returns what each became. */
@@ -847,6 +851,27 @@ describe('source-versus-target lint diagnostics', () => {
         'src/plain.js': 'export class E {\n  static f() {}\n}\n',
         'src/valid.ts':
           'export class F {}\nexport class G {\n  constructor() {}\n}\nexport class H {\n  static f() {}\n  g() {}\n}\n',
+      },
+    },
+    {
+      name: 'prefers it() over test(), as Biome does by default',
+      rules: { style: { useConsistentTestIt: 'error' } },
+      files: {
+        'src/top.test.js': 'test("a", () => {})\nit("b", () => {})\n',
+        'src/nested.test.js':
+          'describe("c", () => {\n  test("d", () => {})\n  it("e", () => {})\n})\n',
+      },
+    },
+    {
+      name: 'reports event handlers on non-interactive and static elements alike',
+      rules: { a11y: { noNoninteractiveElementInteractions: 'error' } },
+      files: {
+        'src/static.jsx': 'export const A = () => <div onClick={() => {}}>x</div>\n',
+        'src/span.jsx': 'export const B = () => <span onKeyDown={() => {}}>x</span>\n',
+        'src/heading.jsx': 'export const C = () => <h1 onClick={() => {}}>x</h1>\n',
+        'src/role.jsx': 'export const D = () => <div role="article" onClick={() => {}}>x</div>\n',
+        'src/button.jsx': 'export const E = () => <button onClick={() => {}}>x</button>\n',
+        'src/hidden.jsx': 'export const F = () => <div onClick={() => {}} aria-hidden />\n',
       },
     },
     {

@@ -72,7 +72,6 @@ describe('rule-mapper parity expansion', () => {
       useExportType: 'typescript/consistent-type-exports',
       useExhaustiveSwitchCases: 'typescript/switch-exhaustiveness-check',
       useFilenamingConvention: 'unicorn/filename-case',
-      useFocusableInteractive: 'jsx-a11y/interactive-supports-focus',
       useHtmlLang: 'jsx-a11y/html-has-lang',
       useImportType: 'typescript/consistent-type-imports',
       useJsxKeyInIterable: 'react/jsx-key',
@@ -498,7 +497,7 @@ describe('rule-mapper parity expansion', () => {
     const { rules } = extractRulesFromBiomeConfig(linterRules, reporter)
 
     expect(rules).toMatchObject({
-      'jest/consistent-test-it': 'warn',
+      'jest/consistent-test-it': ['warn', { fn: 'it', withinDescribe: 'it' }],
       'jest/expect-expect': 'error',
       'jest/max-nested-describe': 'warn',
       'jest/no-conditional-expect': 'error',
@@ -509,7 +508,7 @@ describe('rule-mapper parity expansion', () => {
       'jest/no-standalone-expect': 'warn',
       'jest/prefer-hooks-on-top': 'warn',
       'jest/prefer-hooks-in-order': 'error',
-      'vitest/consistent-test-it': 'warn',
+      'vitest/consistent-test-it': ['warn', { fn: 'it', withinDescribe: 'it' }],
       'vitest/expect-expect': 'error',
       'vitest/max-nested-describe': 'warn',
       'vitest/no-conditional-expect': 'error',
@@ -622,7 +621,6 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
       noBlankTarget: 'react/jsx-no-target-blank',
       noExcessiveLinesPerFile: 'max-lines',
       noExcessiveLinesPerFunction: 'max-lines-per-function',
-      noExportsInTest: 'jest/no-export',
       noGlobalDirnameFilename: 'unicorn/prefer-module',
       noGlobalIsFinite: 'unicorn/prefer-number-properties',
       noGlobalIsNan: 'unicorn/prefer-number-properties',
@@ -769,8 +767,8 @@ describe('rule-mapper coverage for rules added by Oxlint 1.66-1.79', () => {
     })
     expect(sourceRulesConverted).toEqual(new Set(['noJsxPropsBind', 'useControlLabel']))
     expect(sourceRulesSkipped).toEqual(new Set())
-    // Both Oxlint rules report exactly what the Biome rule reports, so neither is a narrowing.
-    expect(reporter.getLosses()).toEqual([])
+    // jsx-no-new-function-as-prop skips JSX outside a function, which Biome reports.
+    expect(reporter.getLosses()).toEqual([expect.stringContaining('module level')])
   })
 
   it('translates the options of the newly mapped rules', () => {
@@ -1292,6 +1290,56 @@ describe('rule-mapper coverage for rules added by Biome 2.6', () => {
 })
 
 describe('rule-mapper coverage for Biome rules with existing partial Oxlint counterparts', () => {
+  // Found by running every existing mapping over the Biome rule's documented examples.
+  it.each([
+    ['noInvalidConstructorSuper', 'constructor-super', 'extends `undefined`'],
+    ['noExportsInTest', 'jest/no-export', 'describe() and expect()'],
+    ['noJsxPropsBind', 'react-perf/jsx-no-new-function-as-prop', 'module level'],
+    ['useFocusableInteractive', 'jsx-a11y/interactive-supports-focus', '<div role="button" />'],
+  ])(
+    'reports what the Oxlint counterpart of %s does not check',
+    (biomeRule, oxlintRule, missing) => {
+      const reporter = new CollectingReporter()
+
+      const { rules } = extractRulesFromBiomeConfig({ nursery: { [biomeRule]: 'error' } }, reporter)
+
+      expect(Object.keys(rules)).toContain(oxlintRule)
+      expect(reporter.getLosses()).toEqual([expect.stringContaining(missing)])
+    },
+  )
+
+  it('maps noNoninteractiveElementInteractions onto the non-interactive and static element rules', () => {
+    const reporter = new CollectingReporter()
+
+    const { rules } = extractRulesFromBiomeConfig(
+      { a11y: { noNoninteractiveElementInteractions: 'error' } },
+      reporter,
+    )
+
+    expect(rules).toEqual({
+      'jsx-a11y/no-noninteractive-element-interactions': 'error',
+      'jsx-a11y/no-static-element-interactions': 'error',
+    })
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it.each([
+    [undefined, { fn: 'it', withinDescribe: 'it' }],
+    [{ function: 'test' }, { fn: 'test', withinDescribe: 'it' }],
+    [
+      { function: 'it', withinDescribe: 'test' },
+      { fn: 'it', withinDescribe: 'test' },
+    ],
+  ])('carries useConsistentTestIt %j over with Biome defaults', (options, expected) => {
+    const { rules } = extractRulesFromBiomeConfig(
+      { style: { useConsistentTestIt: options ? { level: 'error', options } : 'error' } },
+      new CollectingReporter(),
+    )
+
+    expect(rules['jest/consistent-test-it']).toEqual(['error', expected])
+    expect(rules['vitest/consistent-test-it']).toEqual(['error', expected])
+  })
+
   it('maps noInlineStyles onto forbid-dom-props for the style prop and reports the narrowing', () => {
     const reporter = new CollectingReporter()
 

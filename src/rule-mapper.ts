@@ -151,6 +151,14 @@ const PARTIAL_RULE_MAPPING_NOTES: Record<string, string> = {
     'Biome rule useObjectFromEntries was mapped to unicorn/prefer-object-from-entries, which reports reduce() calls that build an object from pairs but not a `for...of` loop that does.',
   useSetSize:
     'Biome rule useSetSize was mapped to unicorn/prefer-set-size, which reports the spread of a Set it sees constructed, such as `[...new Set(x)].length`, but not the spread of a parameter typed as a Set.',
+  noInvalidConstructorSuper:
+    'Biome rule noInvalidConstructorSuper was mapped to constructor-super, which reports `super()` in a class that extends `null` or another non-constructor literal but not one that extends `undefined`.',
+  noExportsInTest:
+    'Biome rule noExportsInTest was mapped to jest/no-export, which reports exports only from a file that calls test() or it(), not from a test file whose only test calls are describe() and expect().',
+  noJsxPropsBind:
+    'Biome rule noJsxPropsBind was mapped to react-perf/jsx-no-new-function-as-prop, which reports functions created inside a component but not in JSX written at module level, outside any function.',
+  useFocusableInteractive:
+    'Biome rule useFocusableInteractive was mapped to jsx-a11y/interactive-supports-focus, which reports an element with an interactive role and an event handler but not one without a handler, such as `<div role="button" />`.',
   useVueValidNextTick:
     'Biome rule useVueValidNextTick was mapped to vue/valid-next-tick, which reports nextTick misuse inside a Vue component options object but not in `<script setup>` or other module-level code.',
 }
@@ -469,7 +477,12 @@ const BIOME_TO_OXLINT_RULE_MAP: Record<string, OxlintRuleMapping> = {
   noNestedPromises: 'promise/no-nesting',
   noNestedTernary: 'no-nested-ternary',
   noNextAsyncClientComponent: 'nextjs/no-async-client-component',
-  noNoninteractiveElementInteractions: 'jsx-a11y/no-noninteractive-element-interactions',
+  // Biome reports handlers on static elements such as `<div>` too, which jsx-a11y leaves to
+  // no-static-element-interactions; the two together reported what Biome reported.
+  noNoninteractiveElementInteractions: [
+    'jsx-a11y/no-noninteractive-element-interactions',
+    'jsx-a11y/no-static-element-interactions',
+  ],
   noNoninteractiveElementToInteractiveRole:
     'jsx-a11y/no-noninteractive-element-to-interactive-role',
   noNoninteractiveTabindex: 'jsx-a11y/no-noninteractive-tabindex',
@@ -1077,6 +1090,20 @@ function mapBiomeRuleOptionsToOxlintSeverity(
       )
     }
     return severity
+  }
+
+  if (biomeName === 'useConsistentTestIt') {
+    // Biome defaults to `it` everywhere; Oxlint defaults `fn` to `test`. Biome's `function`
+    // is Oxlint's `fn`, and both sides accept `it` and `test`.
+    const pick = (value: unknown): 'it' | 'test' | undefined =>
+      value === 'it' || value === 'test' ? value : undefined
+    return [
+      severity,
+      {
+        fn: pick(options?.function) ?? 'it',
+        withinDescribe: pick(options?.withinDescribe) ?? 'it',
+      },
+    ]
   }
 
   if (biomeName === 'noMisusedPromises') {
