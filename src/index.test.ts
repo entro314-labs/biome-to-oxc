@@ -762,7 +762,7 @@ describe('migrate file selection fidelity', () => {
 
     expect(oxfmt.ignorePatterns).toEqual(
       expect.arrayContaining([
-        '**/*.toml',
+        '**/*.{toml,toml.example}',
         '**/*.{mdx,livemd,mdown,mdwn,mkd,mkdn,mkdown,ronn,scd,workbook}',
         '**/*.{html,htm}',
       ]),

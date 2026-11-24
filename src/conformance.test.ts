@@ -110,6 +110,15 @@ const UNFORMATTED_SOURCES = {
   'src/glide.lock': 'a:   1\n',
   'src/.prettierrc': 'a:   1\n',
   'src/settings.toml': 'a =   1\n',
+  'src/Pipfile': 'a =   1\n',
+  'src/legacy.json5': '{"a":   1}\n',
+  'src/map.geojson': '{"a":   1}\n',
+  'src/.babelrc': '{"a":   1}\n',
+  'src/legacy.es6': 'const d={x:1}\n',
+  'src/Jakefile': 'const e={x:1}\n',
+  'src/theme.less': 'a{color:red}\n',
+  'src/theme.pcss': 'a{color:red}\n',
+  'src/view.hbs': '<div   class="x"><p>hi</p>   </div>\n',
 }
 
 /**

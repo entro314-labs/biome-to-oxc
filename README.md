@@ -49,10 +49,11 @@ Current capabilities:
   `no-implied-eval` depend on it)
 - Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
-- The set of formatted files: what only Oxfmt formats is excluded (TOML, MDX, Markdown beyond
-  `.md`/`.markdown`, such as `README` or `.mkd`, YAML files Oxfmt finds by name such as
-  `.prettierrc` or `glide.lock`, `.xhtml`, `.xht`, `.hta`, `.inc`, and `.html`/`.htm` unless
-  Biome's HTML formatter is on), what only Biome formats is associated with the right Oxfmt
+- The set of formatted files: what only Oxfmt formats is excluded (TOML, MDX, Less, PostCSS,
+  Handlebars, MJML, JSON5 and other JSON variants such as `.geojson` or `.babelrc`, less common
+  JavaScript extensions such as `.es6` or `Jakefile`, Markdown beyond `.md`/`.markdown`, such as
+  `README` or `.mkd`, YAML files Oxfmt finds by name such as `.prettierrc` or `glide.lock`,
+  `.xhtml`, `.xht`, `.hta`, `.inc`, and `.html`/`.htm` unless Biome's HTML formatter is on), what only Biome formats is associated with the right Oxfmt
   language (YAML extensions such as `.cff` and `.eyaml`, and `.svg` as HTML when Biome formats
   HTML), and `sortPackageJson` is pinned off unless the Biome config turns the matching assist
   action on, so migrating never reformats files Biome left alone

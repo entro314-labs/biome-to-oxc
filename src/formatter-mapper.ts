@@ -79,17 +79,26 @@ const JAVASCRIPT_FORMATTER_KEYS = new Set([
 
 /**
  * File types Oxfmt formats that Biome does not, so a faithful migration must exclude
- * them rather than silently widen the set of formatted files. Biome 2.6 formats YAML and
- * Markdown, but recognises Markdown only as `.md` and `.markdown`, and does not format the
- * YAML files below that Oxfmt finds by name (`apps/oxfmt/src/core/support.rs`). Oxfmt formats
- * `.xhtml`, `.xht`, `.hta` and `.inc` as HTML; Biome treats them as unknown files even with
- * its HTML formatter on.
+ * them rather than silently widen the set of formatted files. Taken from Oxfmt's file
+ * classification (`apps/oxfmt/src/core/support.rs`) and checked by running both binaries
+ * over one file of each kind: Biome 2.6 formats YAML and Markdown, but recognises Markdown only
+ * as `.md` and `.markdown`, does not format the YAML, JSON and JavaScript files Oxfmt finds by
+ * name or by the less common extensions below, and formats no TOML, Less, PostCSS, Handlebars
+ * or MJML. Oxfmt formats `.xhtml`, `.xht`, `.hta` and `.inc` as HTML; Biome treats them as
+ * unknown files even with its HTML formatter on.
  */
 const OXFMT_ONLY_IGNORE_PATTERNS = [
-  '**/*.toml',
+  '**/*.{toml,toml.example}',
+  '**/{Pipfile,Cargo.toml.orig}',
   '**/*.{mdx,livemd,mdown,mdwn,mkd,mkdn,mkdown,ronn,scd,workbook}',
   '**/{README,contents.lr}',
   '**/{.clangd,glide.lock,pixi.lock,.prettierrc,.stylelintrc,.lintstagedrc}',
+  '**/*.{json5,4DForm,4DProject,JSON-tmLanguage,avsc,geojson,gltf,har,ice,importmap,mcmeta,sarif,tact,tfstate,topojson,yy,yyp,json.example,tfstate.backup}',
+  '**/{.all-contributorsrc,.arcconfig,.auto-changelog,.babelrc,.c8rc,.htmlhintrc,.imgbotconfig,.jscsrc,.jshintrc,.jslintrc,.nycrc,.swcrc,.tern-config,.tern-project,.watchmanconfig}',
+  '**/*.{_js,bones,es,es6,jake,javascript,jsb,jscad,jsfl,jslib,jsm,jspre,jss,njs,pac,sjs,ssjs,xsjs,xsjslib,start.frag,end.frag}',
+  '**/{Jakefile,start.frag,end.frag}',
+  '**/*.{less,pcss,postcss,wxss}',
+  '**/*.{hbs,handlebars,mjml}',
   '**/*.{xhtml,xht,hta,inc}',
 ] as const
 
