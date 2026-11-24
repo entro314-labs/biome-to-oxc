@@ -1,6 +1,7 @@
-import { createRequire } from 'node:module'
+import fs from 'node:fs'
+import module, { createRequire } from 'node:module'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import url, { pathToFileURL } from 'node:url'
 
 import { defineConfig } from 'tsdown'
 
@@ -10,11 +11,19 @@ import { defineConfig } from 'tsdown'
 // the compiler binary (it looks for `@typescript/native-preview`, not a dependency
 // here). TypeScript 7 ships the native compiler as its own `tsc`, so select the
 // generator explicitly and resolve the binary the way the compiler package does.
+// Since 7.1.0-dev.20261123 `getExePath` takes the Node modules it uses as an argument.
 const require = createRequire(import.meta.url)
 const typescriptLib = path.join(path.dirname(require.resolve('typescript/package.json')), 'lib')
-const { default: getExePath }: { default: () => string } = await import(
-  pathToFileURL(path.join(typescriptLib, 'getExePath.js')).href
-)
+const {
+  default: getExePath,
+}: {
+  default: (modules: {
+    fs: typeof fs
+    module: typeof module
+    path: typeof path
+    url: typeof url
+  }) => string
+} = await import(pathToFileURL(path.join(typescriptLib, 'getExePath.js')).href)
 
 export default defineConfig({
   entry: ['bin/biome-to-oxc.ts', 'src/index.ts'],
@@ -22,7 +31,7 @@ export default defineConfig({
   // Generate .d.ts by invoking the native compiler binary resolved above. The
   // classic Compiler API path is unusable here: typescript@7 does not expose the
   // programmatic API, so rolldown-plugin-dts's TS-based generator fails.
-  dts: { generator: 'tsgo', tsgo: { path: getExePath() } },
+  dts: { generator: 'tsgo', tsgo: { path: getExePath({ fs, module, path, url }) } },
   sourcemap: false,
   clean: true,
   // Package-manifest lint. Runs on every build so a broken `exports` map, a missing file,
