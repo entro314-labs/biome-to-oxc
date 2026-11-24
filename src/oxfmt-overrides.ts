@@ -4,7 +4,9 @@ import type {
   BiomeGraphqlConfig,
   BiomeJavaScriptConfig,
   BiomeJsonConfig,
+  BiomeMarkdownConfig,
   BiomeOverride,
+  BiomeYamlConfig,
   OxfmtOverride,
   Reporter,
 } from './types.js'
@@ -33,6 +35,54 @@ const JAVASCRIPT_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx', 'mjs', 'mts', 'cjs', 'c
 const JSON_EXTENSIONS = ['json', 'jsonc', 'json5']
 const CSS_EXTENSIONS = ['css', 'scss', 'sass', 'less']
 const GRAPHQL_EXTENSIONS = ['graphql', 'gql']
+
+/**
+ * File extensions Biome 2.6 formats as YAML (`crates/biome_languages/src/yaml.rs`). Oxfmt
+ * recognises only some of them; `OXFMT_UNRECOGNISED_YAML_EXTENSIONS` lists the rest.
+ */
+const YAML_EXTENSIONS = [
+  'yaml',
+  'yml',
+  'cff',
+  'eyaml',
+  'eyml',
+  'mir',
+  'reek',
+  'rviz',
+  'sublime-syntax',
+  'syntax',
+  'yaml-tmlanguage',
+  'yaml-tmpreferences',
+  'yaml-tmtheme',
+  'yaml.sed',
+  'yml.mysql',
+]
+/** Dotfiles Biome formats as YAML by name; Oxfmt does too. */
+const YAML_FILENAMES = ['.clang-format', '.clang-tidy', '.gemrc']
+/**
+ * Biome YAML extensions Oxfmt does not format by default. `cff` is among them because Oxfmt
+ * only recognises `CITATION.cff` by name, while Biome formats every `.cff` file.
+ */
+const OXFMT_UNRECOGNISED_YAML_EXTENSIONS = [
+  'cff',
+  'eyaml',
+  'eyml',
+  'yaml-tmpreferences',
+  'yaml-tmtheme',
+  'yaml.sed',
+  'yml.mysql',
+]
+/** Biome formats Markdown by these two extensions only. */
+const MARKDOWN_EXTENSIONS = ['md', 'markdown']
+
+/** Every file Biome formats as YAML, as Oxfmt globs. */
+export const BIOME_YAML_FILE_PATTERNS = [
+  `**/*.{${YAML_EXTENSIONS.join(',')}}`,
+  `**/{${YAML_FILENAMES.join(',')}}`,
+]
+/** The Biome YAML files Oxfmt only formats when they are associated with YAML. */
+export const OXFMT_UNRECOGNISED_YAML_PATTERN = `**/*.{${OXFMT_UNRECOGNISED_YAML_EXTENSIONS.join(',')}}`
+export const BIOME_MARKDOWN_FILE_PATTERN = `**/*.{${MARKDOWN_EXTENSIONS.join(',')}}`
 const JSON_FORMATTER_KEYS = new Set([
   'enabled',
   'expand',
@@ -52,6 +102,30 @@ const CSS_FORMATTER_KEYS = new Set([
   'lineEnding',
   'lineWidth',
   'quoteStyle',
+  'trailingNewline',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
+
+const YAML_FORMATTER_KEYS = new Set([
+  'enabled',
+  'bracketSpacing',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  'quoteStyle',
+  'trailingNewline',
+  ...EXPLICIT_OXFMT_OPTION_KEYS,
+  ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
+])
+const MARKDOWN_FORMATTER_KEYS = new Set([
+  'enabled',
+  'formatEmbeds',
+  'indentStyle',
+  'indentWidth',
+  'lineEnding',
+  'lineWidth',
+  'proseWrap',
   'trailingNewline',
   ...EXPLICIT_OXFMT_OPTION_KEYS,
   ...Object.keys(LEGACY_EXPLICIT_OXFMT_OPTION_ALIASES),
@@ -177,6 +251,29 @@ export function generateOxfmtOverrides(
       reporter,
       'graphql.formatter',
       GRAPHQL_EXTENSIONS,
+    )
+
+    const yamlOptions = mapYamlFormatterOptions(override.yaml?.formatter, reporter)
+    pushScopedOverride(
+      oxfmtOverrides,
+      files,
+      excludeFiles,
+      yamlOptions,
+      reporter,
+      'yaml.formatter',
+      // The dotfile names match the same `.name` check the extensions do.
+      [...YAML_EXTENSIONS, ...YAML_FILENAMES.map((name) => name.slice(1))],
+    )
+
+    const markdownOptions = mapMarkdownFormatterOptions(override.markdown?.formatter, reporter)
+    pushScopedOverride(
+      oxfmtOverrides,
+      files,
+      excludeFiles,
+      markdownOptions,
+      reporter,
+      'markdown.formatter',
+      MARKDOWN_EXTENSIONS,
     )
   }
 
@@ -498,6 +595,90 @@ function mapGraphqlFormatterOptions(
   }
 
   applyExplicitFormatterOptionPassThrough([graphqlFormatter], options, reporter)
+
+  return options
+}
+
+function mapYamlFormatterOptions(
+  yamlFormatter: BiomeYamlConfig['formatter'] | undefined,
+  reporter: Reporter,
+): Partial<Record<string, unknown>> {
+  const options: Record<string, unknown> = {}
+
+  if (!yamlFormatter) {
+    return options
+  }
+
+  warnAboutUnsupportedKeys(yamlFormatter, YAML_FORMATTER_KEYS, 'yaml.formatter', reporter)
+
+  if (yamlFormatter.lineWidth !== undefined) {
+    options.printWidth = yamlFormatter.lineWidth
+  }
+
+  if (yamlFormatter.indentWidth !== undefined) {
+    options.tabWidth = yamlFormatter.indentWidth
+  }
+
+  mapLineEnding(yamlFormatter.lineEnding, 'yaml.formatter', options, reporter)
+
+  if (yamlFormatter.quoteStyle !== undefined) {
+    options.singleQuote = yamlFormatter.quoteStyle === 'single'
+  }
+
+  if (yamlFormatter.bracketSpacing !== undefined) {
+    options.bracketSpacing = yamlFormatter.bracketSpacing
+  }
+
+  if (yamlFormatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = yamlFormatter.trailingNewline
+  }
+
+  applyExplicitFormatterOptionPassThrough([yamlFormatter], options, reporter)
+
+  return options
+}
+
+function mapMarkdownFormatterOptions(
+  markdownFormatter: BiomeMarkdownConfig['formatter'] | undefined,
+  reporter: Reporter,
+): Partial<Record<string, unknown>> {
+  const options: Record<string, unknown> = {}
+
+  if (!markdownFormatter) {
+    return options
+  }
+
+  warnAboutUnsupportedKeys(
+    markdownFormatter,
+    MARKDOWN_FORMATTER_KEYS,
+    'markdown.formatter',
+    reporter,
+  )
+
+  if (markdownFormatter.lineWidth !== undefined) {
+    options.printWidth = markdownFormatter.lineWidth
+  }
+
+  // `indentStyle` and `indentWidth` are accepted but not mapped: Biome's Markdown output is
+  // the same whatever they say, so the Markdown override pins Oxfmt's indent instead.
+
+  mapLineEnding(markdownFormatter.lineEnding, 'markdown.formatter', options, reporter)
+
+  if (markdownFormatter.proseWrap !== undefined) {
+    options.proseWrap = markdownFormatter.proseWrap
+  }
+
+  // Biome formats fenced code blocks, frontmatter and HTML blocks with their own language's
+  // formatter unless `formatEmbeds` is off; Oxfmt does the same unless this is `off`.
+  if (markdownFormatter.formatEmbeds === false) {
+    options.embeddedLanguageFormatting = 'off'
+  }
+
+  if (markdownFormatter.trailingNewline !== undefined) {
+    options.insertFinalNewline = markdownFormatter.trailingNewline
+  }
+
+  applyExplicitFormatterOptionPassThrough([markdownFormatter], options, reporter)
 
   return options
 }

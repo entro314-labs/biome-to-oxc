@@ -42,6 +42,10 @@ function collectOxfmtPatternGroups(config: OxfmtConfig): PatternGroup[] {
       { field: `overrides[${index}].files`, patterns: override.files },
       { field: `overrides[${index}].excludeFiles`, patterns: override.excludeFiles },
     ]),
+    ...(config.associations ?? []).flatMap((association, index) => [
+      { field: `associations[${index}].files`, patterns: association.files },
+      { field: `associations[${index}].excludeFiles`, patterns: association.excludeFiles },
+    ]),
   ]
 }
 

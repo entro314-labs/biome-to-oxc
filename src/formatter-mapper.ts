@@ -1,4 +1,10 @@
-import { generateOxfmtOverrides, mapBiomeExpandToObjectWrap } from './oxfmt-overrides.js'
+import {
+  BIOME_MARKDOWN_FILE_PATTERN,
+  BIOME_YAML_FILE_PATTERNS,
+  generateOxfmtOverrides,
+  mapBiomeExpandToObjectWrap,
+  OXFMT_UNRECOGNISED_YAML_PATTERN,
+} from './oxfmt-overrides.js'
 import { joinExclusions } from './schema-normalizer.js'
 import type {
   BiomeAssistAction,
@@ -73,14 +79,18 @@ const JAVASCRIPT_FORMATTER_KEYS = new Set([
 
 /**
  * File types Oxfmt formats that Biome does not, so a faithful migration must exclude
- * them rather than silently widen the set of formatted files. Oxfmt formats `.htm` and
- * `.xhtml` as HTML; Biome treats them as unknown files even with its HTML formatter on.
+ * them rather than silently widen the set of formatted files. Biome 2.6 formats YAML and
+ * Markdown, but recognises Markdown only as `.md` and `.markdown`, and does not format the
+ * YAML files below that Oxfmt finds by name (`apps/oxfmt/src/core/support.rs`). Oxfmt formats
+ * `.xhtml`, `.xht`, `.hta` and `.inc` as HTML; Biome treats them as unknown files even with
+ * its HTML formatter on.
  */
 const OXFMT_ONLY_IGNORE_PATTERNS = [
-  '**/*.{yaml,yml}',
   '**/*.toml',
-  '**/*.{md,mdx}',
-  '**/*.{htm,xhtml}',
+  '**/*.{mdx,livemd,mdown,mdwn,mkd,mkdn,mkdown,ronn,scd,workbook}',
+  '**/{README,contents.lr}',
+  '**/{.clangd,glide.lock,pixi.lock,.prettierrc,.stylelintrc,.lintstagedrc}',
+  '**/*.{xhtml,xht,hta,inc}',
 ] as const
 
 /**
@@ -120,7 +130,9 @@ export function generateOxfmtConfig(
       jsFormatter?.enabled === true ||
       biomeConfig.json?.formatter?.enabled === true ||
       biomeConfig.css?.formatter?.enabled === true ||
-      biomeConfig.graphql?.formatter?.enabled === true
+      biomeConfig.graphql?.formatter?.enabled === true ||
+      biomeConfig.yaml?.formatter?.enabled === true ||
+      biomeConfig.markdown?.formatter?.enabled === true
 
     if (!languageFormatterEnabled) {
       oxfmtConfig.ignorePatterns = ['**/*']
@@ -155,9 +167,25 @@ export function generateOxfmtConfig(
       { include: ['**/*.{json,jsonc,json5}'], json: biomeConfig.json },
       { include: ['**/*.{css,scss,sass,less}'], css: biomeConfig.css },
       { include: ['**/*.{graphql,gql}'], graphql: biomeConfig.graphql },
+      { include: BIOME_YAML_FILE_PATTERNS, yaml: biomeConfig.yaml },
+      { include: [BIOME_MARKDOWN_FILE_PATTERN], markdown: biomeConfig.markdown },
     ],
     reporter,
   )
+
+  // Biome indents Markdown the same whatever its indent settings say, while Oxfmt indents
+  // nested list items by `tabWidth`, so Markdown keeps Oxfmt's default width of 2.
+  if (oxfmtConfig.tabWidth !== undefined) {
+    const markdownOverride = languageOverrides.find(
+      (override) => override.files.join() === BIOME_MARKDOWN_FILE_PATTERN,
+    )
+
+    if (markdownOverride) {
+      markdownOverride.options = { ...markdownOverride.options, tabWidth: 2 }
+    } else {
+      languageOverrides.push({ files: [BIOME_MARKDOWN_FILE_PATTERN], options: { tabWidth: 2 } })
+    }
+  }
 
   if (languageOverrides.length > 0) {
     oxfmtConfig.overrides = languageOverrides
@@ -167,15 +195,28 @@ export function generateOxfmtConfig(
 }
 
 /**
- * Excludes the file types Oxfmt formats but Biome does not.
+ * Whether the project's Biome formats YAML and Markdown, which Biome does from 2.6 on. An
+ * unknown version is taken as the current release.
+ */
+export function biomeFormatsYamlAndMarkdown(biomeVersion: string | undefined): boolean {
+  const [major = 0, minor = 0] = (biomeVersion ?? '2.6.0').split('.').map(Number)
+
+  return major > 2 || (major === 2 && minor >= 6)
+}
+
+/**
+ * Aligns the files Oxfmt formats with the ones Biome formats: excludes the file types only
+ * Oxfmt formats, and associates the files Biome formats as YAML or HTML that Oxfmt does not
+ * recognise by name. Before 2.6 Biome formats neither YAML nor Markdown, so both are excluded.
  *
  * Applied after glob rebasing: these patterns are relative to the generated config's own
  * directory rather than to the Biome project root, so they must not take part in the
  * rebase decision.
  */
-export function excludeOxfmtOnlyLanguages(
+export function alignOxfmtLanguageScope(
   oxfmtConfig: OxfmtConfig,
   biomeConfig: BiomeConfig,
+  biomeVersion: string | undefined,
 ): void {
   const existingPatterns = oxfmtConfig.ignorePatterns ?? []
 
@@ -185,11 +226,33 @@ export function excludeOxfmtOnlyLanguages(
   }
 
   // Biome's HTML formatter is off unless the config turns it on; Oxfmt's is always on.
-  const htmlPatterns = biomeHtmlFormatterEnabled(biomeConfig) ? [] : ['**/*.html']
+  const htmlEnabled = biomeHtmlFormatterEnabled(biomeConfig)
+  const htmlPatterns = htmlEnabled ? [] : ['**/*.{html,htm}']
+  const yamlAndMarkdown = biomeFormatsYamlAndMarkdown(biomeVersion)
+  const yamlAndMarkdownPatterns = yamlAndMarkdown
+    ? []
+    : [...BIOME_YAML_FILE_PATTERNS, BIOME_MARKDOWN_FILE_PATTERN]
 
   oxfmtConfig.ignorePatterns = [
-    ...new Set([...existingPatterns, ...OXFMT_ONLY_IGNORE_PATTERNS, ...htmlPatterns]),
+    ...new Set([
+      ...existingPatterns,
+      ...OXFMT_ONLY_IGNORE_PATTERNS,
+      ...yamlAndMarkdownPatterns,
+      ...htmlPatterns,
+    ]),
   ]
+
+  const associations = [
+    ...(!yamlAndMarkdown || biomeConfig.yaml?.formatter?.enabled === false
+      ? []
+      : [{ files: [OXFMT_UNRECOGNISED_YAML_PATTERN], language: 'yaml' }]),
+    // Biome's HTML formatter also formats SVG files, which Oxfmt only formats as associated.
+    ...(htmlEnabled ? [{ files: ['**/*.svg'], language: 'html' }] : []),
+  ]
+
+  if (associations.length > 0) {
+    oxfmtConfig.associations = associations
+  }
 }
 
 /**
@@ -278,6 +341,12 @@ function mapDisabledLanguageFormatters(biomeConfig: BiomeConfig, oxfmtConfig: Ox
   }
   if (biomeConfig.graphql?.formatter?.enabled === false) {
     disabledPatterns.push('**/*.{graphql,gql}')
+  }
+  if (biomeConfig.yaml?.formatter?.enabled === false) {
+    disabledPatterns.push(...BIOME_YAML_FILE_PATTERNS)
+  }
+  if (biomeConfig.markdown?.formatter?.enabled === false) {
+    disabledPatterns.push(BIOME_MARKDOWN_FILE_PATTERN)
   }
 
   if (disabledPatterns.length > 0) {

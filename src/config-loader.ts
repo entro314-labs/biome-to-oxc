@@ -18,8 +18,10 @@ import type {
   BiomeJsonConfig,
   BiomeLinterConfig,
   BiomeLinterRules,
+  BiomeMarkdownConfig,
   BiomeOverride,
   BiomeRuleGroup,
+  BiomeYamlConfig,
   Reporter,
 } from './types.js'
 
@@ -38,6 +40,8 @@ const SUPPORTED_TOP_LEVEL_FIELDS = new Set([
   'css',
   'graphql',
   'html',
+  'yaml',
+  'markdown',
   'overrides',
 ])
 const IncludeFieldsSchema = z
@@ -204,6 +208,42 @@ const BiomeGraphqlConfigSchema: z.ZodType<BiomeGraphqlConfig> = z
       .optional(),
   })
   .loose()
+const LanguageLinterSchema = z.object({ enabled: z.boolean().optional() }).loose().optional()
+const BiomeYamlConfigSchema: z.ZodType<BiomeYamlConfig> = z
+  .object({
+    formatter: z
+      .object({
+        enabled: z.boolean().optional(),
+        bracketSpacing: z.boolean().optional(),
+        indentWidth: z.number().int().optional(),
+        lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
+        lineWidth: z.number().int().optional(),
+        quoteStyle: z.enum(['single', 'double']).optional(),
+        trailingNewline: z.boolean().optional(),
+      })
+      .loose()
+      .optional(),
+    linter: LanguageLinterSchema,
+  })
+  .loose()
+const BiomeMarkdownConfigSchema: z.ZodType<BiomeMarkdownConfig> = z
+  .object({
+    formatter: z
+      .object({
+        enabled: z.boolean().optional(),
+        formatEmbeds: z.boolean().optional(),
+        indentStyle: z.enum(['tab', 'space']).optional(),
+        indentWidth: z.number().int().optional(),
+        lineEnding: z.enum(['lf', 'crlf', 'cr', 'auto']).optional(),
+        lineWidth: z.number().int().optional(),
+        proseWrap: z.enum(['always', 'never', 'preserve']).optional(),
+        trailingNewline: z.boolean().optional(),
+      })
+      .loose()
+      .optional(),
+    linter: LanguageLinterSchema,
+  })
+  .loose()
 const BiomeLinterConfigSchema: z.ZodType<BiomeLinterConfig> = IncludeFieldsSchema.extend({
   enabled: z.boolean().optional(),
   ignore: z.array(z.string()).optional(),
@@ -249,6 +289,8 @@ const BiomeOverrideSchema: z.ZodType<BiomeOverride> = z
     json: BiomeJsonConfigSchema.optional(),
     css: BiomeCssConfigSchema.optional(),
     graphql: BiomeGraphqlConfigSchema.optional(),
+    yaml: BiomeYamlConfigSchema.optional(),
+    markdown: BiomeMarkdownConfigSchema.optional(),
   })
   .loose()
 const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
@@ -284,6 +326,8 @@ const BiomeConfigSchema: z.ZodType<BiomeConfig> = z
     css: BiomeCssConfigSchema.optional(),
     graphql: BiomeGraphqlConfigSchema.optional(),
     html: z.record(z.string(), z.unknown()).optional(),
+    yaml: BiomeYamlConfigSchema.optional(),
+    markdown: BiomeMarkdownConfigSchema.optional(),
     overrides: z.array(BiomeOverrideSchema).optional(),
   })
   .loose()
@@ -292,6 +336,51 @@ const WorkspacePackageJsonSchema = z
     workspaces: z.union([z.array(z.string()), z.record(z.string(), z.unknown())]).optional(),
   })
   .loose()
+
+const BiomePackageManifestSchema = z.object({ version: z.string() }).loose()
+
+/**
+ * The Biome version the project runs: the installed `@biomejs/biome` nearest `projectDir`
+ * (walking up, for hoisted workspace installs), or else the version in the config's `$schema`
+ * URL. `undefined` when neither names one.
+ */
+export async function detectBiomeVersion(
+  projectDir: string,
+  biomeConfig: BiomeConfig,
+  reporter: Reporter,
+): Promise<string | undefined> {
+  let currentDir = resolve(projectDir)
+
+  while (true) {
+    const manifestPath = join(currentDir, 'node_modules', '@biomejs', 'biome', 'package.json')
+
+    if (await pathExists(manifestPath)) {
+      try {
+        const manifest = await readJsonFile(
+          manifestPath,
+          BiomePackageManifestSchema,
+          `Biome package manifest at ${manifestPath}`,
+        )
+        return manifest.version
+      } catch (err) {
+        reporter.warn(
+          `${err instanceof Error ? err.message : String(err)}; reading the Biome version from the config's $schema instead.`,
+        )
+        break
+      }
+    }
+
+    const parentDir = dirname(currentDir)
+
+    if (parentDir === currentDir) {
+      break
+    }
+
+    currentDir = parentDir
+  }
+
+  return biomeConfig.$schema?.match(/\/schemas\/(\d+\.\d+\.\d+)\//u)?.[1]
+}
 
 export async function findBiomeConfig(startDir: string): Promise<string | undefined> {
   for (const name of BIOME_CONFIG_NAMES) {

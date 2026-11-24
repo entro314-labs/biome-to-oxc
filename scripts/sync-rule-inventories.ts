@@ -199,7 +199,9 @@ const BIOME_FORMATTER_SURFACES = {
   HtmlFormatterConfiguration: 'html.formatter',
   JsFormatterConfiguration: 'javascript.formatter',
   JsonFormatterConfiguration: 'json.formatter',
+  MarkdownFormatterConfiguration: 'markdown.formatter',
   OverrideFormatterConfiguration: 'overrides[].formatter',
+  YamlFormatterConfiguration: 'yaml.formatter',
 } as const
 
 async function readBiomeDefinitions(): Promise<Record<string, unknown>> {

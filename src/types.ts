@@ -12,6 +12,8 @@ export interface BiomeConfig {
   css?: BiomeCssConfig
   graphql?: BiomeGraphqlConfig
   html?: Record<string, unknown>
+  yaml?: BiomeYamlConfig
+  markdown?: BiomeMarkdownConfig
   overrides?: BiomeOverride[]
 }
 
@@ -214,6 +216,39 @@ export interface BiomeGraphqlConfig {
   }
 }
 
+/** Biome 2.6+ formats YAML; YAML has no tab indentation, so there is no `indentStyle`. */
+export interface BiomeYamlConfig {
+  formatter?: {
+    enabled?: boolean
+    bracketSpacing?: boolean
+    indentWidth?: number
+    lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
+    lineWidth?: number
+    quoteStyle?: 'single' | 'double'
+    trailingNewline?: boolean
+  }
+  linter?: {
+    enabled?: boolean
+  }
+}
+
+/** Biome 2.6+ formats Markdown. */
+export interface BiomeMarkdownConfig {
+  formatter?: {
+    enabled?: boolean
+    formatEmbeds?: boolean
+    indentStyle?: 'tab' | 'space'
+    indentWidth?: number
+    lineEnding?: 'lf' | 'crlf' | 'cr' | 'auto'
+    lineWidth?: number
+    proseWrap?: 'always' | 'never' | 'preserve'
+    trailingNewline?: boolean
+  }
+  linter?: {
+    enabled?: boolean
+  }
+}
+
 export interface BiomeOverride {
   include?: string[]
   includes?: string[]
@@ -227,6 +262,8 @@ export interface BiomeOverride {
   json?: BiomeJsonConfig
   css?: BiomeCssConfig
   graphql?: BiomeGraphqlConfig
+  yaml?: BiomeYamlConfig
+  markdown?: BiomeMarkdownConfig
 }
 
 export type FixStrategy = 'safe' | 'suggestions' | 'dangerous'
@@ -322,8 +359,16 @@ export interface OxfmtOverride {
   options?: Partial<Omit<OxfmtConfig, '$schema' | 'ignorePatterns' | 'overrides'>>
 }
 
+/** Formats the matched files as `language` (a Shiki id) instead of by file name. */
+export interface OxfmtAssociation {
+  files: string[]
+  excludeFiles?: string[]
+  language: string
+}
+
 export interface OxfmtConfig {
   $schema?: string
+  associations?: OxfmtAssociation[]
   // Core Prettier-compatible options
   printWidth?: number
   tabWidth?: number

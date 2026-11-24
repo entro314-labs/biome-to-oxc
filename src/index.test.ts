@@ -761,8 +761,14 @@ describe('migrate file selection fidelity', () => {
     }
 
     expect(oxfmt.ignorePatterns).toEqual(
-      expect.arrayContaining(['**/*.{yaml,yml}', '**/*.toml', '**/*.{md,mdx}']),
+      expect.arrayContaining([
+        '**/*.toml',
+        '**/*.{mdx,livemd,mdown,mdwn,mkd,mkdn,mkdown,ronn,scd,workbook}',
+        '**/*.{html,htm}',
+      ]),
     )
+    // Biome 2.6 formats YAML and Markdown, so Oxfmt has to as well.
+    expect(oxfmt.ignorePatterns.join()).not.toMatch(/\b(yaml|md)\b/)
     // Oxfmt defaults this to true; Biome never reordered package.json.
     expect(oxfmt.sortPackageJson).toBe(false)
   })

@@ -99,13 +99,29 @@ const UNFORMATTED_SOURCES = {
   'src/notes.md': '#  Heading\n\n*  item\n',
   'src/config.yaml': 'a:   1\nb:    2\n',
   'build/generated.ts': 'const c={x:1,y:2}\n',
+  // Biome formats these as YAML or Markdown too; Oxfmt needs an association for `.cff`.
+  'src/notes.markdown': '#  Heading\n\n*  item\n',
+  'src/.clang-format': 'a:   1\n',
+  'src/data.cff': 'a:   1\n',
+  // Oxfmt formats these as Markdown, YAML or TOML; Biome does not format them at all.
+  'src/notes.mdx': '#  Heading\n\n*  item\n',
+  'src/notes.mkd': '#  Heading\n\n*  item\n',
+  'src/README': '#  Heading\n\n*  item\n',
+  'src/glide.lock': 'a:   1\n',
+  'src/.prettierrc': 'a:   1\n',
+  'src/settings.toml': 'a =   1\n',
 }
 
-/** HTML in each extension Oxfmt formats as HTML; Biome formats only `.html`, and only on request. */
+/**
+ * HTML in the extensions either tool formats as HTML. Biome formats `.html`, `.htm` and `.svg`,
+ * and only on request; Oxfmt formats every one but `.svg` by default.
+ */
 const UNFORMATTED_HTML = {
   'src/page.html': '<div   class="x"><p>hi</p>   </div>\n',
   'src/page.htm': '<div   class="x"><p>hi</p>   </div>\n',
   'src/page.xhtml': '<div   class="x"><p>hi</p>   </div>\n',
+  'src/page.xht': '<div   class="x"><p>hi</p>   </div>\n',
+  'src/icon.svg': '<svg   xmlns="http://www.w3.org/2000/svg"><rect   width="1"/></svg>\n',
 }
 
 async function setupConformanceFixture(
@@ -202,12 +218,20 @@ describe('source-versus-target formatter scope', () => {
     const oxfmtScope = await oxfmtFormatScope(dir)
 
     expect(report.errors).toEqual([])
-    // Oxfmt formats YAML and Markdown by default and Biome does not; the generated config
-    // has to hold that difference back.
+    // Biome 2.6 formats YAML and Markdown, but fewer file types of each than Oxfmt; the
+    // generated config has to match Biome's set exactly.
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
-    expect(sourceFilesOnly(biomeScope)).toContain('src/fragment.gql')
-    expect(sourceFilesOnly(biomeScope)).not.toContain('src/config.yaml')
-    expect(sourceFilesOnly(oxfmtScope)).not.toContain('src/config.yaml')
+    expect(sourceFilesOnly(biomeScope)).toEqual(
+      expect.arrayContaining([
+        'src/fragment.gql',
+        'src/config.yaml',
+        'src/notes.md',
+        'src/notes.markdown',
+        'src/data.cff',
+      ]),
+    )
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/README')
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/settings.toml')
   })
 
   it('honours negated includes the same way Biome does', async () => {
@@ -292,6 +316,42 @@ describe('source-versus-target formatter scope', () => {
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
   })
 
+  it.each([
+    ['YAML', { yaml: { formatter: { enabled: false } } }, ['src/config.yaml', 'src/data.cff']],
+    ['Markdown', { markdown: { formatter: { enabled: false } } }, ['src/notes.md']],
+  ])('stops formatting %s when Biome disables its formatter', async (_, biomeConfig, files) => {
+    const dir = await setupConformanceFixture(biomeConfig)
+
+    const biomeScope = await biomeFormatScope(dir)
+    await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    const oxfmtScope = await oxfmtFormatScope(dir)
+
+    for (const file of files) {
+      expect(sourceFilesOnly(biomeScope)).not.toContain(file)
+    }
+    expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
+  })
+
+  it('formats YAML alone when Biome turns global formatting off but keeps its YAML formatter', async () => {
+    const dir = await setupConformanceFixture({
+      formatter: { enabled: false },
+      yaml: { formatter: { enabled: true } },
+    })
+
+    const biomeScope = await biomeFormatScope(dir)
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+
+    // Oxfmt cannot express an enable-only selection, so the migration reports it.
+    expect(sourceFilesOnly(biomeScope)).toEqual([
+      'src/.clang-format',
+      'src/config.yaml',
+      'src/data.cff',
+    ])
+    expect(report.losses).toEqual(
+      expect.arrayContaining([expect.stringContaining('language formatter re-enabled')]),
+    )
+  })
+
   it('leaves HTML files alone, as Biome does by default', async () => {
     const dir = await setupConformanceFixture({}, UNFORMATTED_HTML)
 
@@ -313,9 +373,11 @@ describe('source-versus-target formatter scope', () => {
     await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
     const oxfmtScope = await oxfmtFormatScope(dir)
 
-    // Biome reads .htm and .xhtml as unknown files even with the HTML formatter on.
-    expect(sourceFilesOnly(biomeScope)).toContain('src/page.html')
-    expect(sourceFilesOnly(biomeScope)).not.toContain('src/page.htm')
+    // Biome formats .htm and .svg as HTML too, but reads .xhtml and .xht as unknown files.
+    expect(sourceFilesOnly(biomeScope)).toEqual(
+      expect.arrayContaining(['src/page.html', 'src/page.htm', 'src/icon.svg']),
+    )
+    expect(sourceFilesOnly(biomeScope)).not.toContain('src/page.xhtml')
     expect(sourceFilesOnly(oxfmtScope)).toEqual(sourceFilesOnly(biomeScope))
   })
 
@@ -442,6 +504,49 @@ describe('GraphQL formatter options', () => {
     expect(biomeFormatted).toContain('\n    user(')
     expect(biomeFormatted).toContain('{name: "a", age: 3}')
     expect(oxfmtFormatted).toBe(biomeFormatted)
+    expect(report.losses).toEqual([])
+  })
+})
+
+describe('YAML and Markdown formatter options', () => {
+  const yaml =
+    'root:\n    nested:\n        - item: "x"\n          other:   \'y\'\n    flow: {a: 1, b: [1,2]}\nlist: [alpha, beta, gamma, delta, epsilon, zeta]\n'
+  // Biome keeps runs of spaces inside a blockquote and leaves code blocks nested in list items
+  // unformatted, where Oxfmt does not, so neither appears here.
+  const markdown =
+    '#  Title\nA paragraph long enough to wrap at forty columns when it is written out.\n\n* one\n    * nested\n\n```js\nconst a = {b:1}\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n'
+
+  it.each([
+    ['default', {}],
+    [
+      'global',
+      { formatter: { indentStyle: 'space', indentWidth: 4, lineWidth: 40, bracketSpacing: false } },
+    ],
+    [
+      'language-level',
+      {
+        yaml: { formatter: { quoteStyle: 'single', indentWidth: 4, lineWidth: 40 } },
+        markdown: { formatter: { proseWrap: 'always', lineWidth: 40, formatEmbeds: false } },
+      },
+    ],
+  ])('formats YAML and Markdown identically to Biome under %s options', async (_, biomeConfig) => {
+    const sources = { 'src/a.yaml': yaml, 'src/a.md': markdown }
+    const dir = await setupConformanceFixture(biomeConfig, sources)
+
+    await run(BIOME_BIN, ['format', '--write', 'src/a.yaml', 'src/a.md'], dir)
+    const biomeFormatted = await Promise.all(
+      Object.keys(sources).map((path) => readFile(join(dir, path), 'utf-8')),
+    )
+
+    const report = await migrate({ configPath: join(dir, 'biome.json'), outputDir: dir })
+    await writeFixtureFiles(dir, sources)
+    await run(OXFMT_BIN, ['--config', '.oxfmtrc.jsonc', 'src/a.yaml', 'src/a.md'], dir)
+    const oxfmtFormatted = await Promise.all(
+      Object.keys(sources).map((path) => readFile(join(dir, path), 'utf-8')),
+    )
+
+    expect(biomeFormatted).not.toEqual([yaml, markdown])
+    expect(oxfmtFormatted).toEqual(biomeFormatted)
     expect(report.losses).toEqual([])
   })
 })

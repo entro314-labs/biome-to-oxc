@@ -13,6 +13,7 @@ bracketSpacing	graphql.formatter
 bracketSpacing	javascript.formatter
 bracketSpacing	json.formatter
 bracketSpacing	overrides[].formatter
+bracketSpacing	yaml.formatter
 delimiterSpacing	css.formatter
 delimiterSpacing	formatter
 delimiterSpacing	javascript.formatter
@@ -25,11 +26,14 @@ enabled	grit.formatter
 enabled	html.formatter
 enabled	javascript.formatter
 enabled	json.formatter
+enabled	markdown.formatter
 enabled	overrides[].formatter
+enabled	yaml.formatter
 expand	formatter
 expand	javascript.formatter
 expand	json.formatter
 expand	overrides[].formatter
+formatEmbeds	markdown.formatter
 formatWithErrors	formatter
 formatWithErrors	overrides[].formatter
 includes	formatter
@@ -42,6 +46,7 @@ indentStyle	grit.formatter
 indentStyle	html.formatter
 indentStyle	javascript.formatter
 indentStyle	json.formatter
+indentStyle	markdown.formatter
 indentStyle	overrides[].formatter
 indentWidth	css.formatter
 indentWidth	formatter
@@ -50,7 +55,9 @@ indentWidth	grit.formatter
 indentWidth	html.formatter
 indentWidth	javascript.formatter
 indentWidth	json.formatter
+indentWidth	markdown.formatter
 indentWidth	overrides[].formatter
+indentWidth	yaml.formatter
 jsxQuoteStyle	javascript.formatter
 lineEnding	css.formatter
 lineEnding	formatter
@@ -59,7 +66,9 @@ lineEnding	grit.formatter
 lineEnding	html.formatter
 lineEnding	javascript.formatter
 lineEnding	json.formatter
+lineEnding	markdown.formatter
 lineEnding	overrides[].formatter
+lineEnding	yaml.formatter
 lineWidth	css.formatter
 lineWidth	formatter
 lineWidth	graphql.formatter
@@ -67,12 +76,16 @@ lineWidth	grit.formatter
 lineWidth	html.formatter
 lineWidth	javascript.formatter
 lineWidth	json.formatter
+lineWidth	markdown.formatter
 lineWidth	overrides[].formatter
+lineWidth	yaml.formatter
 operatorLinebreak	javascript.formatter
+proseWrap	markdown.formatter
 quoteProperties	javascript.formatter
 quoteStyle	css.formatter
 quoteStyle	graphql.formatter
 quoteStyle	javascript.formatter
+quoteStyle	yaml.formatter
 selfCloseVoidElements	html.formatter
 semicolons	javascript.formatter
 trailingCommas	javascript.formatter
@@ -85,6 +98,8 @@ trailingNewline	grit.formatter
 trailingNewline	html.formatter
 trailingNewline	javascript.formatter
 trailingNewline	json.formatter
+trailingNewline	markdown.formatter
 trailingNewline	overrides[].formatter
+trailingNewline	yaml.formatter
 useEditorconfig	formatter
 whitespaceSensitivity	html.formatter

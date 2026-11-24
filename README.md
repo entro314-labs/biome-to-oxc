@@ -49,10 +49,17 @@ Current capabilities:
   `no-implied-eval` depend on it)
 - Rule severities (`error`/`warn`/`off`; `info` and `on` are accepted with explicit lossy-mapping warnings)
 - Explicit `printWidth` handling (no silent changes)
-- The set of formatted files: Oxfmt-only formats (YAML, TOML, Markdown, `.htm`/`.xhtml`, and
-  `.html` unless Biome's HTML formatter is on) are excluded, and
-  `sortPackageJson` is pinned off unless the Biome config turns the matching assist action on, so
-  migrating never reformats files Biome left alone
+- The set of formatted files: what only Oxfmt formats is excluded (TOML, MDX, Markdown beyond
+  `.md`/`.markdown`, such as `README` or `.mkd`, YAML files Oxfmt finds by name such as
+  `.prettierrc` or `glide.lock`, `.xhtml`, `.xht`, `.hta`, `.inc`, and `.html`/`.htm` unless
+  Biome's HTML formatter is on), what only Biome formats is associated with the right Oxfmt
+  language (YAML extensions such as `.cff` and `.eyaml`, and `.svg` as HTML when Biome formats
+  HTML), and `sortPackageJson` is pinned off unless the Biome config turns the matching assist
+  action on, so migrating never reformats files Biome left alone
+- Biome 2.6 YAML and Markdown formatting, with `yaml.formatter` and `markdown.formatter` options
+  carried into Oxfmt overrides. Oxfmt's output can still differ from Biome's in Markdown: it
+  collapses runs of spaces inside a blockquote and formats code blocks nested in list items,
+  which Biome leaves as written
 - Assist actions: `organizeImports` and `useSortedPackageJson` become the Oxfmt options that
   implement them, and every other `assist.actions.source` entry is reported as a loss
 

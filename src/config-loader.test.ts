@@ -1,10 +1,10 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { loadBiomeConfig } from './config-loader.js'
+import { detectBiomeVersion, loadBiomeConfig } from './config-loader.js'
 import { CollectingReporter } from './reporter.js'
 
 describe('loadBiomeConfig', () => {
@@ -86,5 +86,41 @@ describe('Biome 2.x schema compatibility', () => {
     expect(config.vcs).toBeUndefined()
     expect(config.formatter?.lineWidth).toBe(100)
     expect(reporter.getErrors()).toEqual([])
+  })
+})
+
+describe('detectBiomeVersion', () => {
+  async function installBiome(dir: string, version: string): Promise<void> {
+    const packageDir = join(dir, 'node_modules', '@biomejs', 'biome')
+    await mkdir(packageDir, { recursive: true })
+    await writeFile(join(packageDir, 'package.json'), JSON.stringify({ version }), 'utf-8')
+  }
+
+  it('reads the installed Biome, including one hoisted to a workspace root', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'biome-to-oxc-version-'))
+    const packageDir = join(root, 'packages', 'app')
+    await mkdir(packageDir, { recursive: true })
+    await installBiome(root, '2.5.15')
+
+    const version = await detectBiomeVersion(
+      packageDir,
+      { $schema: 'https://biomejs.dev/schemas/2.6.8/schema.json' },
+      new CollectingReporter(),
+    )
+
+    expect(version).toBe('2.5.15')
+  })
+
+  it('falls back to the version in the config $schema when Biome is not installed', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-version-'))
+
+    expect(
+      await detectBiomeVersion(
+        dir,
+        { $schema: 'https://biomejs.dev/schemas/2.5.15/schema.json' },
+        new CollectingReporter(),
+      ),
+    ).toBe('2.5.15')
+    expect(await detectBiomeVersion(dir, {}, new CollectingReporter())).toBeUndefined()
   })
 })

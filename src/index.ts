@@ -5,14 +5,19 @@ import { z } from 'zod'
 
 import { detectProjectFeatures, generateFeatureSpecificSuggestions } from './advanced-detection.js'
 import { loadBiomeIgnorePatterns } from './biome-ignore-loader.js'
-import { findBiomeConfig, loadBiomeConfig, resolveBiomeExtends } from './config-loader.js'
+import {
+  detectBiomeVersion,
+  findBiomeConfig,
+  loadBiomeConfig,
+  resolveBiomeExtends,
+} from './config-loader.js'
 import {
   detectESLint,
   generateESLintBridgeSuggestions,
   generateESLintFormatterBridgeSuggestions,
 } from './eslint-detector.js'
 import {
-  excludeOxfmtOnlyLanguages,
+  alignOxfmtLanguageScope,
   generateOxfmtConfig,
   reportUnformattedFrameworkFiles,
 } from './formatter-mapper.js'
@@ -247,12 +252,20 @@ async function runMigration(
 
   if (rebaseOutcome.status === 'nested-without-patterns') {
     reporter.loss(
-      `The generated configs live below the Biome project root, so their ignorePatterns resolve within ${outputDir} rather than ${projectDir}. The YAML/TOML/Markdown/HTML exclusions that keep Oxfmt from formatting files Biome never touched only cover that subtree.`,
+      `The generated configs live below the Biome project root, so their ignorePatterns resolve within ${outputDir} rather than ${projectDir}. The exclusions and associations that keep Oxfmt to the file types Biome formats only cover that subtree.`,
+    )
+  }
+
+  const biomeVersion = await detectBiomeVersion(projectDir, biomeConfig, reporter)
+
+  if (biomeVersion === undefined) {
+    reporter.warn(
+      'Could not determine the Biome version: @biomejs/biome is not installed and the Biome config has no versioned $schema. The Oxfmt config assumes Biome 2.6 or later, which formats YAML and Markdown; before 2.6 Biome formatted neither, so add their patterns to the Oxfmt ignorePatterns if the project ran an older Biome.',
     )
   }
 
   // Applied after rebasing: these patterns are relative to the config's own directory.
-  excludeOxfmtOnlyLanguages(oxfmtConfig, biomeConfig)
+  alignOxfmtLanguageScope(oxfmtConfig, biomeConfig, biomeVersion)
   reportUnformattedFrameworkFiles(
     biomeConfig,
     oxfmtConfig,

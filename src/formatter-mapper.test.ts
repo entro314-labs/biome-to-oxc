@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { generateOxfmtConfig, reportUnformattedFrameworkFiles } from './formatter-mapper.js'
+import {
+  alignOxfmtLanguageScope,
+  biomeFormatsYamlAndMarkdown,
+  generateOxfmtConfig,
+  reportUnformattedFrameworkFiles,
+} from './formatter-mapper.js'
 import { CollectingReporter } from './reporter.js'
 import { normalizeBiomeConfig } from './schema-normalizer.js'
 import type { BiomeConfig } from './types.js'
@@ -499,5 +504,130 @@ describe('language-level line endings', () => {
     expect(config.overrides).toEqual([
       { files: ['**/*.{json,jsonc,json5}'], options: { endOfLine: 'crlf' } },
     ])
+  })
+})
+
+describe('YAML and Markdown formatting', () => {
+  it('keeps YAML and Markdown in scope and associates the YAML files Oxfmt does not recognise', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig({}, reporter)
+
+    alignOxfmtLanguageScope(config, {}, '2.6.8')
+
+    expect(config.ignorePatterns?.join()).not.toMatch(/\b(yaml|yml|md|markdown)\b/)
+    expect(config.associations).toEqual([
+      {
+        files: ['**/*.{cff,eyaml,eyml,yaml-tmpreferences,yaml-tmtheme,yaml.sed,yml.mysql}'],
+        language: 'yaml',
+      },
+    ])
+  })
+
+  it('associates SVG files with HTML when Biome formats HTML', () => {
+    const biomeConfig = { html: { formatter: { enabled: true } } }
+    const config = generateOxfmtConfig(biomeConfig, new CollectingReporter())
+
+    alignOxfmtLanguageScope(config, biomeConfig, '2.6.8')
+
+    expect(config.associations).toContainEqual({ files: ['**/*.svg'], language: 'html' })
+    expect(config.ignorePatterns).not.toContain('**/*.{html,htm}')
+  })
+
+  it.each([
+    [
+      'yaml',
+      { yaml: { formatter: { enabled: false } } },
+      [
+        '**/*.{yaml,yml,cff,eyaml,eyml,mir,reek,rviz,sublime-syntax,syntax,yaml-tmlanguage,yaml-tmpreferences,yaml-tmtheme,yaml.sed,yml.mysql}',
+        '**/{.clang-format,.clang-tidy,.gemrc}',
+      ],
+    ],
+    ['markdown', { markdown: { formatter: { enabled: false } } }, ['**/*.{md,markdown}']],
+  ] as const)(
+    'ignores the files Biome formats as %s when its formatter is off',
+    (language, biomeConfig, patterns) => {
+      const config = generateOxfmtConfig(biomeConfig, new CollectingReporter())
+
+      alignOxfmtLanguageScope(config, biomeConfig, '2.6.8')
+
+      expect(config.ignorePatterns).toEqual(expect.arrayContaining([...patterns]))
+      expect(
+        config.associations?.some((association) => association.language === language),
+      ).not.toBe(true)
+    },
+  )
+
+  it('maps the yaml and markdown formatter options onto language overrides', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig(
+      {
+        yaml: {
+          formatter: {
+            quoteStyle: 'single',
+            indentWidth: 4,
+            lineWidth: 100,
+            bracketSpacing: false,
+            trailingNewline: false,
+            lineEnding: 'crlf',
+          },
+        },
+        markdown: {
+          formatter: { proseWrap: 'always', lineWidth: 60, formatEmbeds: false, indentWidth: 4 },
+        },
+      },
+      reporter,
+    )
+
+    expect(config.overrides).toEqual([
+      {
+        files: expect.arrayContaining(['**/{.clang-format,.clang-tidy,.gemrc}']),
+        options: {
+          singleQuote: true,
+          tabWidth: 4,
+          printWidth: 100,
+          bracketSpacing: false,
+          insertFinalNewline: false,
+          endOfLine: 'crlf',
+        },
+      },
+      {
+        files: ['**/*.{md,markdown}'],
+        options: { proseWrap: 'always', printWidth: 60, embeddedLanguageFormatting: 'off' },
+      },
+    ])
+    expect(reporter.getLosses()).toEqual([])
+  })
+
+  it('keeps Markdown at an indent width of 2, which Biome uses whatever the global width', () => {
+    const config = generateOxfmtConfig(
+      { formatter: { indentStyle: 'space', indentWidth: 4 } },
+      new CollectingReporter(),
+    )
+
+    expect(config.tabWidth).toBe(4)
+    expect(config.overrides).toEqual([{ files: ['**/*.{md,markdown}'], options: { tabWidth: 2 } }])
+  })
+
+  it.each(['2.5.15', '1.9.4'])(
+    'excludes YAML and Markdown for Biome %s, which formats neither',
+    (version) => {
+      const config = generateOxfmtConfig({}, new CollectingReporter())
+
+      alignOxfmtLanguageScope(config, {}, version)
+
+      expect(config.ignorePatterns).toEqual(
+        expect.arrayContaining(['**/*.{md,markdown}', '**/{.clang-format,.clang-tidy,.gemrc}']),
+      )
+      expect(config.associations).toBeUndefined()
+    },
+  )
+
+  it.each([
+    [undefined, true],
+    ['2.6.0', true],
+    ['3.0.0', true],
+    ['2.5.15', false],
+  ])('treats Biome %s as formatting YAML and Markdown: %s', (version, expected) => {
+    expect(biomeFormatsYamlAndMarkdown(version)).toBe(expected)
   })
 })
