@@ -87,6 +87,28 @@ describe('Biome 2.x schema compatibility', () => {
     expect(config.formatter?.lineWidth).toBe(100)
     expect(reporter.getErrors()).toEqual([])
   })
+
+  it('reads the Biome 2.6 yaml, markdown and tailwind sections without reporting a loss', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'biome-to-oxc-schema-'))
+    const configPath = join(dir, 'biome.json')
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        yaml: { formatter: { quoteStyle: 'single' } },
+        markdown: { formatter: { proseWrap: 'always' } },
+        // Only Biome's Tailwind lint rules read this; each enabled one is reported as unmapped.
+        tailwind: { attributes: ['class'], mergeFunctions: ['cn'] },
+      }),
+      'utf-8',
+    )
+    const reporter = new CollectingReporter()
+
+    const config = await loadBiomeConfig(configPath, reporter)
+
+    expect(config.yaml?.formatter?.quoteStyle).toBe('single')
+    expect(config.markdown?.formatter?.proseWrap).toBe('always')
+    expect(reporter.getLosses()).toEqual([])
+  })
 })
 
 describe('detectBiomeVersion', () => {

@@ -42,6 +42,9 @@ const SUPPORTED_TOP_LEVEL_FIELDS = new Set([
   'html',
   'yaml',
   'markdown',
+  // Only tells Biome's Tailwind lint rules where class strings are. None of those rules has an
+  // Oxlint counterpart, and each one the config enables is already reported as unmapped.
+  'tailwind',
   'overrides',
 ])
 const IncludeFieldsSchema = z
