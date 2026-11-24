@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - `noMisusedPromises` reports a union that contains a promise used as a condition again, such as `Promise<void> | undefined` in an `if`. Biome reports it, but `typescript/no-misused-promises` only does with its `checksConditionals.flagUnions` option set to `"all"`, which Oxlint 1.94 added; the migration now sets it. A conformance test runs both binaries over the same fixture.
+- A language-level `lineEnding` of `"auto"` (in `javascript`, `json`, `css` or `graphql` formatter settings, or in an override's `formatter`) no longer produces an Oxfmt config that fails to load. It was copied into `endOfLine`, which Oxfmt rejects with "unknown variant `auto`", so every Oxfmt run failed. It is now reported as a semantic loss and left out, as the top-level `formatter.lineEnding` already was: Oxfmt writes LF, which matches Biome's `"auto"` except on Windows.
 - The conformance test that checks Oxlint accepts the generated config now also reads stdout, where Oxlint prints "Failed to parse oxlint configuration file", so a rejected config can no longer pass it.
 
 ## [3.7.2] - 2026-10-14

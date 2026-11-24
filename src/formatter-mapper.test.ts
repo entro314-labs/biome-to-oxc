@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { generateOxfmtConfig, reportUnformattedFrameworkFiles } from './formatter-mapper.js'
 import { CollectingReporter } from './reporter.js'
 import { normalizeBiomeConfig } from './schema-normalizer.js'
+import type { BiomeConfig } from './types.js'
 
 describe('generateOxfmtConfig', () => {
   it('does not enable package sorting by default for an empty biome config', () => {
@@ -473,5 +474,30 @@ describe('reportUnformattedFrameworkFiles', () => {
     reportUnformattedFrameworkFiles(normalized, config, new Set(['astro', 'svelte']), reporter)
 
     expect(reporter.getLosses()).toEqual([])
+  })
+})
+
+describe('language-level line endings', () => {
+  // Oxfmt rejects the whole config when any `endOfLine` is "auto", so every run would fail.
+  it.each<[string, BiomeConfig]>([
+    ['javascript', { javascript: { formatter: { lineEnding: 'auto' } } }],
+    ['json', { json: { formatter: { lineEnding: 'auto' } } }],
+    ['css', { css: { formatter: { lineEnding: 'auto' } } }],
+    ['graphql', { graphql: { formatter: { lineEnding: 'auto' } } }],
+  ])('reports a %s lineEnding of "auto" instead of emitting it', (_, biomeConfig) => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig(normalizeBiomeConfig(biomeConfig, reporter), reporter)
+
+    expect(JSON.stringify(config)).not.toContain('"endOfLine"')
+    expect(reporter.getLosses()).toEqual([expect.stringContaining('lineEnding "auto"')])
+  })
+
+  it('keeps an explicit language-level line ending', () => {
+    const reporter = new CollectingReporter()
+    const config = generateOxfmtConfig({ json: { formatter: { lineEnding: 'crlf' } } }, reporter)
+
+    expect(config.overrides).toEqual([
+      { files: ['**/*.{json,jsonc,json5}'], options: { endOfLine: 'crlf' } },
+    ])
   })
 })

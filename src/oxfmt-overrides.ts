@@ -258,9 +258,7 @@ function mapBaseFormatterOptions(
     options.tabWidth = formatter.indentWidth
   }
 
-  if (formatter.lineEnding !== undefined) {
-    options.endOfLine = formatter.lineEnding
-  }
+  mapLineEnding(formatter.lineEnding, 'overrides[].formatter', options, reporter)
 
   if (formatter.bracketSpacing !== undefined) {
     options.bracketSpacing = formatter.bracketSpacing
@@ -314,9 +312,7 @@ function mapJavaScriptFormatterOptions(
     options.tabWidth = jsFormatter.indentWidth
   }
 
-  if (jsFormatter.lineEnding !== undefined) {
-    options.endOfLine = jsFormatter.lineEnding
-  }
+  mapLineEnding(jsFormatter.lineEnding, 'javascript.formatter', options, reporter)
 
   if (jsFormatter.quoteStyle !== undefined) {
     options.singleQuote = jsFormatter.quoteStyle === 'single'
@@ -406,9 +402,7 @@ function mapJsonFormatterOptions(
     options.tabWidth = jsonFormatter.indentWidth
   }
 
-  if (jsonFormatter.lineEnding !== undefined) {
-    options.endOfLine = jsonFormatter.lineEnding
-  }
+  mapLineEnding(jsonFormatter.lineEnding, 'json.formatter', options, reporter)
 
   if (jsonFormatter.trailingCommas !== undefined) {
     options.trailingComma = jsonFormatter.trailingCommas === 'none' ? 'none' : 'all'
@@ -452,9 +446,7 @@ function mapCssFormatterOptions(
     options.tabWidth = cssFormatter.indentWidth
   }
 
-  if (cssFormatter.lineEnding !== undefined) {
-    options.endOfLine = cssFormatter.lineEnding
-  }
+  mapLineEnding(cssFormatter.lineEnding, 'css.formatter', options, reporter)
 
   if (cssFormatter.quoteStyle !== undefined) {
     options.singleQuote = cssFormatter.quoteStyle === 'single'
@@ -495,9 +487,7 @@ function mapGraphqlFormatterOptions(
     options.tabWidth = graphqlFormatter.indentWidth
   }
 
-  if (graphqlFormatter.lineEnding !== undefined) {
-    options.endOfLine = graphqlFormatter.lineEnding
-  }
+  mapLineEnding(graphqlFormatter.lineEnding, 'graphql.formatter', options, reporter)
 
   if (graphqlFormatter.bracketSpacing !== undefined) {
     options.bracketSpacing = graphqlFormatter.bracketSpacing
@@ -510,6 +500,25 @@ function mapGraphqlFormatterOptions(
   applyExplicitFormatterOptionPassThrough([graphqlFormatter], options, reporter)
 
   return options
+}
+
+/**
+ * Oxfmt has no `auto` line ending and rejects the whole config when it meets one. Its `lf`
+ * default matches Biome's `auto` everywhere but Windows, so `auto` is reported, not emitted.
+ */
+function mapLineEnding(
+  lineEnding: 'lf' | 'crlf' | 'cr' | 'auto' | undefined,
+  label: string,
+  options: Record<string, unknown>,
+  reporter: Reporter,
+): void {
+  if (lineEnding === 'auto') {
+    reporter.loss(
+      `Biome ${label}.lineEnding "auto" has no Oxfmt equivalent; Oxfmt will write LF for those files. On Windows checkouts this changes the emitted line endings.`,
+    )
+  } else if (lineEnding !== undefined) {
+    options.endOfLine = lineEnding
+  }
 }
 
 function warnAboutUnsupportedKeys(

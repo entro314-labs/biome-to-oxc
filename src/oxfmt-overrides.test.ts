@@ -143,4 +143,22 @@ describe('generateOxfmtOverrides', () => {
     ])
     expect(reporter.getWarnings()).toEqual([])
   })
+
+  it('reports an override lineEnding of "auto" instead of emitting it, which Oxfmt rejects', () => {
+    const reporter = new CollectingReporter()
+
+    const overrides = generateOxfmtOverrides(
+      [
+        { include: ['src/**'], formatter: { lineEnding: 'auto', lineWidth: 100 } },
+        { include: ['**/*.json'], json: { formatter: { lineEnding: 'auto' } } },
+      ],
+      reporter,
+    )
+
+    expect(overrides).toEqual([{ files: ['src/**'], options: { printWidth: 100 } }])
+    expect(reporter.getLosses()).toEqual([
+      expect.stringContaining('overrides[].formatter.lineEnding "auto"'),
+      expect.stringContaining('json.formatter.lineEnding "auto"'),
+    ])
+  })
 })
