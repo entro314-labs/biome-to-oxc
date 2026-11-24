@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-24
+
 ### Added
 
 - Mappings for 108 Biome rules, most of them added in Biome 2.6. Each pair was checked by running Biome 2.6.8 and Oxlint 1.95.0 over the examples in the Biome rule's documentation, one file per example. 83 Oxlint rules reported the same examples as the Biome rule, among them `noNull` → `unicorn/no-null`, `noUselessCall` → `no-useless-call`, `noSyncMethods` → `node/no-sync`, `noUnsafeReturn` → `typescript/no-unsafe-return`, `useSpyOn` → `jest/prefer-spy-on` and `vitest/prefer-spy-on`, and 28 Vue rules such as `noVueWatchAfterAwait` → `vue/no-watch-after-await`. Four report more than the Biome rule, which a comment on each mapping records: `noConsoleSpaces`, `noSharedBranchCode`, `useValidNamespaceImports` and `useVueTypedRef`. 21 cover only part of the Biome rule and are reported as a semantic loss that names what goes unreported, for example `noPathConcat` → `node/no-path-concat` (not `import.meta.dirname`), `useCalledWith` → `prefer-called-with` (not `toHaveBeenCalledOnce()`), `useVueValidNextTick` → `vue/valid-next-tick` (not `<script setup>`), `noExcessiveNestedBlocks` → `max-depth` and `useConsistentUnicodeBom` → `unicode-bom` (JavaScript and TypeScript only). The rule options of 16 of them carry over under their Oxlint names, such as `noDynamicRequire`'s `checkDynamicImports` as `esmodule`, `noTripleSlashReference`'s `preferImport` as `prefer-import`, and `useVueConsistentPropNameCasing`'s `ignore` names as anchored `ignoreProps` patterns. Where the defaults differ the Biome default is written out: `noVueExcessiveProps` allows 10 props (Oxlint's `vue/max-props` allows 1), and `useObjectFromEntries` keeps reporting `_.fromPairs` and `lodash.fromPairs` when more functions are configured, since Oxlint's `functions` replaces that list. Seven type-aware counterparts, such as `noUselessTypeAssertion` → `typescript/no-unnecessary-type-assertion`, are reported as not running in a migration without `--type-aware`. Biome rules whose Oxlint namesake reported none of the same examples stay unmapped: `noDelete` (`no-delete-var` only covers variables) and `noUselessSplice` (`unicorn/no-unnecessary-array-splice-count`).
@@ -485,7 +487,8 @@ All notable changes to this project will be documented in this file.
 - Dry-run mode
 - Verbose logging
 
-[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.2...HEAD
+[Unreleased]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.8.0...HEAD
+[3.8.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.2...v3.8.0
 [3.7.2]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.1...v3.7.2
 [3.7.1]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/entro314-labs/biome-to-oxc/compare/v3.6.1...v3.7.0
