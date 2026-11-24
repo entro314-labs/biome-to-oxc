@@ -29,6 +29,8 @@ no-unnecessary-type-parameters	implemented	typescript/no-unnecessary-type-parame
 no-unsafe-argument	implemented	typescript/no-unsafe-argument
 no-unsafe-assignment	implemented	typescript/no-unsafe-assignment
 no-unsafe-call	implemented	typescript/no-unsafe-call
+no-unsafe-class-instance-assignment	implemented	typescript/no-unsafe-class-instance-assignment
+no-unsafe-enum-assignment	implemented	typescript/no-unsafe-enum-assignment
 no-unsafe-enum-comparison	implemented	typescript/no-unsafe-enum-comparison
 no-unsafe-member-access	implemented	typescript/no-unsafe-member-access
 no-unsafe-return	implemented	typescript/no-unsafe-return

@@ -64,7 +64,9 @@ typescript/no-unnecessary-type-parameters	yes	implemented
 typescript/no-unsafe-argument	yes	implemented
 typescript/no-unsafe-assignment	yes	implemented
 typescript/no-unsafe-call	yes	implemented
+typescript/no-unsafe-class-instance-assignment	yes	implemented
 typescript/no-unsafe-declaration-merging	no	n/a
+typescript/no-unsafe-enum-assignment	yes	implemented
 typescript/no-unsafe-enum-comparison	yes	implemented
 typescript/no-unsafe-function-type	no	n/a
 typescript/no-unsafe-member-access	yes	implemented
